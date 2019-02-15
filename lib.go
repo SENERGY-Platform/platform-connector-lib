@@ -17,23 +17,82 @@
 package platform_connector_lib
 
 import (
+	"encoding/json"
+	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 )
 
-type CommandHandler func(endpoint string, protocolParts map[string]string) (responseParts map[string]string, err error)
+type EndpointCommandHandler func(endpoint string, protocolParts map[string]string) (responseParts map[string]string, err error)
+type DeviceCommandHandler func(deviceId string, deviceUri string, serviceId string, serviceUri string, protocolParts map[string]string) (responseParts map[string]string, err error)
 
 type Connector struct {
-	Config         Config
-	CommandHandler CommandHandler //must be able to handle concurrent calls
-	producer       *kafka.Producer
-	consumer       *kafka.Consumer
-	openid         *OpenidToken
+	Config Config
+	//EndpointCommandHandler and DeviceCommandHandler are mutual exclusive
+	EndpointCommandHandler EndpointCommandHandler //must be able to handle concurrent calls
+	DeviceCommandHandler   DeviceCommandHandler   //must be able to handle concurrent calls
+	producer               *kafka.Producer
+	consumer               *kafka.Consumer
+	iot                    *iot.Iot
+	security               *security.Security
 }
 
-func Init(config Config, commandHandler CommandHandler) (connector *Connector, err error) {
-	connector = &Connector{Config: config, CommandHandler: commandHandler, producer: kafka.PrepareProducer(config.ZookeeperUrl)}
-	connector.consumer, err = connector.initKafkaConsumer()
+func New(config Config) (connector *Connector) {
+	connector = &Connector{
+		Config:   config,
+		iot:      iot.New(config.IotRepoUrl, config.Protocol),
+		security: security.New(config.AuthEndpoint, config.AuthClientId, config.AuthClientSecret, config.JwtIssuer, config.JwtPrivateKey, config.JwtExpiration, config.AuthExpirationTimeBuffer),
+	}
+	return
+}
+
+//EndpointCommandHandler and DeviceCommandHandler are mutual exclusive
+func (this *Connector) SetEndpointCommandHandler(handler EndpointCommandHandler) *Connector {
+	if this.DeviceCommandHandler != nil {
+		panic("try setting endpoint command handler while device command handler exists")
+	}
+	this.EndpointCommandHandler = handler
+	return this
+}
+
+//EndpointCommandHandler and DeviceCommandHandler are mutual exclusive
+func (this *Connector) SetDeviceCommandHandler(handler DeviceCommandHandler) *Connector {
+	if this.DeviceCommandHandler != nil {
+		panic("try setting endpoint command handler while device command handler exists")
+	}
+	this.DeviceCommandHandler = handler
+	return this
+}
+
+func (this *Connector) Start() (err error) {
+	if this.DeviceCommandHandler == nil && this.EndpointCommandHandler == nil {
+		return errors.New("missing comand handler; use SetDeviceCommandHandler() or SetEndpointCommandHandler()")
+	}
+	this.producer = kafka.PrepareProducer(this.Config.ZookeeperUrl)
+	this.consumer, err = kafka.NewConsumer(this.Config.ZookeeperUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte) error {
+		envelope := model.Envelope{}
+		err = json.Unmarshal(msg, &envelope)
+		if err != nil {
+			log.Println("ERROR: ", err)
+			return nil //ignore marshaling errors --> no repeat; errors would definitely reoccur
+		}
+		payload, err := json.Marshal(envelope.Value)
+		if err != nil {
+			log.Println("ERROR: ", err)
+			return nil //ignore marshaling errors --> no repeat; errors would definitely reoccur
+		}
+		return this.handleCommand(payload)
+	}, func(err error, consumer *kafka.Consumer) {
+		if this.Config.FatalKafkaError == "true" || this.Config.FatalKafkaError == "" {
+			log.Println("FATAL ERROR: kafka", err)
+			panic(err)
+		} else {
+			consumer.Restart()
+		}
+	})
 	return
 }
 
@@ -41,20 +100,53 @@ func (this *Connector) Stop() {
 	this.consumer.Stop()
 }
 
-func (this *Connector) HandleEvent(username string, password string, endpoint string, protocolParts map[string]string) (total int, success int, ignore int, fail int, err error) {
-	token, err := this.GetOpenidPasswordToken(username, password)
+func (this *Connector) HandleEndpointEvent(username string, password string, endpoint string, protocolParts map[string]string) (total int, success int, fail int, err error) {
+	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
-		log.Println("ERROR HandleEvent::GetOpenidPasswordToken()", err)
-		return total, success, ignore, fail, err
+		log.Println("ERROR HandleEndpointEvent::GetUserToken()", err)
+		return total, success, fail, err
 	}
-	return this.HandleEventWithAuthToken(token.JwtToken(), endpoint, protocolParts)
+	return this.HandleEndpointEventWithAuthToken(token, endpoint, protocolParts)
 }
 
-//is able to handle concurrent calls
-func (this *Connector) HandleEventWithAuthToken(token JwtToken, endpoint string, protocolParts map[string]string) (total int, success int, ignore int, fail int, err error) {
-	protocol := []ProtocolPart{}
+func (this *Connector) HandleEndpointEventWithAuthToken(token security.JwtToken, endpoint string, protocolParts map[string]string) (total int, success int, fail int, err error) {
+	protocol := []model.ProtocolPart{}
 	for key, val := range protocolParts {
-		protocol = append(protocol, ProtocolPart{Name: key, Value: val})
+		protocol = append(protocol, model.ProtocolPart{Name: key, Value: val})
 	}
-	return this.handleEvent(token, endpoint, protocol)
+	return this.handleEndpointEvent(token, endpoint, protocol)
+}
+
+func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string) (err error) {
+	token, err := this.security.GetUserToken(username, password)
+	if err != nil {
+		log.Println("ERROR HandleEndpointEvent::GetUserToken()", err)
+		return err
+	}
+	return this.HandleDeviceEventWithAuthToken(token, deviceId, serviceId, protocolParts)
+}
+
+func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, deviceId string, serviceId string, protocolParts map[string]string) (err error) {
+	protocol := []model.ProtocolPart{}
+	for key, val := range protocolParts {
+		protocol = append(protocol, model.ProtocolPart{Name: key, Value: val})
+	}
+	return this.handleDeviceEvent(token, deviceId, serviceId, protocol)
+}
+
+func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, protocolParts map[string]string) (err error) {
+	token, err := this.security.GetUserToken(username, password)
+	if err != nil {
+		log.Println("ERROR HandleEndpointEvent::GetUserToken()", err)
+		return err
+	}
+	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, protocolParts)
+}
+
+func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken, deviceUri string, serviceUri string, protocolParts map[string]string) (err error) {
+	protocol := []model.ProtocolPart{}
+	for key, val := range protocolParts {
+		protocol = append(protocol, model.ProtocolPart{Name: key, Value: val})
+	}
+	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, protocol)
 }

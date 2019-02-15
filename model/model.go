@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package platform_connector_lib
+package model
 
 import (
 	"github.com/SmartEnergyPlatform/iot-device-repository/lib/model"
@@ -37,30 +37,11 @@ type ProtocolMsg struct {
 	ServiceId        string         `json:"service_id"`
 	OutputName       string         `json:"output_name"`
 	Time             string         `json:"time"`
-	Service          model.Service `json:"service"`
+	Service          model.Service  `json:"service"`
 }
 
 type Envelope struct {
 	DeviceId  string      `json:"device_id,omitempty"`
 	ServiceId string      `json:"service_id,omitempty"`
 	Value     interface{} `json:"value"`
-}
-
-type EndpointGenMsgPart struct {
-	Msg            string `json:"msg"`
-	MsgSegmentName string `json:"msg_segment_name"`
-}
-
-type EndpointGenMsg struct {
-	Endpoint        string               `json:"endpoint"`
-	ProtocolHandler string               `json:"protocol_handler"`
-	Parts           []EndpointGenMsgPart `json:"parts"`
-}
-
-type Endpoint struct {
-	Id              string `json:"id"`
-	Endpoint        string `json:"endpoint"`
-	Service         string `json:"service"`
-	Device          string `json:"device"`
-	ProtocolHandler string `json:"protocol_handler"`
 }

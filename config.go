@@ -30,15 +30,12 @@ import (
 type Config struct {
 	ZookeeperUrl       string //host1:2181,host2:2181/chroot
 	KafkaResponseTopic string
-	KafkaEventTopic    string
+	KafkaEventTopic    string //optional
+	KafkaGroupName     string
+	FatalKafkaError    string // "true" || "false"; "" -> "true", else -> "false"
 	Protocol           string
-	FatalKafkaErrors   string
-	KafkaTimeout       int64
-	SaramaLog          string
 
 	IotRepoUrl string
-
-	LogProduce string //"true"
 
 	AuthClientId             string //keycloak-client
 	AuthClientSecret         string //keycloak-secret
@@ -48,8 +45,6 @@ type Config struct {
 	JwtPrivateKey string
 	JwtExpiration int64
 	JwtIssuer     string
-
-	KafkaGroupName string
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

@@ -18,93 +18,114 @@ package platform_connector_lib
 
 import (
 	"encoding/json"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"strings"
 
 	"github.com/SmartEnergyPlatform/formatter-lib"
 )
 
-func (this *Connector) formatEvent(token JwtToken, deviceid string, serviceid string, event formatter_lib.EventMsg) (result string, isSensor bool, err error) {
+func (this *Connector) formatEvent(token security.JwtToken, deviceid string, serviceid string, event formatter_lib.EventMsg) (result string, isSensor bool, err error) {
 	isSensor = true
 	formatter, err := formatter_lib.NewTransformer(this.Config.IotRepoUrl, token, deviceid, serviceid)
 	if err != nil {
 		return "", false, err
 	}
-	if formatter.Service.ServiceType != SENSOR_TYPE {
-		log.Println("DEBUG Servicetype: ", formatter.Service.ServiceType, "!=", SENSOR_TYPE, "in ", formatter.Service.Name)
+	if formatter.Service.ServiceType != model.SENSOR_TYPE {
+		log.Println("DEBUG Servicetype: ", formatter.Service.ServiceType, "!=", model.SENSOR_TYPE, "in ", formatter.Service.Name)
 		return "", false, err
 	}
 	result, err = formatter.Transform(event)
 	return
 }
 
-func (this *Connector) handleEvent(token JwtToken, endpoint string, protocolParts []ProtocolPart) (total int, success int, ignore int, fail int, err error) {
-	endpoints, err := this.getInEndpoints(token, endpoint)
+func (this *Connector) handleEndpointEvent(token security.JwtToken, endpoint string, protocolParts []model.ProtocolPart) (total int, success int, fail int, err error) {
+	endpoints, err := this.iot.GetInEndpoints(token, endpoint)
 	if err != nil {
-		log.Println("ERROR in handleEvent::GetInEndpoints(): ", err)
-		return total, success, ignore, fail, err
+		log.Println("ERROR in handleEndpointEvent::GetInEndpoints(): ", err)
+		return total, success, fail, err
 	}
 	total = len(endpoints)
 	if total == 0 {
 		log.Println("DEBUG: unknown device for endpoint ", endpoint)
-		_, err = this.createNewEndpoint(token, endpoint, protocolParts) //async on iot-repo side
+		_, err = this.iot.CreateNewEndpoint(token, endpoint, protocolParts) //async on iot-repo side
 		if err != nil {
-			log.Println("ERROR in handleEvent::CreateNewEndpoint(): ", err)
+			log.Println("ERROR in handleEndpointEvent::CreateNewEndpoint(): ", err)
 		}
-		return total, success, ignore, fail, err
+		return total, success, fail, err
 	}
+	for _, endpoint := range endpoints {
+		err = this.handleDeviceEvent(token, endpoint.Device, endpoint.Service, protocolParts)
+		if err != nil {
+			fail++
+		} else {
+			success++
+		}
+	}
+	return
+}
+
+func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, protocolParts []model.ProtocolPart) error {
+	entities, err := this.iot.DeviceUrlToIotDevice(deviceUri, token)
+	if err != nil {
+		return err
+	}
+	for _, entity := range entities {
+		for _, service := range entity.Services {
+			if service.Url == serviceUri {
+				err = this.handleDeviceEvent(token, entity.Device.Id, service.Id, protocolParts)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, protocolParts []model.ProtocolPart) (err error) {
 	eventMsg := formatter_lib.EventMsg{}
 	for _, part := range protocolParts {
 		eventMsg = append(eventMsg, formatter_lib.ProtocolPart{Name: part.Name, Value: part.Value})
 	}
-	for _, endpoint := range endpoints {
-		deviceId := endpoint.Device
-		serviceId := endpoint.Service
-		formatedEvent, isSensor, err := this.formatEvent(token, deviceId, serviceId, eventMsg)
-		if err != nil {
-			log.Println("ERROR: handleEvent::formatEvent() ", err)
-			fail++
-			continue
-		}
-		if !isSensor {
-			log.Println("DEBUG: is not a sensor --> ignore")
-			ignore++
-			continue
-		}
+	formatedEvent, isSensor, err := this.formatEvent(token, deviceId, serviceId, eventMsg)
+	if err != nil {
+		log.Println("ERROR: handleDeviceEvent::formatEvent() ", err)
+		return err
+	}
+	if !isSensor {
+		log.Println("DEBUG: is not a sensor --> ignore")
+		return nil
+	}
 
-		var eventValue interface{}
-		err = json.Unmarshal([]byte(formatedEvent), &eventValue)
-		if err != nil {
-			log.Println("ERROR: handleEvent::unmarshaling ", err)
-			fail++
-			continue
-		}
+	var eventValue interface{}
+	err = json.Unmarshal([]byte(formatedEvent), &eventValue)
+	if err != nil {
+		log.Println("ERROR: handleDeviceEvent::unmarshaling ", err)
+		return
+	}
 
-		serviceTopic := formatId(serviceId)
-		envelope := Envelope{DeviceId: deviceId, ServiceId: serviceId}
-		envelope.Value = eventValue
+	serviceTopic := formatId(serviceId)
+	envelope := model.Envelope{DeviceId: deviceId, ServiceId: serviceId}
+	envelope.Value = eventValue
 
-		jsonMsg, err := json.Marshal(envelope)
-		if err != nil {
-			log.Println("ERROR: handleEvent::marshaling ", err)
-			fail++
-			continue
-		}
-		err = this.producer.Produce(serviceTopic, string(jsonMsg))
-		if err != nil {
-			log.Println("ERROR: produce event on service topic ", err)
-			fail++
-			continue
-		}
-		if this.Config.KafkaEventTopic != "" {
-			err = this.producer.Produce(this.Config.KafkaEventTopic, string(jsonMsg))
-		}
-		if err != nil {
-			log.Println("ERROR: produce event on event topic", this.Config.KafkaEventTopic, err)
-			fail++
-			continue
-		}
-		success++
+	jsonMsg, err := json.Marshal(envelope)
+	if err != nil {
+		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
+		return err
+	}
+	err = this.producer.Produce(serviceTopic, string(jsonMsg))
+	if err != nil {
+		log.Println("ERROR: produce event on service topic ", err)
+		return err
+	}
+	if this.Config.KafkaEventTopic != "" {
+		err = this.producer.Produce(this.Config.KafkaEventTopic, string(jsonMsg))
+	}
+	if err != nil {
+		log.Println("ERROR: produce event on event topic", this.Config.KafkaEventTopic, err)
+		return err
 	}
 	return
 }

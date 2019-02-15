@@ -8,5 +8,6 @@ require (
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/segmentio/kafka-go v0.2.2
+	github.com/streadway/amqp v0.0.0-20180315184602-8e4aba63da9f
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a
 )
