@@ -17,9 +17,8 @@
 package platform_connector_lib
 
 import (
+	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"log"
-
-	"github.com/Shopify/sarama"
 )
 
 type CommandHandler func(endpoint string, protocolParts map[string]string) (responseParts map[string]string, err error)
@@ -27,19 +26,18 @@ type CommandHandler func(endpoint string, protocolParts map[string]string) (resp
 type Connector struct {
 	Config         Config
 	CommandHandler CommandHandler //must be able to handle concurrent calls
-	producer       sarama.AsyncProducer
-	consumer       *RunnerTask
+	producer       *kafka.Producer
+	consumer       *kafka.Consumer
 	openid         *OpenidToken
 }
 
-func Init(config Config, commandHandler CommandHandler) (connector *Connector) {
-	connector = &Connector{Config: config, CommandHandler: commandHandler, producer: initProducer(config.ZookeeperUrl)}
-	connector.consumer = connector.initKafkaConsumer()
+func Init(config Config, commandHandler CommandHandler) (connector *Connector, err error) {
+	connector = &Connector{Config: config, CommandHandler: commandHandler, producer: kafka.PrepareProducer(config.ZookeeperUrl)}
+	connector.consumer, err = connector.initKafkaConsumer()
 	return
 }
 
 func (this *Connector) Stop() {
-	this.producer.Close()
 	this.consumer.Stop()
 }
 

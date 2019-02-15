@@ -88,11 +88,23 @@ func (this *Connector) handleEvent(token JwtToken, endpoint string, protocolPart
 		if err != nil {
 			log.Println("ERROR: handleEvent::marshaling ", err)
 			fail++
-		} else {
-			this.produce(serviceTopic, string(jsonMsg))
-			this.produce(this.Config.KafkaEventTopic, string(jsonMsg))
-			success++
+			continue
 		}
+		err = this.producer.Produce(serviceTopic, string(jsonMsg))
+		if err != nil {
+			log.Println("ERROR: produce event on service topic ", err)
+			fail++
+			continue
+		}
+		if this.Config.KafkaEventTopic != "" {
+			err = this.producer.Produce(this.Config.KafkaEventTopic, string(jsonMsg))
+		}
+		if err != nil {
+			log.Println("ERROR: produce event on event topic", this.Config.KafkaEventTopic, err)
+			fail++
+			continue
+		}
+		success++
 	}
 	return
 }

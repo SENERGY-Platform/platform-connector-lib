@@ -47,7 +47,7 @@ func (this *Connector) handleCommand(msg string) (err error) {
 		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
 		return err
 	}
-	this.produce(this.Config.KafkaResponseTopic, string(response))
+	this.producer.Produce(this.Config.KafkaResponseTopic, string(response))
 	return
 }
 
