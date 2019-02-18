@@ -150,3 +150,11 @@ func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken
 	}
 	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, protocol)
 }
+
+func (this *Connector) Security() *security.Security {
+	return this.security
+}
+
+func (this *Connector) Iot() *iot.Iot {
+	return this.iot
+}
