@@ -17,7 +17,7 @@
 package model
 
 import (
-	"github.com/SmartEnergyPlatform/iot-device-repository/lib/model"
+	"github.com/SENERGY-Platform/iot-device-repository/lib/model"
 )
 
 const SENSOR_TYPE = "http://www.sepl.wifa.uni-leipzig.de/ontlogies/device-repo#Sensor"

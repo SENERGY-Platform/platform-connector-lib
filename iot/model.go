@@ -16,7 +16,7 @@
 
 package iot
 
-import iot_model "github.com/SmartEnergyPlatform/iot-device-repository/lib/model"
+import iot_model "github.com/SENERGY-Platform/iot-device-repository/lib/model"
 
 type ConnectorDevice struct {
 	IotType string   `json:"iot_type"`

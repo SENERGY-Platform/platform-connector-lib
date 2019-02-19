@@ -27,7 +27,7 @@ import (
 	"reflect"
 	"strings"
 
-	iot_model "github.com/SmartEnergyPlatform/iot-device-repository/lib/model"
+	iot_model "github.com/SENERGY-Platform/iot-device-repository/lib/model"
 )
 
 func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model.ShortDeviceType, err error) {
