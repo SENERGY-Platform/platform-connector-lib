@@ -41,6 +41,21 @@ func (this *Iot) GetGateway(id string, cred *security.JwtToken) (gateway Gateway
 	return gateway, err
 }
 
+func (this *Iot) GetGatewayWithoutProvisioning(id string, cred *security.JwtToken) (gateway Gateway, err error) {
+	resp, err := cred.Get(this.url + "/gateway/" + url.QueryEscape(id))
+	if err != nil {
+		log.Println("ERROR on GetGateway()", err)
+		return gateway, err
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&gateway)
+	if err != nil {
+		log.Println("ERROR on GetGateway() json decode", err)
+	}
+	return gateway, err
+}
+
 func (this *Iot) ClearGateway(id string, cred *security.JwtToken) (err error) {
 	var resp *http.Response
 	for i := 0; i < 30; i++ {
