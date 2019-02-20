@@ -19,6 +19,7 @@ package iot
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/SENERGY-Platform/iot-device-repository/lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"net/http"
@@ -98,4 +99,15 @@ func (this *Iot) CommitGateway(id string, gateway GatewayRef, cred *security.Jwt
 	}
 	resp.Body.Close()
 	return
+}
+
+func (this *Iot) CheckGateway(id string, cred *security.JwtToken) (result model.GatewayCheck, err error) {
+	err = cred.GetJSON(this.url+"/gateway/"+url.QueryEscape(id)+"/check", &result)
+	return
+}
+
+func (this *Iot) ProvisionGateway(id string, provisionMessage model.ProvisionMessage, cred *security.JwtToken) (resultId string, err error) {
+	result := map[string]string{}
+	err = cred.PostJSON(this.url+"/gateway/"+url.QueryEscape(id)+"/check", provisionMessage, &result)
+	return result["gateway"], err
 }
