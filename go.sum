@@ -5,10 +5,13 @@ github.com/SENERGY-Platform/iot-device-repository v0.0.0-20181018081528-7297409a
 github.com/SENERGY-Platform/iot-device-repository v0.0.0-20181018081528-7297409a5f9f/go.mod h1:xv0W5tDUCdJpR/Ur9OSrW3TspUksVtYcVhw7pVgz6do=
 github.com/SENERGY-Platform/iot-device-repository v0.0.0-20190219082631-b01b6fec0f7a h1:eomU9JC7DacCBSNXNmOwUwuDbJIFY5L/A+qza8KVgi4=
 github.com/SENERGY-Platform/iot-device-repository v0.0.0-20190219082631-b01b6fec0f7a/go.mod h1:K6XOxGCzGxVIXCJBo/g2UIKLJUu/o9rYg9TpuMWJ9sc=
+github.com/SENERGY-Platform/iot-device-repository v0.0.0-20190220144108-84940e97636b h1:TltTRHMElz+IcnHQfwMmwnPTUmkP20hSH7XyQSQji8o=
+github.com/SENERGY-Platform/iot-device-repository v0.0.0-20190220144108-84940e97636b/go.mod h1:K6XOxGCzGxVIXCJBo/g2UIKLJUu/o9rYg9TpuMWJ9sc=
 github.com/SmartEnergyPlatform/amqp-wrapper-lib v0.0.0-20181018071408-32e07d9d89bb h1:wkigEsq8SRUzIbsA5gAWhZ7a1CECn1vnhpElcoA6evE=
 github.com/SmartEnergyPlatform/amqp-wrapper-lib v0.0.0-20181018071408-32e07d9d89bb/go.mod h1:X1U6gbRInWfBsFKgb/owoLNZp2NSx6vLnUPbw6bjEN4=
 github.com/SmartEnergyPlatform/formatter-lib v0.0.0-20181018082014-b45c9317bb5e h1:zb96w1DbEUogL2IDxFJ0GuHN2ukO1la1iWTnK6ld/4Q=
 github.com/SmartEnergyPlatform/formatter-lib v0.0.0-20181018082014-b45c9317bb5e/go.mod h1:4Fa5krgcZn9ym9dW9BbqpGY3dYklM/Bfvp+0DjeAnbw=
+github.com/SmartEnergyPlatform/iot-device-repository v0.0.0-20181018081528-7297409a5f9f h1:GZTSHADOWquAkGDUZ7Z+XX1/4wyIEGCaK1HXwAQCPts=
 github.com/SmartEnergyPlatform/iot-device-repository v0.0.0-20181018081528-7297409a5f9f/go.mod h1:xv0W5tDUCdJpR/Ur9OSrW3TspUksVtYcVhw7pVgz6do=
 github.com/SmartEnergyPlatform/jwt-http-router v0.0.0-20181018071703-2fca7308e21f h1:PaAqaTlimX7SG6jFeQRyVbWBCxSfh0tOHjQ78YGDkXg=
 github.com/SmartEnergyPlatform/jwt-http-router v0.0.0-20181018071703-2fca7308e21f/go.mod h1:EJR6/QRwaUKPdlXd++sqyoBsc80Ety6Yew1epvbGFs4=

@@ -84,7 +84,7 @@ type IotErrorMessage struct {
 	Detail     []string `json:"detail,omitempty"`
 }
 
-func (this *Iot) CreateIotDevice(device ConnectorDevice, token security.JwtToken) (result iot_model.DeviceInstance, err error) {
+func (this *Iot) CreateIotDevice(device iot_model.ProvisioningDevice, token security.JwtToken) (result iot_model.DeviceInstance, err error) {
 	typeid := device.IotType
 
 	if typeid == "" {
@@ -134,7 +134,7 @@ func (this *Iot) CreateIotDevice(device ConnectorDevice, token security.JwtToken
 	return
 }
 
-func (this *Iot) UpdateDevice(new ConnectorDevice, old iot_model.DeviceServiceEntity, token security.JwtToken) (result iot_model.DeviceServiceEntity, err error) {
+func (this *Iot) UpdateDevice(new iot_model.ProvisioningDevice, old iot_model.DeviceServiceEntity, token security.JwtToken) (result iot_model.DeviceServiceEntity, err error) {
 	clientTags := IndexTags(new.Tags)
 	platformTags := IndexTags(old.Device.Tags)
 	mergedTags := MergeTagIndexes(platformTags, clientTags)

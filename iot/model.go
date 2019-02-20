@@ -18,11 +18,12 @@ package iot
 
 import iot_model "github.com/SENERGY-Platform/iot-device-repository/lib/model"
 
-type ConnectorDevice struct {
-	IotType string   `json:"iot_type"`
-	Uri     string   `json:"uri"` //device url should be unique for the user (even if multiple connector clients of the same kind are used) for example:  <<MAC>>+<<local_device_id>>
-	Name    string   `json:"name"`
-	Tags    []string `json:"tags"` // tag = <<id>>:<<display>>
+type ProvisionMessage struct {
+	Username string                         `json:"username"`
+	Password string                         `json:"password"`
+	Gateway  string                         `json:"gateway"`
+	Devices  []iot_model.ProvisioningDevice `json:"devices"`
+	Hash     string                         `json:"hash"`
 }
 
 type GatewayRef struct {

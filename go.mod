@@ -1,7 +1,7 @@
 module github.com/SENERGY-Platform/platform-connector-lib
 
 require (
-	github.com/SENERGY-Platform/iot-device-repository v0.0.0-20190219082631-b01b6fec0f7a // indirect
+	github.com/SENERGY-Platform/iot-device-repository v0.0.0-20190220144108-84940e97636b
 	github.com/SmartEnergyPlatform/formatter-lib v0.0.0-20181018082014-b45c9317bb5e
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
