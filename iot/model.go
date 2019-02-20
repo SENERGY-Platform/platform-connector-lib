@@ -18,14 +18,6 @@ package iot
 
 import iot_model "github.com/SENERGY-Platform/iot-device-repository/lib/model"
 
-type ProvisionMessage struct {
-	Username string                         `json:"username"`
-	Password string                         `json:"password"`
-	Gateway  string                         `json:"gateway"`
-	Devices  []iot_model.ProvisioningDevice `json:"devices"`
-	Hash     string                         `json:"hash"`
-}
-
 type GatewayRef struct {
 	Id      string   `json:"id,omitempty"`
 	Devices []string `json:"devices,omitempty"`
