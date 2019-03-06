@@ -26,14 +26,20 @@ import (
 	"log"
 )
 
-type EndpointCommandHandler func(endpoint string, protocolParts map[string]string) (responseParts map[string]string, err error)
-type DeviceCommandHandler func(deviceId string, deviceUri string, serviceId string, serviceUri string, protocolParts map[string]string) (responseParts map[string]string, err error)
+type ProtocolSegmentName = string
+type CommandResponseMsg = map[ProtocolSegmentName]string
+type CommandRequestMsg = map[ProtocolSegmentName]string
+
+type EndpointCommandHandler func(endpoint string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
+type DeviceCommandHandler func(deviceId string, deviceUri string, serviceId string, serviceUri string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
+type AsyncCommandHandler func(commandRequest model.ProtocolMsg, requestMsg CommandRequestMsg) (err error)
 
 type Connector struct {
 	Config Config
-	//EndpointCommandHandler and DeviceCommandHandler are mutual exclusive
-	EndpointCommandHandler EndpointCommandHandler //must be able to handle concurrent calls
-	DeviceCommandHandler   DeviceCommandHandler   //must be able to handle concurrent calls
+	//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
+	endpointCommandHandler EndpointCommandHandler //must be able to handle concurrent calls
+	deviceCommandHandler   DeviceCommandHandler   //must be able to handle concurrent calls
+	asyncCommandHandler    AsyncCommandHandler    //must be able to handle concurrent calls
 	producer               *kafka.Producer
 	consumer               *kafka.Consumer
 	iot                    *iot.Iot
@@ -49,26 +55,44 @@ func New(config Config) (connector *Connector) {
 	return
 }
 
-//EndpointCommandHandler and DeviceCommandHandler are mutual exclusive
+//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 func (this *Connector) SetEndpointCommandHandler(handler EndpointCommandHandler) *Connector {
-	if this.DeviceCommandHandler != nil {
+	if this.deviceCommandHandler != nil {
 		panic("try setting endpoint command handler while device command handler exists")
 	}
-	this.EndpointCommandHandler = handler
+	if this.asyncCommandHandler != nil {
+		panic("try setting endpoint command handler while async command handler exists")
+	}
+	this.endpointCommandHandler = handler
 	return this
 }
 
-//EndpointCommandHandler and DeviceCommandHandler are mutual exclusive
+//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 func (this *Connector) SetDeviceCommandHandler(handler DeviceCommandHandler) *Connector {
-	if this.DeviceCommandHandler != nil {
+	if this.endpointCommandHandler != nil {
+		panic("try setting endpoint command handler while endpoint command handler exists")
+	}
+	if this.asyncCommandHandler != nil {
+		panic("try setting endpoint command handler while async command handler exists")
+	}
+	this.deviceCommandHandler = handler
+	return this
+}
+
+//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
+func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Connector {
+	if this.deviceCommandHandler != nil {
 		panic("try setting endpoint command handler while device command handler exists")
 	}
-	this.DeviceCommandHandler = handler
+	if this.endpointCommandHandler != nil {
+		panic("try setting endpoint command handler while endpoint command handler exists")
+	}
+	this.asyncCommandHandler = handler
 	return this
 }
 
 func (this *Connector) Start() (err error) {
-	if this.DeviceCommandHandler == nil && this.EndpointCommandHandler == nil {
+	if this.deviceCommandHandler == nil && this.endpointCommandHandler == nil {
 		return errors.New("missing comand handler; use SetDeviceCommandHandler() or SetEndpointCommandHandler()")
 	}
 	this.producer = kafka.PrepareProducer(this.Config.ZookeeperUrl)

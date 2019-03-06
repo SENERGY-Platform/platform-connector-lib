@@ -31,32 +31,38 @@ func (this *Connector) handleCommand(msg []byte) (err error) {
 		return
 	}
 	protocolParts := getProtocolPartMap(protocolmsg.ProtocolParts)
-	var handlerResponse map[string]string
-	if this.EndpointCommandHandler != nil {
+	var handlerResponse CommandResponseMsg
+	if this.endpointCommandHandler != nil {
 		handlerResponse, err = this.useEndpointCommandHandler(protocolmsg, protocolParts)
-	} else if this.EndpointCommandHandler != nil {
+	} else if this.endpointCommandHandler != nil {
 		handlerResponse, err = this.useDeviceCommandHandler(protocolmsg, protocolParts)
+	} else if this.asyncCommandHandler != nil {
+		return this.asyncCommandHandler(protocolmsg, protocolParts)
 	} else {
 		err = errors.New("missing command handler")
 	}
 	if err != nil {
 		return err
 	}
+	return this.HandleCommandResponse(protocolmsg, handlerResponse)
+}
+
+func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, commandResponse CommandResponseMsg) (err error) {
 	resultProtocolParts := []model.ProtocolPart{}
-	for name, value := range handlerResponse {
+	for name, value := range commandResponse {
 		resultProtocolParts = append(resultProtocolParts, model.ProtocolPart{Name: name, Value: value})
 	}
-	protocolmsg.ProtocolParts = resultProtocolParts
-	response, err := json.Marshal(protocolmsg)
+	commandRequest.ProtocolParts = resultProtocolParts
+	responseMsg, err := json.Marshal(commandRequest)
 	if err != nil {
 		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
 		return err
 	}
-	return this.producer.Produce(this.Config.KafkaResponseTopic, string(response))
+	return this.producer.Produce(this.Config.KafkaResponseTopic, string(responseMsg))
 }
 
 func (this *Connector) useDeviceCommandHandler(msg model.ProtocolMsg, protocolParts map[string]string) (result map[string]string, err error) {
-	return this.DeviceCommandHandler(msg.DeviceInstanceId, msg.DeviceUrl, msg.ServiceId, msg.ServiceUrl, protocolParts)
+	return this.deviceCommandHandler(msg.DeviceInstanceId, msg.DeviceUrl, msg.ServiceId, msg.ServiceUrl, protocolParts)
 }
 
 func (this *Connector) useEndpointCommandHandler(msg model.ProtocolMsg, protocolParts map[string]string) (result map[string]string, err error) {
@@ -65,7 +71,7 @@ func (this *Connector) useEndpointCommandHandler(msg model.ProtocolMsg, protocol
 		log.Println("ERROR: handleCommand::getEndpoint()", err.Error())
 		return
 	}
-	return this.EndpointCommandHandler(endpoint, protocolParts)
+	return this.endpointCommandHandler(endpoint, protocolParts)
 }
 
 func (this *Connector) getEndpoint(msg model.ProtocolMsg) (endpoint string, err error) {
