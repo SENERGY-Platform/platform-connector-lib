@@ -32,7 +32,7 @@ type Config struct {
 	KafkaResponseTopic string
 	KafkaEventTopic    string //optional
 	KafkaGroupName     string
-	FatalKafkaError    string // "true" || "false"; "" -> "true", else -> "false"
+	FatalKafkaError    bool
 	Protocol           string
 
 	IotRepoUrl string
@@ -95,6 +95,14 @@ func handleEnvironmentVars(config *Config) {
 			}
 			if configValue.FieldByName(fieldName).Kind() == reflect.String {
 				configValue.FieldByName(fieldName).SetString(envValue)
+			}
+			if configValue.FieldByName(fieldName).Kind() == reflect.Bool {
+				b, _ := strconv.ParseBool(envValue)
+				configValue.FieldByName(fieldName).SetBool(b)
+			}
+			if configValue.FieldByName(fieldName).Kind() == reflect.Float64 {
+				f, _ := strconv.ParseFloat(envValue, 64)
+				configValue.FieldByName(fieldName).SetFloat(f)
 			}
 			if configValue.FieldByName(fieldName).Kind() == reflect.Slice {
 				val := []string{}
