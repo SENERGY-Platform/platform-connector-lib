@@ -110,7 +110,7 @@ func (this *Connector) Start() (err error) {
 		}
 		return this.handleCommand(payload)
 	}, func(err error, consumer *kafka.Consumer) {
-		if this.Config.FatalKafkaError == "true" || this.Config.FatalKafkaError == "" {
+		if this.Config.FatalKafkaError {
 			log.Println("FATAL ERROR: kafka", err)
 			panic(err)
 		} else {
