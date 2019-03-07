@@ -208,6 +208,6 @@ func (this *Iot) DeleteDeviceInstance(uri string, token security.JwtToken) (err 
 	if len(entities) != 1 {
 		return errors.New("cant find exactly one device with given uri")
 	}
-	_, err = token.Delete(this.url+"/deviceInstance/"+url.QueryEscape(entities[0].Device.Id), nil)
+	_, err = token.Delete(this.url + "/deviceInstance/" + url.QueryEscape(entities[0].Device.Id))
 	return
 }

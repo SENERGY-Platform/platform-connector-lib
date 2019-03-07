@@ -16,21 +16,6 @@
 
 package iot
 
-import iot_model "github.com/SENERGY-Platform/iot-device-repository/lib/model"
-
-type GatewayRef struct {
-	Id      string   `json:"id,omitempty"`
-	Devices []string `json:"devices,omitempty"`
-	Hash    string   `json:"hash,omitempty"`
-}
-
-type Gateway struct {
-	Id      string                     `json:"id,omitempty"`
-	Name    string                     `json:"name,omitempty"`
-	Hash    string                     `json:"hash,omitempty"`
-	Devices []iot_model.DeviceInstance `json:"devices,omitempty"`
-}
-
 type EndpointGenMsgPart struct {
 	Msg            string `json:"msg"`
 	MsgSegmentName string `json:"msg_segment_name"`
