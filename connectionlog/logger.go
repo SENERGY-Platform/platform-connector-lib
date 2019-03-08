@@ -18,6 +18,7 @@ package connectionlog
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"time"
 )
@@ -29,7 +30,17 @@ func New(amqpUrl string, connectorLogTopic string, gatewayLogTopic string, devic
 }
 
 func (this *Logger) start() (err error) {
-	this.conn, err = NewPublisher(this.amqpUrl, this.deviceLogTopic, this.gatewayLogTopic, this.connectorLogTopic)
+	topics := []string{}
+	if this.deviceLogTopic != "" {
+		topics = append(topics, this.deviceLogTopic)
+	}
+	if this.gatewayLogTopic != "" {
+		topics = append(topics, this.gatewayLogTopic)
+	}
+	if this.connectorLogTopic != "" {
+		topics = append(topics, this.connectorLogTopic)
+	}
+	this.conn, err = NewPublisher(this.amqpUrl, topics...)
 	return
 }
 
@@ -55,16 +66,25 @@ func (this *Logger) sendEvent(topic string, event interface{}) error {
 }
 
 func (this *Logger) LogDeviceState(state DeviceLog) error {
+	if this.deviceLogTopic == "" {
+		return errors.New("topic not configured")
+	}
 	state.Time = time.Now()
 	return this.sendEvent(this.deviceLogTopic, this)
 }
 
 func (this *Logger) LogGatewayState(state GatewayLog) error {
+	if this.gatewayLogTopic == "" {
+		return errors.New("topic not configured")
+	}
 	state.Time = time.Now()
 	return this.sendEvent(this.gatewayLogTopic, this)
 }
 
 func (this *Logger) LogConnectorState(state ConnectorLog) error {
+	if this.connectorLogTopic == "" {
+		return errors.New("topic not configured")
+	}
 	state.Time = time.Now()
 	return this.sendEvent(this.connectorLogTopic, this)
 }
