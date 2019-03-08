@@ -93,7 +93,7 @@ func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Conn
 
 func (this *Connector) Start() (err error) {
 	if this.deviceCommandHandler == nil && this.endpointCommandHandler == nil {
-		return errors.New("missing comand handler; use SetDeviceCommandHandler() or SetEndpointCommandHandler()")
+		return errors.New("missing command handler; use SetAsyncCommandHandler(), SetDeviceCommandHandler() or SetEndpointCommandHandler()")
 	}
 	this.producer = kafka.PrepareProducer(this.Config.ZookeeperUrl)
 	this.consumer, err = kafka.NewConsumer(this.Config.ZookeeperUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte) error {
