@@ -54,7 +54,7 @@ func (this *Iot) GetHubDevices(id string, cred security.JwtToken) (devices []str
 	return
 }
 
-func (this *Iot) CreateHub(id string, hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {
+func (this *Iot) CreateHub(hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {
 	err = cred.PostJSON(this.url+"/hub", hub, &result)
 	return
 }
