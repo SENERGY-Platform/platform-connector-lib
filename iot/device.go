@@ -45,6 +45,21 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model
 	return dt, err
 }
 
+func (this *Iot) GetService(id string, token security.JwtToken) (service iot_model.Service, err error) {
+	resp, err := token.Get(this.url + "/service/" + url.QueryEscape(id))
+	if err != nil {
+		log.Println("ERROR on GetDeviceType()", err)
+		return service, err
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&service)
+	if err != nil {
+		log.Println("ERROR on GetDeviceType() json decode", err)
+	}
+	return service, err
+}
+
 func (this *Iot) DeviceInstanceToDeviceServiceEntity(device iot_model.DeviceInstance, dtCache *map[string]iot_model.ShortDeviceType, token security.JwtToken) (entity iot_model.DeviceServiceEntity, err error) {
 	if dtCache == nil {
 		dtCache = &map[string]iot_model.ShortDeviceType{}
