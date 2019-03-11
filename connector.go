@@ -98,6 +98,9 @@ func (this *Connector) Start() (err error) {
 	}
 	this.producer = kafka.PrepareProducer(this.Config.ZookeeperUrl)
 	this.consumer, err = kafka.NewConsumer(this.Config.ZookeeperUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte) error {
+		if string(msg) == "topic_init" {
+			return nil
+		}
 		envelope := model.Envelope{}
 		err = json.Unmarshal(msg, &envelope)
 		if err != nil {
