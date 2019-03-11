@@ -29,6 +29,7 @@ import (
 type ProtocolSegmentName = string
 type CommandResponseMsg = map[ProtocolSegmentName]string
 type CommandRequestMsg = map[ProtocolSegmentName]string
+type EventMsg = map[ProtocolSegmentName]string
 
 type EndpointCommandHandler func(endpoint string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
 type DeviceCommandHandler func(deviceId string, deviceUri string, serviceId string, serviceUri string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
@@ -124,19 +125,19 @@ func (this *Connector) Stop() {
 	this.consumer.Stop()
 }
 
-func (this *Connector) HandleEndpointEvent(username string, password string, endpoint string, protocolParts map[string]string) (total int, success int, fail int, err error) {
+func (this *Connector) HandleEndpointEvent(username string, password string, endpoint string, eventMsg EventMsg) (total int, success int, fail int, err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
 		log.Println("ERROR HandleEndpointEvent::GetUserToken()", err)
 		return total, success, fail, err
 	}
-	return this.HandleEndpointEventWithAuthToken(token, endpoint, protocolParts)
+	return this.HandleEndpointEventWithAuthToken(token, endpoint, eventMsg)
 }
 
-func (this *Connector) HandleEndpointEventWithAuthToken(token security.JwtToken, endpoint string, protocolParts map[string]string) (total int, success int, fail int, err error) {
+func (this *Connector) HandleEndpointEventWithAuthToken(token security.JwtToken, endpoint string, eventMsg EventMsg) (total int, success int, fail int, err error) {
 	protocol := []model.ProtocolPart{}
-	for key, val := range protocolParts {
-		protocol = append(protocol, model.ProtocolPart{Name: key, Value: val})
+	for segmentName, value := range eventMsg {
+		protocol = append(protocol, model.ProtocolPart{Name: segmentName, Value: value})
 	}
 	return this.handleEndpointEvent(token, endpoint, protocol)
 }
@@ -150,27 +151,27 @@ func (this *Connector) HandleDeviceEvent(username string, password string, devic
 	return this.HandleDeviceEventWithAuthToken(token, deviceId, serviceId, protocolParts)
 }
 
-func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, deviceId string, serviceId string, protocolParts map[string]string) (err error) {
+func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, deviceId string, serviceId string, eventMsg EventMsg) (err error) {
 	protocol := []model.ProtocolPart{}
-	for key, val := range protocolParts {
-		protocol = append(protocol, model.ProtocolPart{Name: key, Value: val})
+	for segmentName, value := range eventMsg {
+		protocol = append(protocol, model.ProtocolPart{Name: segmentName, Value: value})
 	}
 	return this.handleDeviceEvent(token, deviceId, serviceId, protocol)
 }
 
-func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, protocolParts map[string]string) (err error) {
+func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg) (err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
 		log.Println("ERROR HandleEndpointEvent::GetUserToken()", err)
 		return err
 	}
-	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, protocolParts)
+	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, eventMsg)
 }
 
-func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken, deviceUri string, serviceUri string, protocolParts map[string]string) (err error) {
+func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken, deviceUri string, serviceUri string, eventMsg EventMsg) (err error) {
 	protocol := []model.ProtocolPart{}
-	for key, val := range protocolParts {
-		protocol = append(protocol, model.ProtocolPart{Name: key, Value: val})
+	for segmentName, value := range eventMsg {
+		protocol = append(protocol, model.ProtocolPart{Name: segmentName, Value: value})
 	}
 	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, protocol)
 }
