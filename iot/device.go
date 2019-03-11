@@ -79,7 +79,7 @@ func (this *Iot) DeviceInstanceToDeviceServiceEntity(device iot_model.DeviceInst
 func (this *Iot) DeviceUrlToIotDevice(deviceUrl string, token security.JwtToken) (entities []iot_model.DeviceServiceEntity, err error) {
 	resp, err := token.Get(this.url + "/url_to_devices/" + url.QueryEscape(deviceUrl) + "/execute")
 	if err != nil {
-		log.Println("error on ConnectorDeviceToIotDevice", err)
+		log.Println("error on ConnectorDeviceToIotDevice", this.url+"/url_to_devices/"+url.QueryEscape(deviceUrl)+"/execute", err)
 		return entities, err
 	}
 	defer resp.Body.Close()
