@@ -6,6 +6,7 @@ require (
 	github.com/bradfitz/gomemcache v0.0.0-20180710155616-bc664df96737 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
+	github.com/ory/dockertest v3.3.2+incompatible
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/segmentio/kafka-go v0.2.2

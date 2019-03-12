@@ -18,37 +18,61 @@ package kafka
 
 import (
 	"context"
+	"errors"
 	"github.com/segmentio/kafka-go"
+	"io/ioutil"
 	"log"
-	"os"
 	"time"
 )
 
 type Producer struct {
-	zk string
+	zk     string
+	logger *log.Logger
 }
 
 func PrepareProducer(zk string) *Producer {
 	return &Producer{zk: zk}
 }
 
-func (this *Producer) getProducer(topic string) (writer *kafka.Writer) {
+func (this *Producer) Log(logger *log.Logger) {
+	this.logger = logger
+}
+
+func (this *Producer) getProducer(topic string) (writer *kafka.Writer, err error) {
 	broker, err := GetBroker(this.zk)
 	if err != nil {
-		log.Fatal("error while getting broker", err)
+		return writer, err
+	}
+	if len(broker) == 0 {
+		return writer, errors.New("no broker found")
+	}
+	var logger *log.Logger
+	if this.logger != nil {
+		logger = this.logger
+	} else {
+		logger = log.New(ioutil.Discard, "", 0)
 	}
 	writer = kafka.NewWriter(kafka.WriterConfig{
 		Brokers:     broker,
 		Topic:       topic,
 		Balancer:    &kafka.LeastBytes{},
 		MaxAttempts: 25,
-		Logger:      log.New(os.Stdout, "KAFKA", 0), //log.New(ioutil.Discard, "", 0),
+		Logger:      logger,
 	})
-	return writer
+	return writer, err
 }
 
 func (this *Producer) Produce(topic string, message string) (err error) {
-	writer := this.getProducer(topic)
+	if this.logger != nil {
+		this.logger.Println("DEBUG: produce ", this.zk, topic, message)
+	}
+	writer, err := this.getProducer(topic)
+	if err != nil {
+		if this.logger != nil {
+			this.logger.Println("ERROR: while getting kafka producer:", err)
+		}
+		return err
+	}
 	defer writer.Close()
 	return writer.WriteMessages(context.Background(),
 		kafka.Message{
