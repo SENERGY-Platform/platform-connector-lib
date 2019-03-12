@@ -119,5 +119,5 @@ func (this *Publisher) Publish(topic string, payload []byte) error {
 		ContentType:  "application/json",
 		Body:         payload,
 	}
-	return this.channel.Publish(topic, "", false, true, msg)
+	return this.channel.Publish(topic, "", false, false, msg)
 }
