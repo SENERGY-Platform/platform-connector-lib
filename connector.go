@@ -45,6 +45,8 @@ type Connector struct {
 	consumer               *kafka.Consumer
 	iot                    *iot.Iot
 	security               *security.Security
+
+	kafkalogger *log.Logger
 }
 
 func New(config Config) (connector *Connector) {
@@ -54,6 +56,10 @@ func New(config Config) (connector *Connector) {
 		security: security.New(config.AuthEndpoint, config.AuthClientId, config.AuthClientSecret, config.JwtIssuer, config.JwtPrivateKey, config.JwtExpiration, config.AuthExpirationTimeBuffer),
 	}
 	return
+}
+
+func (this *Connector) SetKafkaLogger(logger *log.Logger) {
+	this.kafkalogger = logger
 }
 
 //asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
@@ -97,6 +103,9 @@ func (this *Connector) Start() (err error) {
 		return errors.New("missing command handler; use SetAsyncCommandHandler(), SetDeviceCommandHandler() or SetEndpointCommandHandler()")
 	}
 	this.producer = kafka.PrepareProducer(this.Config.ZookeeperUrl)
+	if this.kafkalogger != nil {
+		this.producer.Log(this.kafkalogger)
+	}
 	this.consumer, err = kafka.NewConsumer(this.Config.ZookeeperUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte) error {
 		if string(msg) == "topic_init" {
 			return nil
