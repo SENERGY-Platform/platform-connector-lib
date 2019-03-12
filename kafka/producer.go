@@ -19,8 +19,8 @@ package kafka
 import (
 	"context"
 	"github.com/segmentio/kafka-go"
-	"io/ioutil"
 	"log"
+	"os"
 	"time"
 )
 
@@ -42,7 +42,7 @@ func (this *Producer) getProducer(topic string) (writer *kafka.Writer) {
 		Topic:       topic,
 		Balancer:    &kafka.LeastBytes{},
 		MaxAttempts: 25,
-		Logger:      log.New(ioutil.Discard, "", 0),
+		Logger:      log.New(os.Stdout, "KAFKA", 0), //log.New(ioutil.Discard, "", 0),
 	})
 	return writer
 }
