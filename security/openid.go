@@ -56,7 +56,7 @@ func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret s
 		err = errors.New(resp.Status + ": " + string(b))
 		return
 	}
-	err = json.NewDecoder(resp.Body).Decode(openid)
+	err = json.NewDecoder(resp.Body).Decode(&openid)
 	openid.RequestTime = requesttime
 	return
 }
@@ -78,7 +78,7 @@ func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecr
 		err = errors.New(resp.Status + ": " + string(b))
 		return
 	}
-	err = json.NewDecoder(resp.Body).Decode(openid)
+	err = json.NewDecoder(resp.Body).Decode(&openid)
 	openid.RequestTime = requesttime
 	return
 }
