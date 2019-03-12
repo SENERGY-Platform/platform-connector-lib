@@ -19,6 +19,7 @@ package security
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -47,9 +48,13 @@ func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret s
 		"client_secret": {authClientSecret},
 		"grant_type":    {"client_credentials"},
 	})
-
 	if err != nil {
 		return openid, err
+	}
+	if resp.StatusCode >= 300 {
+		b, _ := ioutil.ReadAll(resp.Body)
+		err = errors.New(resp.Status + ": " + string(b))
+		return
 	}
 	err = json.NewDecoder(resp.Body).Decode(openid)
 	openid.RequestTime = requesttime
@@ -68,8 +73,10 @@ func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecr
 	if err != nil {
 		return openid, err
 	}
-	if resp.StatusCode == http.StatusUnauthorized {
-		return openid, errors.New("access denied")
+	if resp.StatusCode >= 300 {
+		b, _ := ioutil.ReadAll(resp.Body)
+		err = errors.New(resp.Status + ": " + string(b))
+		return
 	}
 	err = json.NewDecoder(resp.Body).Decode(openid)
 	openid.RequestTime = requesttime
@@ -89,8 +96,10 @@ func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClient
 	if err != nil {
 		return token, err
 	}
-	if resp.StatusCode == http.StatusUnauthorized {
-		return token, errors.New("access denied")
+	if resp.StatusCode >= 300 {
+		b, _ := ioutil.ReadAll(resp.Body)
+		err = errors.New(resp.Status + ": " + string(b))
+		return
 	}
 	err = json.NewDecoder(resp.Body).Decode(&token)
 	token.RequestTime = requesttime
