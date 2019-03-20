@@ -56,7 +56,7 @@ func (this *Consumer) start() error {
 		log.Println("ERROR: unable to get broker list", err)
 		return err
 	}
-	err = InitTopic(broker, this.topic)
+	err = InitTopic(this.zkUrl, this.topic)
 	if err != nil {
 		log.Println("ERROR: unable to create topic", err)
 		return err

@@ -38,11 +38,36 @@ func getBroker(zkUrl string) (brokers []string, err error) {
 	}
 }
 
-func InitTopic(broker []string, topic string) (err error) {
-	if len(broker) == 0 {
-		return errors.New("missing broker")
+func getControler(zkUrl string) (controller string, err error) {
+	zookeeper := kazoo.NewConfig()
+	zk, chroot := kazoo.ParseConnectionString(zkUrl)
+	zookeeper.Chroot = chroot
+	kz, err := kazoo.NewKazoo(zk, zookeeper)
+	if err != nil {
+		return controller, err
 	}
-	initConn, err := kafka.Dial("tcp", broker[0])
+	controllerId, err := kz.Controller()
+	if err != nil {
+		return controller, err
+	}
+	brokers, err := kz.Brokers()
+	if err != nil {
+		return controller, err
+	}
+	return brokers[controllerId], err
+}
+
+func InitTopic(zkUrl string, topic string) (err error) {
+	controller, err := getControler(zkUrl)
+	if err != nil {
+		log.Println("ERROR: unable to find controller", err)
+		return err
+	}
+	if controller == "" {
+		log.Println("ERROR: unable to find controller")
+		return errors.New("unable to find controller")
+	}
+	initConn, err := kafka.Dial("tcp", controller)
 	if err != nil {
 		log.Println("ERROR: while init topic connection ", err)
 		return err
