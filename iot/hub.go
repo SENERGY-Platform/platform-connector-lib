@@ -54,6 +54,11 @@ func (this *Iot) GetHubDevices(id string, cred security.JwtToken) (devices []str
 	return
 }
 
+func (this *Iot) GetHubDevicesAsId(id string, cred security.JwtToken) (devices []string, err error) {
+	err = cred.GetJSON(this.url+"/hubs/"+url.QueryEscape(id)+"/devices?as=id", &devices)
+	return
+}
+
 func (this *Iot) CreateHub(hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {
 	err = cred.PostJSON(this.url+"/hubs", hub, &result)
 	return
