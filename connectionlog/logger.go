@@ -74,7 +74,7 @@ func (this *Logger) LogDeviceState(state DeviceLog) error {
 		return errors.New("topic not configured")
 	}
 	state.Time = time.Now()
-	return this.sendEvent(this.deviceLogTopic, this)
+	return this.sendEvent(this.deviceLogTopic, state)
 }
 
 func (this *Logger) LogGatewayState(state GatewayLog) error {
@@ -82,7 +82,7 @@ func (this *Logger) LogGatewayState(state GatewayLog) error {
 		return errors.New("topic not configured")
 	}
 	state.Time = time.Now()
-	return this.sendEvent(this.gatewayLogTopic, this)
+	return this.sendEvent(this.gatewayLogTopic, state)
 }
 
 func (this *Logger) LogConnectorState(state ConnectorLog) error {
@@ -90,7 +90,7 @@ func (this *Logger) LogConnectorState(state ConnectorLog) error {
 		return errors.New("topic not configured")
 	}
 	state.Time = time.Now()
-	return this.sendEvent(this.connectorLogTopic, this)
+	return this.sendEvent(this.connectorLogTopic, state)
 }
 
 func (this *Logger) LogDeviceDisconnect(id string) error {
