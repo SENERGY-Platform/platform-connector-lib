@@ -54,6 +54,7 @@ type Logger struct {
 	deviceLogTopic    string
 	gatewayLogTopic   string
 	connectorLogTopic string
+	Debug             bool
 }
 
 func (this *Logger) sendEvent(topic string, event interface{}) error {
@@ -61,6 +62,9 @@ func (this *Logger) sendEvent(topic string, event interface{}) error {
 	if err != nil {
 		log.Println("ERROR: event marshaling:", err)
 		return err
+	}
+	if this.Debug {
+		log.Println("DEBUG: send event", this.amqpUrl, topic, event)
 	}
 	return this.conn.Publish(topic, payload)
 }
