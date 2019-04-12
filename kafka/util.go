@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/segmentio/kafka-go"
 	"github.com/wvanbergen/kazoo-go"
+	"io/ioutil"
 	"log"
 )
 
@@ -29,6 +30,7 @@ func GetBroker(zk string) (brokers []string, err error) {
 
 func getBroker(zkUrl string) (brokers []string, err error) {
 	zookeeper := kazoo.NewConfig()
+	zookeeper.Logger = log.New(ioutil.Discard, "", 0)
 	zk, chroot := kazoo.ParseConnectionString(zkUrl)
 	zookeeper.Chroot = chroot
 	if kz, err := kazoo.NewKazoo(zk, zookeeper); err != nil {
@@ -40,6 +42,7 @@ func getBroker(zkUrl string) (brokers []string, err error) {
 
 func getControler(zkUrl string) (controller string, err error) {
 	zookeeper := kazoo.NewConfig()
+	zookeeper.Logger = log.New(ioutil.Discard, "", 0)
 	zk, chroot := kazoo.ParseConnectionString(zkUrl)
 	zookeeper.Chroot = chroot
 	kz, err := kazoo.NewKazoo(zk, zookeeper)
