@@ -46,7 +46,11 @@ func TestProducer_Produce(t *testing.T) {
 	})
 	defer consumer.Stop()
 
-	producer := PrepareProducer(zookeeperUrl)
+	producer, err := PrepareProducer(zookeeperUrl)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	producer.Log(log.New(os.Stdout, "[KAFKA-PRODUCER] ", 0))
 	log.Println("produce 1")
 	err = producer.Produce("test", "msg1")

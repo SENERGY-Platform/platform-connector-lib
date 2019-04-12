@@ -26,12 +26,16 @@ import (
 )
 
 type Producer struct {
-	zk     string
+	broker []string
 	logger *log.Logger
 }
 
-func PrepareProducer(zk string) *Producer {
-	return &Producer{zk: zk}
+func PrepareProducer(zk string) (*Producer, error) {
+	broker, err := GetBroker(zk)
+	if err == nil && len(broker) == 0 {
+		err = errors.New("missing kafka broker")
+	}
+	return &Producer{broker: broker}, err
 }
 
 func (this *Producer) Log(logger *log.Logger) {
@@ -39,13 +43,6 @@ func (this *Producer) Log(logger *log.Logger) {
 }
 
 func (this *Producer) getProducer(topic string) (writer *kafka.Writer, err error) {
-	broker, err := GetBroker(this.zk)
-	if err != nil {
-		return writer, err
-	}
-	if len(broker) == 0 {
-		return writer, errors.New("no broker found")
-	}
 	var logger *log.Logger
 	if this.logger != nil {
 		logger = this.logger
@@ -53,7 +50,7 @@ func (this *Producer) getProducer(topic string) (writer *kafka.Writer, err error
 		logger = log.New(ioutil.Discard, "", 0)
 	}
 	writer = kafka.NewWriter(kafka.WriterConfig{
-		Brokers:     broker,
+		Brokers:     this.broker,
 		Topic:       topic,
 		Balancer:    &kafka.LeastBytes{},
 		MaxAttempts: 25,
@@ -64,7 +61,7 @@ func (this *Producer) getProducer(topic string) (writer *kafka.Writer, err error
 
 func (this *Producer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
-		this.logger.Println("DEBUG: produce ", this.zk, topic, message)
+		this.logger.Println("DEBUG: produce ", topic, message)
 	}
 	writer, err := this.getProducer(topic)
 	if err != nil {
