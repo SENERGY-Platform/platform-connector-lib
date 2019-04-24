@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestProducer_Produce(t *testing.T) {
@@ -35,6 +36,18 @@ func TestProducer_Produce(t *testing.T) {
 		return
 	}
 	defer closeKafka()
+
+	err = InitTopic(zookeeperUrl, "test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = InitTopic(zookeeperUrl, "test2")
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	result := [][]byte{}
 
@@ -71,6 +84,8 @@ func TestProducer_Produce(t *testing.T) {
 		return
 	}
 	log.Println("produced")
+
+	time.Sleep(5 * time.Second)
 
 	if len(result) != 2 {
 		t.Error(len(result))

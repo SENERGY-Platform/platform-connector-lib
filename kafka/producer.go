@@ -17,64 +17,48 @@
 package kafka
 
 import (
-	"context"
 	"errors"
-	"github.com/segmentio/kafka-go"
-	"io/ioutil"
+	"github.com/Shopify/sarama"
 	"log"
 	"time"
 )
 
 type Producer struct {
-	broker []string
-	logger *log.Logger
+	broker   []string
+	logger   *log.Logger
+	producer sarama.SyncProducer
 }
 
 func PrepareProducer(zk string) (*Producer, error) {
-	broker, err := GetBroker(zk)
-	if err == nil && len(broker) == 0 {
-		err = errors.New("missing kafka broker")
+	result := &Producer{}
+	var err error
+	result.broker, err = GetBroker(zk)
+	if err != nil {
+		return result, err
 	}
-	return &Producer{broker: broker}, err
+	if len(result.broker) == 0 {
+		return result, errors.New("missing kafka broker")
+	}
+	sarama_conf := sarama.NewConfig()
+	sarama_conf.Version = sarama.V2_2_0_0
+	sarama_conf.Producer.Return.Errors = true
+	sarama_conf.Producer.Return.Successes = true
+
+	sarama_conf.Producer.Idempotent = true
+	sarama_conf.Net.MaxOpenRequests = 1
+	sarama_conf.Producer.RequiredAcks = sarama.WaitForAll
+	result.producer, err = sarama.NewSyncProducer(result.broker, sarama_conf)
+	return result, err
 }
 
 func (this *Producer) Log(logger *log.Logger) {
 	this.logger = logger
 }
 
-func (this *Producer) getProducer(topic string) (writer *kafka.Writer, err error) {
-	var logger *log.Logger
-	if this.logger != nil {
-		logger = this.logger
-	} else {
-		logger = log.New(ioutil.Discard, "", 0)
-	}
-	writer = kafka.NewWriter(kafka.WriterConfig{
-		Brokers:     this.broker,
-		Topic:       topic,
-		Balancer:    &kafka.LeastBytes{},
-		MaxAttempts: 25,
-		Logger:      logger,
-	})
-	return writer, err
-}
-
 func (this *Producer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	writer, err := this.getProducer(topic)
-	if err != nil {
-		if this.logger != nil {
-			this.logger.Println("ERROR: while getting kafka producer:", err)
-		}
-		return err
-	}
-	defer writer.Close()
-	return writer.WriteMessages(context.Background(),
-		kafka.Message{
-			Value: []byte(message),
-			Time:  time.Now(),
-		},
-	)
+	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
+	return
 }
