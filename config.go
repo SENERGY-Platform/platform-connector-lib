@@ -45,6 +45,10 @@ type Config struct {
 	JwtPrivateKey string
 	JwtExpiration int64
 	JwtIssuer     string
+
+	DeviceExpiration     int32
+	DeviceTypeExpiration int32
+	CacheUrl             []string
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

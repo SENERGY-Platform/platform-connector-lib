@@ -23,12 +23,12 @@ import (
 	"log"
 	"strings"
 
-	"github.com/SmartEnergyPlatform/formatter-lib"
+	"github.com/SENERGY-Platform/formatter-lib"
 )
 
 func (this *Connector) formatEvent(token security.JwtToken, deviceid string, serviceid string, event formatter_lib.EventMsg) (result string, isSensor bool, err error) {
 	isSensor = true
-	formatter, err := formatter_lib.NewTransformer(this.Config.IotRepoUrl, token, deviceid, serviceid)
+	formatter, err := formatter_lib.NewTransformer(this.Config.IotRepoUrl, this.IotCache.WithToken(token), deviceid, serviceid)
 	if err != nil {
 		return "", false, err
 	}

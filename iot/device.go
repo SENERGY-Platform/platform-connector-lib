@@ -30,7 +30,22 @@ import (
 	iot_model "github.com/SENERGY-Platform/iot-device-repository/lib/model"
 )
 
-func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model.ShortDeviceType, err error) {
+func (this *Iot) GetDevice(id string, token security.JwtToken) (device iot_model.DeviceInstance, err error) {
+	resp, err := token.Get(this.url + "/deviceInstance/" + url.QueryEscape(id))
+	if err != nil {
+		log.Println("ERROR on GetDevice()", err)
+		return device, err
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&device)
+	if err != nil {
+		log.Println("ERROR on GetDevice() json decode", err)
+	}
+	return device, err
+}
+
+func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model.DeviceType, err error) {
 	resp, err := token.Get(this.url + "/deviceType/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetDeviceType()", err)
@@ -58,22 +73,6 @@ func (this *Iot) GetService(id string, token security.JwtToken) (service iot_mod
 		log.Println("ERROR on GetDeviceType() json decode", err)
 	}
 	return service, err
-}
-
-func (this *Iot) DeviceInstanceToDeviceServiceEntity(device iot_model.DeviceInstance, dtCache *map[string]iot_model.ShortDeviceType, token security.JwtToken) (entity iot_model.DeviceServiceEntity, err error) {
-	if dtCache == nil {
-		dtCache = &map[string]iot_model.ShortDeviceType{}
-	}
-	dt, ok := (*dtCache)[device.DeviceType]
-	if !ok {
-		dt, err = this.GetDeviceType(device.DeviceType, token)
-		if err != nil {
-			log.Println("ERROR in DeviceInstanceToDeviceServiceEntity()::GetDeviceType()", device)
-			return
-		}
-		(*dtCache)[device.DeviceType] = dt
-	}
-	return iot_model.DeviceServiceEntity{Device: device, Services: dt.Services}, err
 }
 
 func (this *Iot) DeviceUrlToIotDevice(deviceUrl string, token security.JwtToken) (entities []iot_model.DeviceServiceEntity, err error) {
