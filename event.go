@@ -67,7 +67,7 @@ func (this *Connector) handleEndpointEvent(token security.JwtToken, endpoint str
 }
 
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, protocolParts []model.ProtocolPart) error {
-	entities, err := this.iot.DeviceUrlToIotDevice(deviceUri, token)
+	entities, err := this.IotCache.WithToken(token).DeviceUrlToIotDevice(deviceUri)
 	if err != nil {
 		return err
 	}
