@@ -1,16 +1,15 @@
-package iotcache
+package iot
 
 import (
 	"encoding/json"
 	"github.com/SENERGY-Platform/iot-device-repository/lib/model"
-	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/bradfitz/gomemcache/memcache"
 	"log"
 )
 
 type PreparedCache struct {
-	iot                  *iot.Iot
+	iot                  *Iot
 	memcached            *memcache.Client
 	deviceExpiration     int32
 	deviceTypeExpiration int32
@@ -18,7 +17,7 @@ type PreparedCache struct {
 }
 
 type Cache struct {
-	iot                  *iot.Iot
+	iot                  *Iot
 	memcached            *memcache.Client
 	deviceExpiration     int32
 	deviceTypeExpiration int32
@@ -26,7 +25,7 @@ type Cache struct {
 	debug                bool
 }
 
-func New(iot *iot.Iot, deviceExpiration int32, deviceTypeExpiration int32, memcachedServer ...string) *PreparedCache {
+func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, memcachedServer ...string) *PreparedCache {
 	return &PreparedCache{iot: iot, deviceExpiration: deviceExpiration, deviceTypeExpiration: deviceTypeExpiration, memcached: memcache.New(memcachedServer...)}
 }
 

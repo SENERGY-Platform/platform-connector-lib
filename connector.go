@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
-	"github.com/SENERGY-Platform/platform-connector-lib/iotcache"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
@@ -47,18 +46,28 @@ type Connector struct {
 	iot                    *iot.Iot
 	security               *security.Security
 
-	IotCache *iotcache.PreparedCache
+	IotCache *iot.PreparedCache
 
 	kafkalogger *log.Logger
 }
 
 func New(config Config) (connector *Connector) {
 	connector = &Connector{
-		Config:   config,
-		iot:      iot.New(config.IotRepoUrl, config.Protocol),
-		security: security.New(config.AuthEndpoint, config.AuthClientId, config.AuthClientSecret, config.JwtIssuer, config.JwtPrivateKey, config.JwtExpiration, config.AuthExpirationTimeBuffer),
+		Config: config,
+		iot:    iot.New(config.IotRepoUrl, config.Protocol),
+		security: security.New(
+			config.AuthEndpoint,
+			config.AuthClientId,
+			config.AuthClientSecret,
+			config.JwtIssuer,
+			config.JwtPrivateKey,
+			config.JwtExpiration,
+			config.AuthExpirationTimeBuffer,
+			config.TokenCacheExpiration,
+			config.TokenCacheUrl,
+		),
 	}
-	connector.IotCache = iotcache.New(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CacheUrl...)
+	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.IotCacheUrl...)
 	return
 }
 

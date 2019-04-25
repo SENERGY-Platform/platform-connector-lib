@@ -38,11 +38,11 @@ func (this *CorrelationService) Save(msg model.ProtocolMsg) (correlationId strin
 	if err != nil {
 		return correlationId, err
 	}
-	return correlationId, this.memcached.Set(&memcache.Item{Key: correlationId, Value: value, Expiration: this.expiration})
+	return correlationId, this.memcached.Set(&memcache.Item{Key: "cid." + correlationId, Value: value, Expiration: this.expiration})
 }
 
 func (this *CorrelationService) Get(correlationId string) (msg model.ProtocolMsg, err error) {
-	item, err := this.memcached.Get(correlationId)
+	item, err := this.memcached.Get("cid." + correlationId)
 	if err != nil {
 		return msg, err
 	}

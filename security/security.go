@@ -18,13 +18,14 @@ package security
 
 import (
 	"encoding/json"
+	"github.com/bradfitz/gomemcache/memcache"
 	"log"
 	"sync"
 	"time"
 )
 
-func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64) *Security {
-	return &Security{
+func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64, tokenCacheExpiration int32, cacheUrls []string) *Security {
+	result := &Security{
 		authEndpoint:             authEndpoint,
 		authClientSecret:         authClientSecret,
 		authClientId:             authClientId,
@@ -32,7 +33,12 @@ func New(authEndpoint string, authClientId string, authClientSecret string, jwtI
 		jwtPrivateKey:            jwtPrivateKey,
 		authExpirationTimeBuffer: authExpirationTimeBuffer,
 		jwtExpiration:            jwtExpiration,
+		tokenCacheExpiration:     tokenCacheExpiration,
 	}
+	if tokenCacheExpiration != 0 && len(cacheUrls) > 0 {
+		result.memcached = memcache.New(cacheUrls...)
+	}
+	return result
 }
 
 type Security struct {
@@ -45,6 +51,9 @@ type Security struct {
 	authClientSecret         string
 	openid                   *OpenidToken
 	mux                      sync.Mutex
+
+	memcached            *memcache.Client
+	tokenCacheExpiration int32
 }
 
 func (this *Security) ResetAccess() {

@@ -48,7 +48,9 @@ type Config struct {
 
 	DeviceExpiration     int32
 	DeviceTypeExpiration int32
-	CacheUrl             []string
+	TokenCacheExpiration int32
+	IotCacheUrl          []string
+	TokenCacheUrl        []string
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
