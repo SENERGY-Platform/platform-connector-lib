@@ -14,6 +14,7 @@ type PreparedCache struct {
 	memcached            *memcache.Client
 	deviceExpiration     int32
 	deviceTypeExpiration int32
+	Debug                bool
 }
 
 type Cache struct {
@@ -22,6 +23,7 @@ type Cache struct {
 	deviceExpiration     int32
 	deviceTypeExpiration int32
 	token                security.JwtToken
+	debug                bool
 }
 
 func New(iot *iot.Iot, deviceExpiration int32, deviceTypeExpiration int32, memcachedServer ...string) *PreparedCache {
@@ -29,7 +31,7 @@ func New(iot *iot.Iot, deviceExpiration int32, deviceTypeExpiration int32, memca
 }
 
 func (this *PreparedCache) WithToken(token security.JwtToken) *Cache {
-	return &Cache{iot: this.iot, deviceExpiration: this.deviceExpiration, deviceTypeExpiration: this.deviceTypeExpiration, memcached: this.memcached, token: token}
+	return &Cache{iot: this.iot, deviceExpiration: this.deviceExpiration, deviceTypeExpiration: this.deviceTypeExpiration, debug: this.Debug, memcached: this.memcached, token: token}
 }
 
 func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error) {
@@ -115,6 +117,9 @@ func (this *Cache) getDeviceTypeFromCache(token security.JwtToken, id string) (d
 	if err != nil {
 		return dt, err
 	}
+	if this.debug {
+		log.Println("DEBUG: getDeviceTypeFromCache()", "dt."+id, string(item.Value), err)
+	}
 	err = json.Unmarshal(item.Value, &dt)
 	return
 }
@@ -125,7 +130,10 @@ func (this *Cache) saveDeviceTypeToCache(token security.JwtToken, deviceType mod
 		log.Println("WARNING: saveDeviceTypeToCache() unable to marshal instance", err)
 		return
 	}
-	_ = this.memcached.Set(&memcache.Item{Key: "dt." + deviceType.Id, Value: value, Expiration: this.deviceTypeExpiration})
+	err = this.memcached.Set(&memcache.Item{Key: "dt." + deviceType.Id, Value: value, Expiration: this.deviceTypeExpiration})
+	if this.debug {
+		log.Println("DEBUG: saveDeviceTypeToCache()", "dt."+deviceType.Id, err)
+	}
 }
 
 func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, deviceUrl string) (entities []model.DeviceServiceEntity, err error) {
