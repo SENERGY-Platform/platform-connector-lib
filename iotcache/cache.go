@@ -37,9 +37,9 @@ func (this *PreparedCache) WithToken(token security.JwtToken) *Cache {
 func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error) {
 	if this.deviceExpiration != 0 {
 		result, err = this.getDeviceFromCache(this.token, id)
-	}
-	if err == nil {
-		return
+		if err == nil {
+			return
+		}
 	}
 	if err != memcache.ErrCacheMiss {
 		log.Println("ERROR: Cache.GetDeviceFromCache() ", err)
@@ -57,9 +57,9 @@ func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error)
 func (this *Cache) DeviceUrlToIotDevice(deviceUrl string) (result []model.DeviceServiceEntity, err error) {
 	if this.deviceExpiration != 0 {
 		result, err = this.getDeviceUrlToIotDeviceFromCache(this.token, deviceUrl)
-	}
-	if err == nil {
-		return
+		if err == nil {
+			return
+		}
 	}
 	if err != memcache.ErrCacheMiss {
 		log.Println("ERROR: Cache.DeviceUrlToIotDevice() ", err)
@@ -77,9 +77,9 @@ func (this *Cache) DeviceUrlToIotDevice(deviceUrl string) (result []model.Device
 func (this *Cache) GetDeviceType(id string) (result model.DeviceType, err error) {
 	if this.deviceTypeExpiration != 0 {
 		result, err = this.getDeviceTypeFromCache(this.token, id)
-	}
-	if err == nil {
-		return
+		if err == nil {
+			return
+		}
 	}
 	if err != memcache.ErrCacheMiss {
 		log.Println("ERROR: Cache.GetDeviceType() ", err)
