@@ -6,6 +6,8 @@ github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEV
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5/go.mod h1:lmUJ/7eu/Q8D7ML55dXQrVaamCz2vxCfdQBasLZfHKk=
 github.com/SENERGY-Platform/formatter-lib v0.0.0-20190425083814-7856ccd68eba h1:6lWyqDCWKdNwAxFoJQvZ8joLn10BrMMPDS3O6VhY2cA=
 github.com/SENERGY-Platform/formatter-lib v0.0.0-20190425083814-7856ccd68eba/go.mod h1:R3JIeZAtwnRoa7irZ5mvxX/MFsEe3qOR+Y2n7lbDXbc=
+github.com/SENERGY-Platform/formatter-lib v0.0.0-20190425141726-82f4aabae873 h1:BRBHRKhgEduiEU7hKjOs65hPTPM+fCyZi2xb0A4t1sE=
+github.com/SENERGY-Platform/formatter-lib v0.0.0-20190425141726-82f4aabae873/go.mod h1:R3JIeZAtwnRoa7irZ5mvxX/MFsEe3qOR+Y2n7lbDXbc=
 github.com/SENERGY-Platform/iot-device-repository v0.0.0-20181018081528-7297409a5f9f h1:GZTSHADOWquAkGDUZ7Z+XX1/4wyIEGCaK1HXwAQCPts=
 github.com/SENERGY-Platform/iot-device-repository v0.0.0-20181018081528-7297409a5f9f/go.mod h1:xv0W5tDUCdJpR/Ur9OSrW3TspUksVtYcVhw7pVgz6do=
 github.com/SENERGY-Platform/iot-device-repository v0.0.0-20190219082631-b01b6fec0f7a h1:eomU9JC7DacCBSNXNmOwUwuDbJIFY5L/A+qza8KVgi4=

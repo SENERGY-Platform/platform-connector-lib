@@ -1,7 +1,7 @@
 module github.com/SENERGY-Platform/platform-connector-lib
 
 require (
-	github.com/SENERGY-Platform/formatter-lib v0.0.0-20190425083814-7856ccd68eba // indirect
+	github.com/SENERGY-Platform/formatter-lib v0.0.0-20190425141726-82f4aabae873
 	github.com/SENERGY-Platform/iot-device-repository v0.0.0-20190411071940-270889a26f60
 	github.com/Shopify/sarama v1.22.0
 	github.com/bradfitz/gomemcache v0.0.0-20180710155616-bc664df96737
