@@ -40,9 +40,9 @@ func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error)
 		if err == nil {
 			return
 		}
-	}
-	if err != memcache.ErrCacheMiss {
-		log.Println("ERROR: Cache.GetDeviceFromCache() ", err)
+		if err != memcache.ErrCacheMiss {
+			log.Println("ERROR: Cache.GetDeviceFromCache() ", err)
+		}
 	}
 	result, err = this.iot.GetDevice(id, this.token)
 	if err != nil {
@@ -60,9 +60,9 @@ func (this *Cache) DeviceUrlToIotDevice(deviceUrl string) (result []model.Device
 		if err == nil {
 			return
 		}
-	}
-	if err != memcache.ErrCacheMiss {
-		log.Println("ERROR: Cache.DeviceUrlToIotDevice() ", err)
+		if err != memcache.ErrCacheMiss {
+			log.Println("ERROR: Cache.DeviceUrlToIotDevice() ", err)
+		}
 	}
 	result, err = this.iot.DeviceUrlToIotDevice(deviceUrl, this.token)
 	if err != nil {
@@ -80,9 +80,9 @@ func (this *Cache) GetDeviceType(id string) (result model.DeviceType, err error)
 		if err == nil {
 			return
 		}
-	}
-	if err != memcache.ErrCacheMiss {
-		log.Println("ERROR: Cache.GetDeviceType() ", err)
+		if err != memcache.ErrCacheMiss {
+			log.Println("ERROR: Cache.GetDeviceType() ", err)
+		}
 	}
 	result, err = this.iot.GetDeviceType(id, this.token)
 	if err != nil {
