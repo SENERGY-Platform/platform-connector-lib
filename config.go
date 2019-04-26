@@ -51,6 +51,8 @@ type Config struct {
 	TokenCacheExpiration int32
 	IotCacheUrl          []string
 	TokenCacheUrl        []string
+	SyncKafka            bool
+	SyncKafkaIdempotent  bool
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
