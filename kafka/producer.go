@@ -20,7 +20,6 @@ import (
 	"errors"
 	"github.com/Shopify/sarama"
 	"log"
-	"sync/atomic"
 	"time"
 )
 
@@ -32,20 +31,16 @@ type ProducerInterface interface {
 type SyncProducer struct {
 	broker   []string
 	logger   *log.Logger
-	pool     []sarama.SyncProducer
-	count    int64
-	poolsize int64
+	producer sarama.SyncProducer
 }
 
 type AsyncProducer struct {
 	broker   []string
 	logger   *log.Logger
-	pool     []sarama.AsyncProducer
-	count    int64
-	poolsize int64
+	producer sarama.AsyncProducer
 }
 
-func PrepareProducer(zk string, sync bool, syncIdempotent bool, poolsize int64) (ProducerInterface, error) {
+func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterface, error) {
 	var err error
 	broker, err := GetBroker(zk)
 	if err != nil {
@@ -55,37 +50,25 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool, poolsize int64) 
 		return nil, errors.New("missing kafka broker")
 	}
 	if sync {
-		result := &SyncProducer{broker: broker, poolsize: poolsize}
-		for i := int64(0); i < poolsize; i++ {
-			sarama_conf := sarama.NewConfig()
-			sarama_conf.Version = sarama.V2_2_0_0
-			sarama_conf.Producer.Return.Errors = true
-			sarama_conf.Producer.Return.Successes = true
-			if syncIdempotent {
-				sarama_conf.Producer.Idempotent = true
-				sarama_conf.Net.MaxOpenRequests = 1
-				sarama_conf.Producer.RequiredAcks = sarama.WaitForAll
-			}
-			producer, err := sarama.NewSyncProducer(result.broker, sarama_conf)
-			if err != nil {
-				return result, err
-			}
-			result.pool = append(result.pool, producer)
+		result := &SyncProducer{broker: broker}
+		sarama_conf := sarama.NewConfig()
+		sarama_conf.Version = sarama.V2_2_0_0
+		sarama_conf.Producer.Return.Errors = true
+		sarama_conf.Producer.Return.Successes = true
+		if syncIdempotent {
+			sarama_conf.Producer.Idempotent = true
+			sarama_conf.Net.MaxOpenRequests = 1
+			sarama_conf.Producer.RequiredAcks = sarama.WaitForAll
 		}
+		result.producer, err = sarama.NewSyncProducer(result.broker, sarama_conf)
 		return result, err
 	} else {
-		result := &AsyncProducer{broker: broker, poolsize: poolsize}
-		for i := int64(0); i < poolsize; i++ {
-			sarama_conf := sarama.NewConfig()
-			sarama_conf.Version = sarama.V2_2_0_0
-			sarama_conf.Producer.Return.Errors = false
-			sarama_conf.Producer.Return.Successes = false
-			producer, err := sarama.NewAsyncProducer(result.broker, sarama_conf)
-			if err != nil {
-				return result, err
-			}
-			result.pool = append(result.pool, producer)
-		}
+		result := &AsyncProducer{broker: broker}
+		sarama_conf := sarama.NewConfig()
+		sarama_conf.Version = sarama.V2_2_0_0
+		sarama_conf.Producer.Return.Errors = false
+		sarama_conf.Producer.Return.Successes = false
+		result.producer, err = sarama.NewAsyncProducer(result.broker, sarama_conf)
 		return result, err
 	}
 }
@@ -98,7 +81,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	this.pool[atomic.AddInt64(&this.count, 1)%this.poolsize].SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
+	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
 	return
 }
 
@@ -106,7 +89,7 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	this.pool[atomic.AddInt64(&this.count, 1)%this.poolsize].Input() <- &sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()}
+	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()}
 	return
 }
 
