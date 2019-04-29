@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 
 	iot_model "github.com/SENERGY-Platform/iot-device-repository/lib/model"
@@ -43,6 +44,21 @@ func (this *Iot) GetDevice(id string, token security.JwtToken) (device iot_model
 		log.Println("ERROR on GetDevice() json decode", err)
 	}
 	return device, err
+}
+
+func (this *Iot) GetDevices(token security.JwtToken, limit int, offset int) (devices []iot_model.DeviceInstance, err error) {
+	resp, err := token.Get(this.url + "/deviceInstances/" + strconv.Itoa(limit) + "/" + strconv.Itoa(offset) + "/execute")
+	if err != nil {
+		log.Println("ERROR on GetDevice()", err)
+		return devices, err
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&devices)
+	if err != nil {
+		log.Println("ERROR on GetDevice() json decode", err)
+	}
+	return devices, err
 }
 
 func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model.DeviceType, err error) {

@@ -40,7 +40,7 @@ func getBroker(zkUrl string) (brokers []string, err error) {
 	}
 }
 
-func getControler(zkUrl string) (controller string, err error) {
+func GetKafkaControler(zkUrl string) (controller string, err error) {
 	zookeeper := kazoo.NewConfig()
 	zookeeper.Logger = log.New(ioutil.Discard, "", 0)
 	zk, chroot := kazoo.ParseConnectionString(zkUrl)
@@ -65,7 +65,7 @@ func InitTopic(zkUrl string, topics ...string) (err error) {
 }
 
 func InitTopicWithConfig(zkUrl string, numPartitions int, replicationFactor int, topics ...string) (err error) {
-	controller, err := getControler(zkUrl)
+	controller, err := GetKafkaControler(zkUrl)
 	if err != nil {
 		log.Println("ERROR: unable to find controller", err)
 		return err
@@ -79,6 +79,7 @@ func InitTopicWithConfig(zkUrl string, numPartitions int, replicationFactor int,
 		log.Println("ERROR: while init topic connection ", err)
 		return err
 	}
+	defer initConn.Close()
 	for _, topic := range topics {
 		err = initConn.CreateTopics(kafka.TopicConfig{
 			Topic:             topic,

@@ -23,6 +23,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	kgo "github.com/segmentio/kafka-go"
 	"log"
 )
 
@@ -211,4 +212,74 @@ func (this *Connector) Security() *security.Security {
 
 func (this *Connector) Iot() *iot.Iot {
 	return this.iot
+}
+
+func (this *Connector) EnsureTopics(token security.JwtToken, batchsize int, numPartitions int, replicationFactor int) {
+	controller, err := kafka.GetKafkaControler(this.Config.ZookeeperUrl)
+	if err != nil {
+		log.Println("ERROR: EnsureTopics:GetKafkaControler()", err)
+		return
+	}
+	if controller == "" {
+		log.Println("ERROR: EnsureTopics:GetKafkaControler(): unable to find controller")
+		return
+	}
+	conn, err := kgo.Dial("tcp", controller)
+	if err != nil {
+		log.Println("ERROR: EnsureTopics:Dial()", err)
+		return
+	}
+	limit := batchsize
+	deviceTypes := make(chan string, limit)
+	go func() {
+		doneDeviceTypes := map[string]bool{}
+		offset := 0
+		defer close(deviceTypes)
+		for {
+			devices, err := this.Iot().GetDevices(token, limit, offset)
+			if err != nil {
+				log.Println("ERROR: EnsureTopics:GetDevices()", err)
+				return
+			}
+			for _, device := range devices {
+				if !doneDeviceTypes[device.DeviceType] {
+					doneDeviceTypes[device.DeviceType] = true
+					deviceTypes <- device.DeviceType
+				}
+			}
+			if len(devices) != limit {
+				return
+			}
+			offset = offset + limit
+		}
+	}()
+
+	topics := make(chan string)
+	go func() {
+		defer close(topics)
+		cache := this.IotCache.WithToken(token)
+		for dtId := range deviceTypes {
+			dt, err := cache.GetDeviceType(dtId)
+			if err != nil {
+				log.Println("ERROR: EnsureTopics:GetDeviceType()", dtId, err)
+				return
+			}
+			for _, service := range dt.Services {
+				topics <- formatId(service.Id)
+			}
+		}
+	}()
+
+	go func() {
+		for topic := range topics {
+			err := conn.CreateTopics(kgo.TopicConfig{
+				Topic:             topic,
+				NumPartitions:     numPartitions,
+				ReplicationFactor: replicationFactor,
+			})
+			if err != nil {
+				log.Println("ERROR: EnsureTopics:CreateTopics()", topic, err)
+			}
+		}
+	}()
 }
