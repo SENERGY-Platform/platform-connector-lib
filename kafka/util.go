@@ -60,7 +60,11 @@ func getControler(zkUrl string) (controller string, err error) {
 	return brokers[controllerId], err
 }
 
-func InitTopic(zkUrl string, topic string) (err error) {
+func InitTopic(zkUrl string, topics ...string) (err error) {
+	return InitTopicWithConfig(zkUrl, 1, 1, topics...)
+}
+
+func InitTopicWithConfig(zkUrl string, numPartitions int, replicationFactor int, topics ...string) (err error) {
 	controller, err := getControler(zkUrl)
 	if err != nil {
 		log.Println("ERROR: unable to find controller", err)
@@ -75,9 +79,15 @@ func InitTopic(zkUrl string, topic string) (err error) {
 		log.Println("ERROR: while init topic connection ", err)
 		return err
 	}
-	return initConn.CreateTopics(kafka.TopicConfig{
-		Topic:             topic,
-		NumPartitions:     1,
-		ReplicationFactor: 1,
-	})
+	for _, topic := range topics {
+		err = initConn.CreateTopics(kafka.TopicConfig{
+			Topic:             topic,
+			NumPartitions:     numPartitions,
+			ReplicationFactor: replicationFactor,
+		})
+		if err != nil {
+			return
+		}
+	}
+	return nil
 }
