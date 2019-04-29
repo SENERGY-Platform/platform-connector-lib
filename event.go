@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/SENERGY-Platform/formatter-lib"
 )
@@ -114,6 +115,12 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 	if err != nil {
 		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
 		return err
+	}
+	if this.Config.Debug {
+		now := time.Now()
+		defer func(start time.Time) {
+			log.Println("DEBUG: kafka produce in", time.Now().Sub(start))
+		}(now)
 	}
 	err = this.producer.Produce(serviceTopic, string(jsonMsg))
 	if err != nil {

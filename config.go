@@ -53,6 +53,7 @@ type Config struct {
 	TokenCacheUrl        []string
 	SyncKafka            bool
 	SyncKafkaIdempotent  bool
+	Debug                bool
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
