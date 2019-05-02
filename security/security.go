@@ -18,7 +18,7 @@ package security
 
 import (
 	"encoding/json"
-	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/SENERGY-Platform/platform-connector-lib/cache"
 	"log"
 	"sync"
 	"time"
@@ -36,7 +36,7 @@ func New(authEndpoint string, authClientId string, authClientSecret string, jwtI
 		tokenCacheExpiration:     tokenCacheExpiration,
 	}
 	if tokenCacheExpiration != 0 && len(cacheUrls) > 0 {
-		result.memcached = memcache.New(cacheUrls...)
+		result.cache = cache.New(cacheUrls...)
 	}
 	return result
 }
@@ -52,7 +52,7 @@ type Security struct {
 	openid                   *OpenidToken
 	mux                      sync.Mutex
 
-	memcached            *memcache.Client
+	cache                *cache.Cache
 	tokenCacheExpiration int32
 }
 

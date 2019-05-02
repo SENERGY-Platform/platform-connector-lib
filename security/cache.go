@@ -6,7 +6,7 @@ import (
 )
 
 func (this *Security) GetCachedUserToken(username string) (token JwtToken, err error) {
-	if this.memcached != nil {
+	if this.cache != nil {
 		token, err = this.getTokenFromCache(username)
 		if err == nil {
 			return
@@ -20,14 +20,14 @@ func (this *Security) GetCachedUserToken(username string) (token JwtToken, err e
 		log.Println("ERROR: GetCachedUserToken::GenerateUserToken()", err, username)
 		return
 	}
-	if this.memcached != nil {
+	if this.cache != nil {
 		this.saveDeviceToCache(username, token)
 	}
 	return
 }
 
 func (this *Security) getTokenFromCache(username string) (token JwtToken, err error) {
-	item, err := this.memcached.Get("token." + username)
+	item, err := this.cache.Get("token." + username)
 	if err != nil {
 		return token, err
 	}
@@ -35,5 +35,5 @@ func (this *Security) getTokenFromCache(username string) (token JwtToken, err er
 }
 
 func (this *Security) saveDeviceToCache(username string, token JwtToken) {
-	_ = this.memcached.Set(&memcache.Item{Key: "token." + username, Value: []byte(token), Expiration: this.tokenCacheExpiration})
+	this.cache.Set("token."+username, []byte(token), this.tokenCacheExpiration)
 }

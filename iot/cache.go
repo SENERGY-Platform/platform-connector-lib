@@ -3,6 +3,7 @@ package iot
 import (
 	"encoding/json"
 	"github.com/SENERGY-Platform/iot-device-repository/lib/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/cache"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/bradfitz/gomemcache/memcache"
 	"log"
@@ -10,7 +11,7 @@ import (
 
 type PreparedCache struct {
 	iot                  *Iot
-	memcached            *memcache.Client
+	cache                *cache.Cache
 	deviceExpiration     int32
 	deviceTypeExpiration int32
 	Debug                bool
@@ -18,7 +19,7 @@ type PreparedCache struct {
 
 type Cache struct {
 	iot                  *Iot
-	memcached            *memcache.Client
+	cache                *cache.Cache
 	deviceExpiration     int32
 	deviceTypeExpiration int32
 	token                security.JwtToken
@@ -26,11 +27,11 @@ type Cache struct {
 }
 
 func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, memcachedServer ...string) *PreparedCache {
-	return &PreparedCache{iot: iot, deviceExpiration: deviceExpiration, deviceTypeExpiration: deviceTypeExpiration, memcached: memcache.New(memcachedServer...)}
+	return &PreparedCache{iot: iot, deviceExpiration: deviceExpiration, deviceTypeExpiration: deviceTypeExpiration, cache: cache.New(memcachedServer...)}
 }
 
 func (this *PreparedCache) WithToken(token security.JwtToken) *Cache {
-	return &Cache{iot: this.iot, deviceExpiration: this.deviceExpiration, deviceTypeExpiration: this.deviceTypeExpiration, debug: this.Debug, memcached: this.memcached, token: token}
+	return &Cache{iot: this.iot, deviceExpiration: this.deviceExpiration, deviceTypeExpiration: this.deviceTypeExpiration, debug: this.Debug, cache: this.cache, token: token}
 }
 
 func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error) {
@@ -98,7 +99,7 @@ func (this *Cache) getDeviceFromCache(token security.JwtToken, id string) (devic
 	if err != nil {
 		return device, err
 	}
-	item, err := this.memcached.Get("device." + pl.UserId + "." + id)
+	item, err := this.cache.Get("device." + pl.UserId + "." + id)
 	if err != nil {
 		return device, err
 	}
@@ -117,11 +118,11 @@ func (this *Cache) saveDeviceToCache(token security.JwtToken, instance model.Dev
 		log.Println("WARNING: saveDeviceToCache() unable to marshal instance", err)
 		return
 	}
-	_ = this.memcached.Set(&memcache.Item{Key: "device." + pl.UserId + "." + instance.Id, Value: value, Expiration: this.deviceExpiration})
+	this.cache.Set("device."+pl.UserId+"."+instance.Id, value, this.deviceExpiration)
 }
 
 func (this *Cache) getDeviceTypeFromCache(token security.JwtToken, id string) (dt model.DeviceType, err error) {
-	item, err := this.memcached.Get("dt." + id)
+	item, err := this.cache.Get("dt." + id)
 	if err != nil {
 		return dt, err
 	}
@@ -138,10 +139,7 @@ func (this *Cache) saveDeviceTypeToCache(token security.JwtToken, deviceType mod
 		log.Println("WARNING: saveDeviceTypeToCache() unable to marshal instance", err)
 		return
 	}
-	err = this.memcached.Set(&memcache.Item{Key: "dt." + deviceType.Id, Value: value, Expiration: this.deviceTypeExpiration})
-	if this.debug {
-		log.Println("DEBUG: saveDeviceTypeToCache()", "dt."+deviceType.Id, err)
-	}
+	this.cache.Set("dt."+deviceType.Id, value, this.deviceTypeExpiration)
 }
 
 func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, deviceUrl string) (entities []model.DeviceServiceEntity, err error) {
@@ -149,7 +147,7 @@ func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, dev
 	if err != nil {
 		return entities, err
 	}
-	item, err := this.memcached.Get("device_url." + pl.UserId + "." + deviceUrl)
+	item, err := this.cache.Get("device_url." + pl.UserId + "." + deviceUrl)
 	if err != nil {
 		return entities, err
 	}
@@ -168,5 +166,5 @@ func (this *Cache) saveDeviceUrlToIotDeviceToCache(token security.JwtToken, devi
 		log.Println("WARNING: saveDeviceToCache() unable to marshal entities", err)
 		return
 	}
-	_ = this.memcached.Set(&memcache.Item{Key: "device_url." + pl.UserId + "." + deviceUrl, Value: value, Expiration: this.deviceExpiration})
+	this.cache.Set("device_url."+pl.UserId+"."+deviceUrl, value, this.deviceExpiration)
 }
