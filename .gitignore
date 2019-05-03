@@ -1,1 +1,3 @@
 .idea
+sharedlib/connector_lib.h
+sharedlib/connector_lib.so
