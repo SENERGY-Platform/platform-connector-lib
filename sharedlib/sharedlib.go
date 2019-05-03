@@ -69,6 +69,10 @@ func Init(authEndpoint *C.char, authClientId *C.char, authClientSecret *C.char, 
 
 //export Transform
 func Transform(user *C.char, payload *C.char, deviceUri *C.char, serviceUri *C.char) (result *C.char) {
+	if iotCache == nil || securityHandler == nil {
+		return jsonHelper(map[string]string{"err": "call Init() before Transform()"})
+	}
+
 	defer C.free(unsafe.Pointer(user))
 	defer C.free(unsafe.Pointer(payload))
 	defer C.free(unsafe.Pointer(deviceUri))
