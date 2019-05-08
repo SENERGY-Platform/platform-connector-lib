@@ -10,27 +10,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"strings"
-	"unsafe"
 )
-
-//export Test5
-func Test5(inp *C.char) (outp *C.char) {
-	defer C.free(unsafe.Pointer(inp))
-	return C.CString("foo " + C.GoString(inp))
-}
-
-var test6 string
-
-//export Test6Set
-func Test6Set(inp *C.char) {
-	defer C.free(unsafe.Pointer(inp))
-	test6 = C.GoString(inp)
-}
-
-//export Test6Get
-func Test6Get() (outp *C.char) {
-	return C.CString(test6)
-}
 
 func main() {}
 
@@ -38,14 +18,7 @@ var iotCache *iot.PreparedCache
 var securityHandler *security.Security
 
 //export Init
-func Init(authEndpoint *C.char, authClientId *C.char, authClientSecret *C.char, iotRepoUrl *C.char, protocol *C.char, deviceExpiration int, deviceTypeExpiration int, iotCacheUrls *C.char, tokenCacheUrls *C.char) {
-	defer C.free(unsafe.Pointer(authEndpoint))
-	defer C.free(unsafe.Pointer(authClientId))
-	defer C.free(unsafe.Pointer(authClientSecret))
-	defer C.free(unsafe.Pointer(iotRepoUrl))
-	defer C.free(unsafe.Pointer(protocol))
-	defer C.free(unsafe.Pointer(iotCacheUrls))
-	defer C.free(unsafe.Pointer(tokenCacheUrls))
+func Init(authEndpoint *C.char, authClientId *C.char, authClientSecret *C.char, iotRepoUrl *C.char, protocol *C.char, deviceExpiration int, deviceTypeExpiration int, iotCacheUrls *C.char) {
 
 	iotCache = iot.NewCache(
 		iot.New(C.GoString(iotRepoUrl), C.GoString(protocol)),
@@ -62,21 +35,16 @@ func Init(authEndpoint *C.char, authClientId *C.char, authClientSecret *C.char, 
 		"",
 		0,
 		1,
-		3600,
-		stringToList(C.GoString(tokenCacheUrls)),
+		0,
+		[]string{},
 	)
 }
 
 //export Transform
-func Transform(user *C.char, payload *C.char, deviceUri *C.char, serviceUri *C.char) (result *C.char) {
+func Transform(payload *C.char, deviceUri *C.char, serviceUri *C.char) (result *C.char) {
 	if iotCache == nil || securityHandler == nil {
 		return jsonHelper(map[string]string{"err": "call Init() before Transform()"})
 	}
-
-	defer C.free(unsafe.Pointer(user))
-	defer C.free(unsafe.Pointer(payload))
-	defer C.free(unsafe.Pointer(deviceUri))
-	defer C.free(unsafe.Pointer(serviceUri))
 
 	var topic string
 	var kafkaPayload string
@@ -91,7 +59,7 @@ func Transform(user *C.char, payload *C.char, deviceUri *C.char, serviceUri *C.c
 		protocol = append(protocol, model.ProtocolPart{Name: segmentName, Value: value})
 	}
 
-	token, err := securityHandler.GetCachedUserToken(C.GoString(user))
+	token, err := securityHandler.Access()
 	if err != nil {
 		return jsonHelper(map[string]string{"err": err.Error()})
 	}
