@@ -92,7 +92,7 @@ func (this *Iot) GetService(id string, token security.JwtToken) (service iot_mod
 }
 
 func (this *Iot) DeviceUrlToIotDevice(deviceUrl string, token security.JwtToken) (result iot_model.DeviceInstance, err error) {
-	resp, err := token.Get(this.repo_url + "/device-uris/" + url.QueryEscape(deviceUrl))
+	resp, err := token.Get(this.repo_url + "/device-uris/" + url.QueryEscape(deviceUrl) + "?permission=x")
 	if err != nil {
 		log.Println("error on ConnectorDeviceToIotDevice", err)
 		return result, err
