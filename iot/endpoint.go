@@ -24,7 +24,7 @@ import (
 )
 
 func (this *Iot) GetOutEndpoint(token security.JwtToken, deviceId, serviceId string) (endpoint Endpoint, err error) {
-	err = token.PostJSON(this.url+"/endpoint/out", Endpoint{Device: deviceId, Service: serviceId}, &endpoint)
+	err = token.GetJSON(this.repo_url+"/endpoints?device="+url.QueryEscape(deviceId)+"&service="+url.QueryEscape(serviceId), &endpoint)
 	if err != nil {
 		log.Println("ERROR on GetOutEndpoint()", err)
 	}
@@ -32,12 +32,12 @@ func (this *Iot) GetOutEndpoint(token security.JwtToken, deviceId, serviceId str
 }
 
 func (this *Iot) CheckEndpointAuth(token security.JwtToken, endpoint string) (err error) {
-	_, err = token.Get(this.url + "/endpoint/listen/auth/check/" + url.QueryEscape(this.protocol) + "/" + url.QueryEscape(endpoint))
+	_, err = token.Get(this.semantic_url + "/endpoint/listen/auth/check/" + url.QueryEscape(this.protocol) + "/" + url.QueryEscape(endpoint))
 	return
 }
 
 func (this *Iot) GetInEndpoints(token security.JwtToken, endpointstring string) (endpoint []Endpoint, err error) {
-	err = token.PostJSON(this.url+"/endpoint/in", Endpoint{Endpoint: endpointstring, ProtocolHandler: this.protocol}, &endpoint)
+	err = token.GetJSON(this.repo_url+"/endpoints?endpoint="+url.QueryEscape(endpointstring)+"&protocol="+url.QueryEscape(this.protocol), &endpoint)
 	if err != nil {
 		log.Println("ERROR on GetInEndpoints()", err)
 	}
@@ -49,7 +49,7 @@ func (this *Iot) CreateNewEndpoint(token security.JwtToken, endpoint string, pro
 	for _, part := range protocolParts {
 		parts = append(parts, EndpointGenMsgPart{MsgSegmentName: part.Name, Msg: part.Value})
 	}
-	err = token.PostJSON(this.url+"/endpoint/generate", EndpointGenMsg{
+	err = token.PostJSON(this.semantic_url+"/endpoint/generate", EndpointGenMsg{
 		Endpoint:        endpoint,
 		ProtocolHandler: this.protocol,
 		Parts:           parts,

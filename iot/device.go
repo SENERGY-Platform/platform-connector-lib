@@ -32,7 +32,7 @@ import (
 )
 
 func (this *Iot) GetDevice(id string, token security.JwtToken) (device iot_model.DeviceInstance, err error) {
-	resp, err := token.Get(this.url + "/deviceInstance/" + url.QueryEscape(id))
+	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetDevice()", err)
 		return device, err
@@ -47,7 +47,7 @@ func (this *Iot) GetDevice(id string, token security.JwtToken) (device iot_model
 }
 
 func (this *Iot) GetDevices(token security.JwtToken, limit int, offset int) (devices []iot_model.DeviceInstance, err error) {
-	resp, err := token.Get(this.url + "/deviceInstances/" + strconv.Itoa(limit) + "/" + strconv.Itoa(offset) + "/execute")
+	resp, err := token.Get(this.repo_url + "/devices?limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset) + "&permission=x&sort=name.asc")
 	if err != nil {
 		log.Println("ERROR on GetDevice()", err)
 		return devices, err
@@ -62,7 +62,7 @@ func (this *Iot) GetDevices(token security.JwtToken, limit int, offset int) (dev
 }
 
 func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model.DeviceType, err error) {
-	resp, err := token.Get(this.url + "/deviceType/" + url.QueryEscape(id))
+	resp, err := token.Get(this.repo_url + "/device-types/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetDeviceType()", err)
 		return dt, err
@@ -77,7 +77,7 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model
 }
 
 func (this *Iot) GetService(id string, token security.JwtToken) (service iot_model.Service, err error) {
-	resp, err := token.Get(this.url + "/service/" + url.QueryEscape(id))
+	resp, err := token.Get(this.repo_url + "/services/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetDeviceType()", err)
 		return service, err
@@ -91,18 +91,17 @@ func (this *Iot) GetService(id string, token security.JwtToken) (service iot_mod
 	return service, err
 }
 
-func (this *Iot) DeviceUrlToIotDevice(deviceUrl string, token security.JwtToken) (entities []iot_model.DeviceServiceEntity, err error) {
-	resp, err := token.Get(this.url + "/url_to_devices/" + url.QueryEscape(deviceUrl) + "/execute")
-	if err != nil {
-		log.Println("error on ConnectorDeviceToIotDevice", this.url+"/url_to_devices/"+url.QueryEscape(deviceUrl)+"/execute", err)
-		return entities, err
-	}
-	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(&entities)
+func (this *Iot) DeviceUrlToIotDevice(deviceUrl string, token security.JwtToken) (result iot_model.DeviceInstance, err error) {
+	resp, err := token.Get(this.repo_url + "/device-uris/" + url.QueryEscape(deviceUrl))
 	if err != nil {
 		log.Println("error on ConnectorDeviceToIotDevice", err)
-		return entities, err
+		return result, err
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		log.Println("error on ConnectorDeviceToIotDevice", err)
+		return result, err
 	}
 	return
 }
@@ -120,7 +119,7 @@ func (this *Iot) CreateIotDevice(device iot_model.ProvisioningDevice, token secu
 	if typeid == "" {
 		return result, errors.New("empty iot_type")
 	}
-	resp, err := token.Get(this.url + "/ui/deviceInstance/resourceSkeleton/" + url.QueryEscape(typeid))
+	resp, err := token.Get(this.semantic_url + "/ui/deviceInstance/resourceSkeleton/" + url.QueryEscape(typeid))
 	if err != nil {
 		log.Println("error on CreateIotDevice() resourceSkeleton", err)
 		return result, err
@@ -147,7 +146,7 @@ func (this *Iot) CreateIotDevice(device iot_model.ProvisioningDevice, token secu
 	if err != nil {
 		return result, err
 	}
-	resp, err = token.Post(this.url+"/deviceInstance", "application/json", b)
+	resp, err = token.Post(this.semantic_url+"/deviceInstance", "application/json", b)
 	if err != nil {
 		log.Println("error on CreateIotDevice() create in repository", err)
 		return result, err
@@ -190,7 +189,7 @@ func (this *Iot) UpdateDeviceInstance(device iot_model.DeviceInstance, token sec
 	if err != nil {
 		return err
 	}
-	resp, err := token.Post(this.url+"/deviceInstance/"+url.QueryEscape(device.Id), "application/json", b)
+	resp, err := token.Post(this.semantic_url+"/deviceInstance/"+url.QueryEscape(device.Id), "application/json", b)
 	if err != nil {
 		log.Println("error while doing UpdateDevice() http request: ", err)
 		return err
@@ -231,13 +230,10 @@ func MergeTagIndexes(platform map[string]string, client map[string]string) (resu
 }
 
 func (this *Iot) DeleteDeviceInstance(uri string, token security.JwtToken) (err error) {
-	entities, err := this.DeviceUrlToIotDevice(uri, token)
+	device, err := this.DeviceUrlToIotDevice(uri, token)
 	if err != nil {
 		return err
 	}
-	if len(entities) != 1 {
-		return errors.New("cant find exactly one device with given uri")
-	}
-	_, err = token.Delete(this.url + "/deviceInstance/" + url.QueryEscape(entities[0].Device.Id))
+	_, err = token.Delete(this.semantic_url + "/deviceInstance/" + url.QueryEscape(device.Id))
 	return
 }

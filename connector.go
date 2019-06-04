@@ -55,7 +55,7 @@ type Connector struct {
 func New(config Config) (connector *Connector) {
 	connector = &Connector{
 		Config: config,
-		iot:    iot.New(config.IotRepoUrl, config.Protocol),
+		iot:    iot.New(config.IotRepoUrl, config.DeviceRepoUrl, config.Protocol),
 		security: security.New(
 			config.AuthEndpoint,
 			config.AuthClientId,

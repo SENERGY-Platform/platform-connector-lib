@@ -54,7 +54,7 @@ func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error)
 	return
 }
 
-func (this *Cache) DeviceUrlToIotDevice(deviceUrl string) (result []model.DeviceServiceEntity, err error) {
+func (this *Cache) DeviceUrlToIotDevice(deviceUrl string) (result model.DeviceInstance, err error) {
 	if this.deviceExpiration != 0 {
 		result, err = this.getDeviceUrlToIotDeviceFromCache(this.token, deviceUrl)
 		if err == nil {
@@ -142,7 +142,7 @@ func (this *Cache) saveDeviceTypeToCache(token security.JwtToken, deviceType mod
 	this.cache.Set("dt."+deviceType.Id, value, this.deviceTypeExpiration)
 }
 
-func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, deviceUrl string) (entities []model.DeviceServiceEntity, err error) {
+func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, deviceUrl string) (entities model.DeviceInstance, err error) {
 	pl, err := token.GetPayload()
 	if err != nil {
 		return entities, err
@@ -155,7 +155,7 @@ func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, dev
 	return
 }
 
-func (this *Cache) saveDeviceUrlToIotDeviceToCache(token security.JwtToken, deviceUrl string, entities []model.DeviceServiceEntity) {
+func (this *Cache) saveDeviceUrlToIotDeviceToCache(token security.JwtToken, deviceUrl string, entities model.DeviceInstance) {
 	pl, err := token.GetPayload()
 	if err != nil {
 		log.Println("WARNING: saveDeviceToCache() unable to parse token", err)

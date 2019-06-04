@@ -1,10 +1,11 @@
 package iot
 
 type Iot struct {
-	url      string
-	protocol string
+	semantic_url string
+	repo_url     string
+	protocol     string
 }
 
-func New(iotRepoUrl string, protocolHandlerUri string) *Iot {
-	return &Iot{url: iotRepoUrl, protocol: protocolHandlerUri}
+func New(iotRepoUrl string, deviceRepoUrl string, protocolHandlerUri string) *Iot {
+	return &Iot{semantic_url: iotRepoUrl, repo_url: deviceRepoUrl, protocol: protocolHandlerUri}
 }

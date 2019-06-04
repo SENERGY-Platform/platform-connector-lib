@@ -18,10 +18,10 @@ var iotCache *iot.PreparedCache
 var securityHandler *security.Security
 
 //export Init
-func Init(authEndpoint *C.char, authClientId *C.char, authClientSecret *C.char, iotRepoUrl *C.char, protocol *C.char, deviceExpiration int, deviceTypeExpiration int, iotCacheUrls *C.char) {
+func Init(authEndpoint *C.char, authClientId *C.char, authClientSecret *C.char, iotRepoUrl *C.char, deviceRepoUrl *C.char, protocol *C.char, deviceExpiration int, deviceTypeExpiration int, iotCacheUrls *C.char) {
 
 	iotCache = iot.NewCache(
-		iot.New(C.GoString(iotRepoUrl), C.GoString(protocol)),
+		iot.New(C.GoString(iotRepoUrl), C.GoString(deviceRepoUrl), C.GoString(protocol)),
 		int32(deviceExpiration),
 		int32(deviceTypeExpiration),
 		stringToList(C.GoString(iotCacheUrls))...,

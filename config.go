@@ -35,7 +35,8 @@ type Config struct {
 	FatalKafkaError    bool
 	Protocol           string
 
-	IotRepoUrl string
+	IotRepoUrl    string
+	DeviceRepoUrl string
 
 	AuthClientId             string //keycloak-client
 	AuthClientSecret         string //keycloak-secret
