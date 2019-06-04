@@ -24,6 +24,10 @@ import (
 	"net/http"
 )
 
+var ErrorNotFound = errors.New("not found")
+var ErrorAccessDenied = errors.New("access denied")
+var ErrorUnexpectedStatus = errors.New("unexpected status")
+
 func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
@@ -34,11 +38,16 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 
 	resp, err = http.DefaultClient.Do(req)
 
-	if err == nil && (resp.StatusCode < 200 || resp.StatusCode >= 300) {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		resp.Body.Close()
-		err = errors.New(resp.Status + ": " + buf.String())
+	if err == nil {
+		if resp.StatusCode == http.StatusNotFound {
+			return resp, ErrorNotFound
+		}
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+			return resp, ErrorAccessDenied
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return resp, ErrorUnexpectedStatus
+		}
 	}
 	return
 }
@@ -68,11 +77,16 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 	req.Header.Set("Authorization", string(this))
 	resp, err = http.DefaultClient.Do(req)
 
-	if err == nil && (resp.StatusCode < 200 || resp.StatusCode >= 300) {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		resp.Body.Close()
-		err = errors.New(resp.Status + ": " + buf.String())
+	if err == nil {
+		if resp.StatusCode == http.StatusNotFound {
+			return resp, ErrorNotFound
+		}
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+			return resp, ErrorAccessDenied
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return resp, ErrorUnexpectedStatus
+		}
 	}
 	return
 }
@@ -95,11 +109,16 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 
 	resp, err = http.DefaultClient.Do(req)
 
-	if err == nil && (resp.StatusCode < 200 || resp.StatusCode >= 300) {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		resp.Body.Close()
-		err = errors.New(resp.Status + ": " + buf.String())
+	if err == nil {
+		if resp.StatusCode == http.StatusNotFound {
+			return resp, ErrorNotFound
+		}
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+			return resp, ErrorAccessDenied
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return resp, ErrorUnexpectedStatus
+		}
 	}
 	return
 }
@@ -114,11 +133,16 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 
 	resp, err = http.DefaultClient.Do(req)
 
-	if err == nil && (resp.StatusCode < 200 || resp.StatusCode >= 300) {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		resp.Body.Close()
-		err = errors.New(resp.Status + ": " + buf.String())
+	if err == nil {
+		if resp.StatusCode == http.StatusNotFound {
+			return resp, ErrorNotFound
+		}
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+			return resp, ErrorAccessDenied
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return resp, ErrorUnexpectedStatus
+		}
 	}
 	return
 }
