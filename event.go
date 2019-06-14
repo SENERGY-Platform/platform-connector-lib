@@ -27,15 +27,10 @@ import (
 	"github.com/SENERGY-Platform/formatter-lib"
 )
 
-func (this *Connector) formatEvent(token security.JwtToken, deviceid string, serviceid string, event formatter_lib.EventMsg) (result string, isSensor bool, err error) {
-	isSensor = true
+func (this *Connector) formatEvent(token security.JwtToken, deviceid string, serviceid string, event formatter_lib.EventMsg) (result string, err error) {
 	formatter, err := formatter_lib.NewTransformer(this.IotCache.WithToken(token), deviceid, serviceid)
 	if err != nil {
-		return "", false, err
-	}
-	if formatter.Service.ServiceType != model.SENSOR_TYPE {
-		log.Println("DEBUG Servicetype: ", formatter.Service.ServiceType, "!=", model.SENSOR_TYPE, "in ", formatter.Service.Name)
-		return "", false, err
+		return "", err
 	}
 	result, err = formatter.Transform(event)
 	return
@@ -89,14 +84,10 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 	for _, part := range protocolParts {
 		eventMsg = append(eventMsg, formatter_lib.ProtocolPart{Name: part.Name, Value: part.Value})
 	}
-	formatedEvent, isSensor, err := this.formatEvent(token, deviceId, serviceId, eventMsg)
+	formatedEvent, err := this.formatEvent(token, deviceId, serviceId, eventMsg)
 	if err != nil {
 		log.Println("ERROR: handleDeviceEvent::formatEvent() ", err)
 		return err
-	}
-	if !isSensor {
-		log.Println("DEBUG: is not a sensor --> ignore")
-		return nil
 	}
 
 	var eventValue interface{}
