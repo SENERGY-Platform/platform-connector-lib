@@ -17,18 +17,24 @@
 package iot
 
 import (
+	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"net/url"
 )
 
-func (this *Iot) GetOutEndpoint(token security.JwtToken, deviceId, serviceId string) (endpoints []Endpoint, err error) {
+func (this *Iot) GetOutEndpoint(token security.JwtToken, deviceId, serviceId string) (endpoint Endpoint, err error) {
+	endpoints := []Endpoint{}
 	err = token.GetJSON(this.repo_url+"/endpoints?device="+url.QueryEscape(deviceId)+"&service="+url.QueryEscape(serviceId), &endpoints)
 	if err != nil {
 		log.Println("ERROR on GetOutEndpoint()", err)
+		return endpoint, err
 	}
-	return
+	if len(endpoints) == 0 {
+		return endpoint, errors.New("no endpoint found")
+	}
+	return endpoints[0], nil
 }
 
 func (this *Iot) CheckEndpointAuth(token security.JwtToken, endpoint string) (err error) {
