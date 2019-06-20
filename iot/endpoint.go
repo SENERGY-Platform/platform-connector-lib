@@ -23,8 +23,8 @@ import (
 	"net/url"
 )
 
-func (this *Iot) GetOutEndpoint(token security.JwtToken, deviceId, serviceId string) (endpoint Endpoint, err error) {
-	err = token.GetJSON(this.repo_url+"/endpoints?device="+url.QueryEscape(deviceId)+"&service="+url.QueryEscape(serviceId), &endpoint)
+func (this *Iot) GetOutEndpoint(token security.JwtToken, deviceId, serviceId string) (endpoints []Endpoint, err error) {
+	err = token.GetJSON(this.repo_url+"/endpoints?device="+url.QueryEscape(deviceId)+"&service="+url.QueryEscape(serviceId), &endpoints)
 	if err != nil {
 		log.Println("ERROR on GetOutEndpoint()", err)
 	}
