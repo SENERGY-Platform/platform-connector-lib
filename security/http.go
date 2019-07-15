@@ -39,7 +39,6 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 	resp, err = http.DefaultClient.Do(req)
 
 	if err == nil {
-		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusNotFound {
 			return resp, ErrorNotFound
 		}
@@ -79,7 +78,6 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 	resp, err = http.DefaultClient.Do(req)
 
 	if err == nil {
-		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusNotFound {
 			return resp, ErrorNotFound
 		}
@@ -112,7 +110,6 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 	resp, err = http.DefaultClient.Do(req)
 
 	if err == nil {
-		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusNotFound {
 			return resp, ErrorNotFound
 		}
@@ -137,7 +134,6 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 	resp, err = http.DefaultClient.Do(req)
 
 	if err == nil {
-		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusNotFound {
 			return resp, ErrorNotFound
 		}
