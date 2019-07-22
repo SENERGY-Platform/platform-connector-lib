@@ -36,11 +36,12 @@ func getBroker(zkUrl string) (brokers []string, err error) {
 	if kz, err := kazoo.NewKazoo(zk, zookeeper); err != nil {
 		return brokers, err
 	} else {
+		defer kz.Close()
 		return kz.BrokerList()
 	}
 }
 
-func GetKafkaControler(zkUrl string) (controller string, err error) {
+func GetKafkaController(zkUrl string) (controller string, err error) {
 	zookeeper := kazoo.NewConfig()
 	zookeeper.Logger = log.New(ioutil.Discard, "", 0)
 	zk, chroot := kazoo.ParseConnectionString(zkUrl)
@@ -54,6 +55,7 @@ func GetKafkaControler(zkUrl string) (controller string, err error) {
 		return controller, err
 	}
 	brokers, err := kz.Brokers()
+	kz.Close()
 	if err != nil {
 		return controller, err
 	}
@@ -65,7 +67,7 @@ func InitTopic(zkUrl string, topics ...string) (err error) {
 }
 
 func InitTopicWithConfig(zkUrl string, numPartitions int, replicationFactor int, topics ...string) (err error) {
-	controller, err := GetKafkaControler(zkUrl)
+	controller, err := GetKafkaController(zkUrl)
 	if err != nil {
 		log.Println("ERROR: unable to find controller", err)
 		return err

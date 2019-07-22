@@ -18,10 +18,12 @@ package security
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"time"
 )
 
 var ErrorNotFound = errors.New("not found")
@@ -33,6 +35,8 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 	if err != nil {
 		return nil, err
 	}
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 	req.Header.Set("Content-Type", contentType)
 
@@ -74,6 +78,8 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 	resp, err = http.DefaultClient.Do(req)
 
@@ -105,6 +111,8 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 
 	resp, err = http.DefaultClient.Do(req)
@@ -128,6 +136,8 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 	if err != nil {
 		return nil, err
 	}
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 	req.Header.Set("Content-Type", contentType)
 
@@ -169,6 +179,8 @@ func (this JwtToken) Head(url string) (exists bool, err error) {
 	if err != nil {
 		return exists, err
 	}
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 
 	resp, err := http.DefaultClient.Do(req)

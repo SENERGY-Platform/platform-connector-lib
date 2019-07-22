@@ -43,7 +43,10 @@ func (this *OpenidToken) JwtToken() JwtToken {
 
 func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret string) (openid OpenidToken, err error) {
 	requesttime := time.Now()
-	resp, err := http.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := client.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
 		"client_id":     {authClientId},
 		"client_secret": {authClientSecret},
 		"grant_type":    {"client_credentials"},
@@ -63,7 +66,10 @@ func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret s
 
 func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecret string, oldOpenid OpenidToken) (openid OpenidToken, err error) {
 	requesttime := time.Now()
-	resp, err := http.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := client.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
 		"client_id":     {authClientId},
 		"client_secret": {authClientSecret},
 		"refresh_token": {oldOpenid.RefreshToken},
@@ -85,7 +91,10 @@ func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecr
 
 func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClientSecret string, username, password string) (token OpenidToken, err error) {
 	requesttime := time.Now()
-	resp, err := http.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := client.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
 		"client_id":     {authClientId},
 		"client_secret": {authClientSecret},
 		"username":      {username},

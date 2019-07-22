@@ -215,13 +215,13 @@ func (this *Connector) Iot() *iot.Iot {
 }
 
 func (this *Connector) EnsureTopics(token security.JwtToken, batchsize int, numPartitions int, replicationFactor int) {
-	controller, err := kafka.GetKafkaControler(this.Config.ZookeeperUrl)
+	controller, err := kafka.GetKafkaController(this.Config.ZookeeperUrl)
 	if err != nil {
-		log.Println("ERROR: EnsureTopics:GetKafkaControler()", err)
+		log.Println("ERROR: EnsureTopics:GetKafkaController()", err)
 		return
 	}
 	if controller == "" {
-		log.Println("ERROR: EnsureTopics:GetKafkaControler(): unable to find controller")
+		log.Println("ERROR: EnsureTopics:GetKafkaController(): unable to find controller")
 		return
 	}
 	conn, err := kgo.Dial("tcp", controller)
