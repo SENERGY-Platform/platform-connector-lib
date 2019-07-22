@@ -6,6 +6,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/cache"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/coocood/freecache"
 	"log"
 )
 
@@ -40,7 +41,7 @@ func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error)
 		if err == nil {
 			return
 		}
-		if err != memcache.ErrCacheMiss {
+		if err != memcache.ErrCacheMiss && err != freecache.ErrNotFound {
 			log.Println("ERROR: Cache.GetDeviceFromCache() ", err)
 		}
 	}
@@ -60,7 +61,7 @@ func (this *Cache) DeviceUrlToIotDevice(deviceUrl string) (result model.DeviceIn
 		if err == nil {
 			return
 		}
-		if err != memcache.ErrCacheMiss {
+		if err != memcache.ErrCacheMiss && err != freecache.ErrNotFound {
 			log.Println("ERROR: Cache.DeviceUrlToIotDevice() ", err)
 		}
 	}
@@ -80,7 +81,7 @@ func (this *Cache) GetDeviceType(id string) (result model.DeviceType, err error)
 		if err == nil {
 			return
 		}
-		if err != memcache.ErrCacheMiss {
+		if err != memcache.ErrCacheMiss && err != freecache.ErrNotFound {
 			log.Println("ERROR: Cache.GetDeviceType() ", err)
 		}
 	}
