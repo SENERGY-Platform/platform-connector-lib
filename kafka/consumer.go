@@ -87,8 +87,9 @@ func (this *Consumer) start() error {
 					this.errorhandler(err, this)
 					return
 				}
-				if time.Now().Sub(m.Time) > 10*time.Second {
-					log.Println("ERROR: kafka message timeout: ", this.topic, time.Now().Sub(m.Time))
+				if time.Now().Sub(m.Time) > 30*time.Second {
+					log.Println("ERROR: kafka message older than 30s: ", this.topic, time.Now().Sub(m.Time))
+					err = r.CommitMessages(this.ctx, m)
 				} else {
 					err = this.listener(m.Topic, m.Value)
 					if err != nil {
@@ -96,6 +97,11 @@ func (this *Consumer) start() error {
 					} else {
 						err = r.CommitMessages(this.ctx, m)
 					}
+				}
+				if err != nil {
+					log.Println("ERROR: while committing message ", this.topic, err)
+					this.errorhandler(err, this)
+					return
 				}
 			}
 		}
