@@ -87,11 +87,15 @@ func (this *Consumer) start() error {
 					this.errorhandler(err, this)
 					return
 				}
-				err = this.listener(m.Topic, m.Value)
-				if err != nil {
-					log.Println("ERROR: unable to handle message (no commit)", err)
+				if time.Now().Sub(m.Time) > 10*time.Second {
+					log.Println("ERROR: kafka message timeout: ", this.topic, time.Now().Sub(m.Time))
 				} else {
-					err = r.CommitMessages(this.ctx, m)
+					err = this.listener(m.Topic, m.Value)
+					if err != nil {
+						log.Println("ERROR: unable to handle message (no commit)", err)
+					} else {
+						err = r.CommitMessages(this.ctx, m)
+					}
 				}
 			}
 		}
