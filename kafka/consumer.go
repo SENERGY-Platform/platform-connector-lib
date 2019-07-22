@@ -90,18 +90,23 @@ func (this *Consumer) start() error {
 				if time.Now().Sub(m.Time) > 30*time.Second {
 					log.Println("ERROR: kafka message older than 30s: ", this.topic, time.Now().Sub(m.Time))
 					err = r.CommitMessages(this.ctx, m)
+					if err != nil {
+						log.Println("ERROR: while committing message ", this.topic, err)
+						this.errorhandler(err, this)
+						return
+					}
 				} else {
 					err = this.listener(m.Topic, m.Value)
 					if err != nil {
 						log.Println("ERROR: unable to handle message (no commit)", err)
 					} else {
 						err = r.CommitMessages(this.ctx, m)
+						if err != nil {
+							log.Println("ERROR: while committing message ", this.topic, err)
+							this.errorhandler(err, this)
+							return
+						}
 					}
-				}
-				if err != nil {
-					log.Println("ERROR: while committing message ", this.topic, err)
-					this.errorhandler(err, this)
-					return
 				}
 			}
 		}
