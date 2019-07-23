@@ -65,13 +65,19 @@ func (this *Connector) handleEndpointEvent(token security.JwtToken, endpoint str
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, protocolParts []model.ProtocolPart) error {
 	device, err := this.IotCache.WithToken(token).DeviceUrlToIotDevice(deviceUri)
 	if err != nil {
+		log.Println("ERROR: handleDeviceRefEvent::DeviceUrlToIotDevice", err)
 		return err
 	}
 	dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceType)
+	if err != nil {
+		log.Println("ERROR: handleDeviceRefEvent::GetDeviceType", err)
+		return err
+	}
 	for _, service := range dt.Services {
 		if service.Url == serviceUri {
 			err = this.handleDeviceEvent(token, device.Id, service.Id, protocolParts)
 			if err != nil {
+				log.Println("ERROR: handleDeviceRefEvent::handleDeviceEvent", err)
 				return err
 			}
 		}

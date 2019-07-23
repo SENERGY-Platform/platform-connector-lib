@@ -51,6 +51,7 @@ func (this *Security) GetUserId(username string) (userid string, err error) {
 	users := []UserRepresentation{}
 	err = clientToken.GetJSON(this.authEndpoint+"/auth/admin/realms/master/users?username="+url.QueryEscape(username), &users)
 	if err != nil {
+		log.Println("ERROR: Security.GetUserId::GetJSON()", err)
 		this.ResetAccess()
 		return
 	}

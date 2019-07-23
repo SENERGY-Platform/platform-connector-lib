@@ -143,7 +143,7 @@ func (this *Connector) Start() (err error) {
 	}, func(err error, consumer *kafka.Consumer) {
 		if this.Config.FatalKafkaError {
 			log.Println("FATAL ERROR: kafka", err)
-			panic(err)
+			log.Fatal(err)
 		} else {
 			consumer.Restart()
 		}
