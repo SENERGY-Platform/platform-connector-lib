@@ -1,7 +1,7 @@
 package security
 
 import (
-	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/SENERGY-Platform/platform-connector-lib/cache"
 	"log"
 )
 
@@ -11,7 +11,7 @@ func (this *Security) GetCachedUserToken(username string) (token JwtToken, err e
 		if err == nil {
 			return
 		}
-		if err != memcache.ErrCacheMiss {
+		if err != cache.ErrNotFound {
 			log.Println("ERROR: GetCachedUserToken() ", err)
 		}
 	}
