@@ -2,8 +2,8 @@ package iot
 
 import (
 	"encoding/json"
-	"github.com/SENERGY-Platform/iot-device-repository/lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/cache"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 )
@@ -23,6 +23,7 @@ type Cache struct {
 	deviceTypeExpiration int32
 	token                security.JwtToken
 	debug                bool
+	protocol             map[string]model.Protocol
 }
 
 func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, memcachedServer ...string) *PreparedCache {
@@ -30,10 +31,10 @@ func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, memc
 }
 
 func (this *PreparedCache) WithToken(token security.JwtToken) *Cache {
-	return &Cache{iot: this.iot, deviceExpiration: this.deviceExpiration, deviceTypeExpiration: this.deviceTypeExpiration, debug: this.Debug, cache: this.cache, token: token}
+	return &Cache{iot: this.iot, deviceExpiration: this.deviceExpiration, deviceTypeExpiration: this.deviceTypeExpiration, debug: this.Debug, cache: this.cache, token: token, protocol: map[string]model.Protocol{}}
 }
 
-func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error) {
+func (this *Cache) GetDevice(id string) (result model.Device, err error) {
 	if this.deviceExpiration != 0 {
 		result, err = this.getDeviceFromCache(this.token, id)
 		if err == nil {
@@ -53,7 +54,7 @@ func (this *Cache) GetDevice(id string) (result model.DeviceInstance, err error)
 	return
 }
 
-func (this *Cache) DeviceUrlToIotDevice(deviceUrl string) (result model.DeviceInstance, err error) {
+func (this *Cache) GetDeviceByLocalId(deviceUrl string) (result model.Device, err error) {
 	if this.deviceExpiration != 0 {
 		result, err = this.getDeviceUrlToIotDeviceFromCache(this.token, deviceUrl)
 		if err == nil {
@@ -63,7 +64,7 @@ func (this *Cache) DeviceUrlToIotDevice(deviceUrl string) (result model.DeviceIn
 			log.Println("ERROR: Cache.DeviceUrlToIotDevice() ", err)
 		}
 	}
-	result, err = this.iot.DeviceUrlToIotDevice(deviceUrl, this.token)
+	result, err = this.iot.GetDeviceByLocalId(deviceUrl, this.token)
 	if err != nil {
 		return
 	}
@@ -93,7 +94,7 @@ func (this *Cache) GetDeviceType(id string) (result model.DeviceType, err error)
 	return
 }
 
-func (this *Cache) getDeviceFromCache(token security.JwtToken, id string) (device model.DeviceInstance, err error) {
+func (this *Cache) getDeviceFromCache(token security.JwtToken, id string) (device model.Device, err error) {
 	pl, err := token.GetPayload()
 	if err != nil {
 		return device, err
@@ -106,7 +107,7 @@ func (this *Cache) getDeviceFromCache(token security.JwtToken, id string) (devic
 	return
 }
 
-func (this *Cache) saveDeviceToCache(token security.JwtToken, instance model.DeviceInstance) {
+func (this *Cache) saveDeviceToCache(token security.JwtToken, instance model.Device) {
 	pl, err := token.GetPayload()
 	if err != nil {
 		log.Println("WARNING: saveDeviceToCache() unable to parse token", err)
@@ -141,7 +142,7 @@ func (this *Cache) saveDeviceTypeToCache(token security.JwtToken, deviceType mod
 	this.cache.Set("dt."+deviceType.Id, value, this.deviceTypeExpiration)
 }
 
-func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, deviceUrl string) (entities model.DeviceInstance, err error) {
+func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, deviceUrl string) (entities model.Device, err error) {
 	pl, err := token.GetPayload()
 	if err != nil {
 		return entities, err
@@ -154,7 +155,7 @@ func (this *Cache) getDeviceUrlToIotDeviceFromCache(token security.JwtToken, dev
 	return
 }
 
-func (this *Cache) saveDeviceUrlToIotDeviceToCache(token security.JwtToken, deviceUrl string, entities model.DeviceInstance) {
+func (this *Cache) saveDeviceUrlToIotDeviceToCache(token security.JwtToken, deviceUrl string, entities model.Device) {
 	pl, err := token.GetPayload()
 	if err != nil {
 		log.Println("WARNING: saveDeviceToCache() unable to parse token", err)
@@ -166,4 +167,17 @@ func (this *Cache) saveDeviceUrlToIotDeviceToCache(token security.JwtToken, devi
 		return
 	}
 	this.cache.Set("device_url."+pl.UserId+"."+deviceUrl, value, this.deviceExpiration)
+}
+
+func (this *Cache) GetProtocol(id string) (protocol model.Protocol, err error) {
+	protocol, ok := this.protocol[id]
+	if ok {
+		return protocol, nil
+	}
+	protocol, err = this.iot.GetProtocol(id, this.token)
+	if err != nil {
+		return protocol, err
+	}
+	this.protocol[id] = protocol
+	return protocol, err
 }

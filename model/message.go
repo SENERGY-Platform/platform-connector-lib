@@ -16,12 +16,6 @@
 
 package model
 
-import (
-	"github.com/SENERGY-Platform/iot-device-repository/lib/model"
-)
-
-const SENSOR_TYPE = "http://www.sepl.wifa.uni-leipzig.de/ontlogies/device-repo#Sensor"
-
 type ProtocolPart struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
@@ -37,7 +31,7 @@ type ProtocolMsg struct {
 	ServiceId        string         `json:"service_id"`
 	OutputName       string         `json:"output_name"`
 	Time             string         `json:"time"`
-	Service          model.Service  `json:"service"`
+	Service          Service        `json:"service"`
 }
 
 type Envelope struct {

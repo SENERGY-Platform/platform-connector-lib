@@ -17,21 +17,14 @@
 package iot
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
-	"net/http"
 	"net/url"
-	"reflect"
-	"strconv"
-	"strings"
-
-	iot_model "github.com/SENERGY-Platform/iot-device-repository/lib/model"
 )
 
-func (this *Iot) GetDevice(id string, token security.JwtToken) (device iot_model.DeviceInstance, err error) {
+func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Device, err error) {
 	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetDevice()", err)
@@ -46,22 +39,7 @@ func (this *Iot) GetDevice(id string, token security.JwtToken) (device iot_model
 	return device, err
 }
 
-func (this *Iot) GetDevices(token security.JwtToken, limit int, offset int) (devices []iot_model.DeviceInstance, err error) {
-	resp, err := token.Get(this.repo_url + "/devices?limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset) + "&permission=x&sort=name.asc")
-	if err != nil {
-		log.Println("ERROR on GetDevice()", err)
-		return devices, err
-	}
-	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(&devices)
-	if err != nil {
-		log.Println("ERROR on GetDevice() json decode", err)
-	}
-	return devices, err
-}
-
-func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model.DeviceType, err error) {
+func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.DeviceType, err error) {
 	resp, err := token.Get(this.repo_url + "/device-types/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetDeviceType()", err)
@@ -76,164 +54,17 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt iot_model
 	return dt, err
 }
 
-func (this *Iot) GetService(id string, token security.JwtToken) (service iot_model.Service, err error) {
-	resp, err := token.Get(this.repo_url + "/services/" + url.QueryEscape(id))
+func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (device model.Device, err error) {
+	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(localId) + "?as=local_id")
 	if err != nil {
-		log.Println("ERROR on GetDeviceType()", err)
-		return service, err
+		log.Println("ERROR on GetDevice()", err)
+		return device, err
 	}
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&service)
+	err = json.NewDecoder(resp.Body).Decode(&device)
 	if err != nil {
-		log.Println("ERROR on GetDeviceType() json decode", err)
+		log.Println("ERROR on GetDevice() json decode", err)
 	}
-	return service, err
-}
-
-func (this *Iot) DeviceUrlToIotDevice(deviceUrl string, token security.JwtToken) (result iot_model.DeviceInstance, err error) {
-	resp, err := token.Get(this.repo_url + "/device-uris/" + url.QueryEscape(deviceUrl) + "?permission=x")
-	if err != nil {
-		log.Println("error on ConnectorDeviceToIotDevice", err)
-		return result, err
-	}
-	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(&result)
-	if err != nil {
-		log.Println("error on ConnectorDeviceToIotDevice", err)
-		return result, err
-	}
-	return
-}
-
-type IotErrorMessage struct {
-	StatusCode int      `json:"status_code,omitempty"`
-	Message    string   `json:"message"`
-	ErrorCode  string   `json:"error_code,omitempty"`
-	Detail     []string `json:"detail,omitempty"`
-}
-
-func (this *Iot) CreateIotDevice(device iot_model.ProvisioningDevice, token security.JwtToken) (result iot_model.DeviceInstance, err error) {
-	typeid := device.IotType
-
-	if typeid == "" {
-		return result, errors.New("empty iot_type")
-	}
-	resp, err := token.Get(this.semantic_url + "/ui/deviceInstance/resourceSkeleton/" + url.QueryEscape(typeid))
-	if err != nil {
-		log.Println("error on CreateIotDevice() resourceSkeleton", err)
-		return result, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		errmsg := IotErrorMessage{}
-		json.NewDecoder(resp.Body).Decode(&errmsg)
-		err = errors.New("error while creating device skeleton: " + errmsg.Message)
-		log.Println("ERROR: CreateIotDevice()", err, errmsg)
-		return
-	}
-	err = json.NewDecoder(resp.Body).Decode(&result)
-	if err != nil {
-		log.Println("error on CreateIotDevice() decode", err)
-		return result, err
-	}
-	result.Name = device.Name
-	result.Url = device.Uri
-	result.Tags = device.Tags
-
-	b := new(bytes.Buffer)
-	err = json.NewEncoder(b).Encode(result)
-	if err != nil {
-		return result, err
-	}
-	resp, err = token.Post(this.semantic_url+"/deviceInstance", "application/json", b)
-	if err != nil {
-		log.Println("error on CreateIotDevice() create in repository", err)
-		return result, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		errmsg := IotErrorMessage{}
-		json.NewDecoder(resp.Body).Decode(&errmsg)
-		err = errors.New("error while creating new device: " + errmsg.Message)
-		log.Println("ERROR: CreateIotDevice()", err, errmsg)
-		return
-	}
-	err = json.NewDecoder(resp.Body).Decode(&result)
-	return
-}
-
-func (this *Iot) UpdateDevice(new iot_model.ProvisioningDevice, old iot_model.DeviceServiceEntity, token security.JwtToken) (result iot_model.DeviceServiceEntity, err error) {
-	clientTags := IndexTags(new.Tags)
-	platformTags := IndexTags(old.Device.Tags)
-	mergedTags := MergeTagIndexes(platformTags, clientTags)
-	tagsChanged := !reflect.DeepEqual(platformTags, mergedTags)
-	nameChanged := new.Name != old.Device.Name
-
-	result = old
-	if tagsChanged || nameChanged {
-		if nameChanged {
-			result.Device.Name = new.Name
-		}
-		if tagsChanged {
-			result.Device.Tags = TagIndexToTagList(mergedTags)
-		}
-		err = this.UpdateDeviceInstance(result.Device, token)
-	}
-	return
-}
-
-func (this *Iot) UpdateDeviceInstance(device iot_model.DeviceInstance, token security.JwtToken) (err error) {
-	b := new(bytes.Buffer)
-	err = json.NewEncoder(b).Encode(device)
-	if err != nil {
-		return err
-	}
-	resp, err := token.Post(this.semantic_url+"/deviceInstance/"+url.QueryEscape(device.Id), "application/json", b)
-	if err != nil {
-		log.Println("error while doing UpdateDevice() http request: ", err)
-		return err
-	}
-	defer resp.Body.Close()
-	return
-}
-
-func IndexTags(tags []string) (result map[string]string) {
-	result = map[string]string{}
-	for _, tag := range tags {
-		parts := strings.SplitN(tag, ":", 2)
-		if len(parts) != 2 {
-			log.Println("ERROR: wrong tag syntax; ", tag)
-			continue
-		}
-		result[parts[0]] = parts[1]
-	}
-	return result
-}
-
-func TagIndexToTagList(index map[string]string) (tags []string) {
-	for key, value := range index {
-		tags = append(tags, key+":"+value)
-	}
-	return
-}
-
-func MergeTagIndexes(platform map[string]string, client map[string]string) (result map[string]string) {
-	result = map[string]string{}
-	for key, value := range platform {
-		result[key] = value
-	}
-	for key, value := range client {
-		result[key] = value
-	}
-	return
-}
-
-func (this *Iot) DeleteDeviceInstance(uri string, token security.JwtToken) (err error) {
-	device, err := this.DeviceUrlToIotDevice(uri, token)
-	if err != nil {
-		return err
-	}
-	_, err = token.Delete(this.semantic_url + "/deviceInstance/" + url.QueryEscape(device.Id))
-	return
+	return device, err
 }

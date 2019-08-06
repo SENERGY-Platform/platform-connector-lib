@@ -31,20 +31,16 @@ func (this *Connector) handleCommand(msg []byte) (err error) {
 		return
 	}
 	protocolParts := getProtocolPartMap(protocolmsg.ProtocolParts)
-	var handlerResponse CommandResponseMsg
-	if this.endpointCommandHandler != nil {
-		handlerResponse, err = this.useEndpointCommandHandler(protocolmsg, protocolParts)
-	} else if this.endpointCommandHandler != nil {
-		handlerResponse, err = this.useDeviceCommandHandler(protocolmsg, protocolParts)
+	if this.deviceCommandHandler != nil {
+		handlerResponse, err := this.useDeviceCommandHandler(protocolmsg, protocolParts)
+		if err != nil {
+			return err
+		}
+		return this.HandleCommandResponse(protocolmsg, handlerResponse)
 	} else if this.asyncCommandHandler != nil {
 		return this.asyncCommandHandler(protocolmsg, protocolParts)
-	} else {
-		err = errors.New("missing command handler")
 	}
-	if err != nil {
-		return err
-	}
-	return this.HandleCommandResponse(protocolmsg, handlerResponse)
+	return errors.New("missing command handler")
 }
 
 func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, commandResponse CommandResponseMsg) (err error) {
@@ -63,31 +59,6 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 
 func (this *Connector) useDeviceCommandHandler(msg model.ProtocolMsg, protocolParts map[string]string) (result map[string]string, err error) {
 	return this.deviceCommandHandler(msg.DeviceInstanceId, msg.DeviceUrl, msg.ServiceId, msg.ServiceUrl, protocolParts)
-}
-
-func (this *Connector) useEndpointCommandHandler(msg model.ProtocolMsg, protocolParts map[string]string) (result map[string]string, err error) {
-	endpoint, err := this.getEndpoint(msg)
-	if err != nil {
-		log.Println("ERROR: handleCommand::getEndpoint()", err.Error())
-		return
-	}
-	return this.endpointCommandHandler(endpoint, protocolParts)
-}
-
-func (this *Connector) getEndpoint(msg model.ProtocolMsg) (endpoint string, err error) {
-	token, err := this.security.Access()
-	if err != nil {
-		log.Println("ERROR getEndpoint::Access()", err)
-		return endpoint, err
-	}
-	endpointStruct, err := this.iot.GetOutEndpoint(token, msg.DeviceInstanceId, msg.ServiceId)
-	if err != nil {
-		log.Println("ERROR getEndpoint::GetOutEndpoint()", err)
-		this.security.ResetAccess()
-		return endpoint, err
-	}
-	endpoint = endpointStruct.Endpoint
-	return
 }
 
 func getProtocolPartMap(protocolParts []model.ProtocolPart) (result map[string]string) {

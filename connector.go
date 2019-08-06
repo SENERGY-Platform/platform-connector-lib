@@ -23,7 +23,6 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
-	kgo "github.com/segmentio/kafka-go"
 	"log"
 )
 
@@ -39,13 +38,12 @@ type AsyncCommandHandler func(commandRequest model.ProtocolMsg, requestMsg Comma
 type Connector struct {
 	Config Config
 	//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
-	endpointCommandHandler EndpointCommandHandler //must be able to handle concurrent calls
-	deviceCommandHandler   DeviceCommandHandler   //must be able to handle concurrent calls
-	asyncCommandHandler    AsyncCommandHandler    //must be able to handle concurrent calls
-	producer               kafka.ProducerInterface
-	consumer               *kafka.Consumer
-	iot                    *iot.Iot
-	security               *security.Security
+	deviceCommandHandler DeviceCommandHandler //must be able to handle concurrent calls
+	asyncCommandHandler  AsyncCommandHandler  //must be able to handle concurrent calls
+	producer             kafka.ProducerInterface
+	consumer             *kafka.Consumer
+	iot                  *iot.Iot
+	security             *security.Security
 
 	IotCache *iot.PreparedCache
 
@@ -55,7 +53,7 @@ type Connector struct {
 func New(config Config) (connector *Connector) {
 	connector = &Connector{
 		Config: config,
-		iot:    iot.New(config.IotRepoUrl, config.DeviceRepoUrl, config.Protocol),
+		iot:    iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl),
 		security: security.New(
 			config.AuthEndpoint,
 			config.AuthClientId,
@@ -77,22 +75,7 @@ func (this *Connector) SetKafkaLogger(logger *log.Logger) {
 }
 
 //asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
-func (this *Connector) SetEndpointCommandHandler(handler EndpointCommandHandler) *Connector {
-	if this.deviceCommandHandler != nil {
-		panic("try setting endpoint command handler while device command handler exists")
-	}
-	if this.asyncCommandHandler != nil {
-		panic("try setting endpoint command handler while async command handler exists")
-	}
-	this.endpointCommandHandler = handler
-	return this
-}
-
-//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 func (this *Connector) SetDeviceCommandHandler(handler DeviceCommandHandler) *Connector {
-	if this.endpointCommandHandler != nil {
-		panic("try setting endpoint command handler while endpoint command handler exists")
-	}
 	if this.asyncCommandHandler != nil {
 		panic("try setting endpoint command handler while async command handler exists")
 	}
@@ -105,15 +88,12 @@ func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Conn
 	if this.deviceCommandHandler != nil {
 		panic("try setting endpoint command handler while device command handler exists")
 	}
-	if this.endpointCommandHandler != nil {
-		panic("try setting endpoint command handler while endpoint command handler exists")
-	}
 	this.asyncCommandHandler = handler
 	return this
 }
 
 func (this *Connector) Start() (err error) {
-	if this.deviceCommandHandler == nil && this.endpointCommandHandler == nil && this.asyncCommandHandler == nil {
+	if this.deviceCommandHandler == nil && this.asyncCommandHandler == nil {
 		return errors.New("missing command handler; use SetAsyncCommandHandler(), SetDeviceCommandHandler() or SetEndpointCommandHandler()")
 	}
 	this.producer, err = kafka.PrepareProducer(this.Config.ZookeeperUrl, this.Config.SyncKafka, this.Config.SyncKafkaIdempotent)
@@ -153,23 +133,6 @@ func (this *Connector) Start() (err error) {
 
 func (this *Connector) Stop() {
 	this.consumer.Stop()
-}
-
-func (this *Connector) HandleEndpointEvent(username string, password string, endpoint string, eventMsg EventMsg) (total int, success int, fail int, err error) {
-	token, err := this.security.GetUserToken(username, password)
-	if err != nil {
-		log.Println("ERROR HandleEndpointEvent::GetUserToken()", err)
-		return total, success, fail, err
-	}
-	return this.HandleEndpointEventWithAuthToken(token, endpoint, eventMsg)
-}
-
-func (this *Connector) HandleEndpointEventWithAuthToken(token security.JwtToken, endpoint string, eventMsg EventMsg) (total int, success int, fail int, err error) {
-	protocol := []model.ProtocolPart{}
-	for segmentName, value := range eventMsg {
-		protocol = append(protocol, model.ProtocolPart{Name: segmentName, Value: value})
-	}
-	return this.handleEndpointEvent(token, endpoint, protocol)
 }
 
 func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string) (err error) {
@@ -212,74 +175,4 @@ func (this *Connector) Security() *security.Security {
 
 func (this *Connector) Iot() *iot.Iot {
 	return this.iot
-}
-
-func (this *Connector) EnsureTopics(token security.JwtToken, batchsize int, numPartitions int, replicationFactor int) {
-	controller, err := kafka.GetKafkaController(this.Config.ZookeeperUrl)
-	if err != nil {
-		log.Println("ERROR: EnsureTopics:GetKafkaController()", err)
-		return
-	}
-	if controller == "" {
-		log.Println("ERROR: EnsureTopics:GetKafkaController(): unable to find controller")
-		return
-	}
-	conn, err := kgo.Dial("tcp", controller)
-	if err != nil {
-		log.Println("ERROR: EnsureTopics:Dial()", err)
-		return
-	}
-	limit := batchsize
-	deviceTypes := make(chan string, limit)
-	go func() {
-		doneDeviceTypes := map[string]bool{}
-		offset := 0
-		defer close(deviceTypes)
-		for {
-			devices, err := this.Iot().GetDevices(token, limit, offset)
-			if err != nil {
-				log.Println("ERROR: EnsureTopics:GetDevices()", err)
-				return
-			}
-			for _, device := range devices {
-				if !doneDeviceTypes[device.DeviceType] {
-					doneDeviceTypes[device.DeviceType] = true
-					deviceTypes <- device.DeviceType
-				}
-			}
-			if len(devices) != limit {
-				return
-			}
-			offset = offset + limit
-		}
-	}()
-
-	topics := make(chan string)
-	go func() {
-		defer close(topics)
-		cache := this.IotCache.WithToken(token)
-		for dtId := range deviceTypes {
-			dt, err := cache.GetDeviceType(dtId)
-			if err != nil {
-				log.Println("ERROR: EnsureTopics:GetDeviceType()", dtId, err)
-				return
-			}
-			for _, service := range dt.Services {
-				topics <- formatId(service.Id)
-			}
-		}
-	}()
-
-	go func() {
-		for topic := range topics {
-			err := conn.CreateTopics(kgo.TopicConfig{
-				Topic:             topic,
-				NumPartitions:     numPartitions,
-				ReplicationFactor: replicationFactor,
-			})
-			if err != nil {
-				log.Println("ERROR: EnsureTopics:CreateTopics()", topic, err)
-			}
-		}
-	}()
 }

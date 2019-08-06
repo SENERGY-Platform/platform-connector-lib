@@ -18,14 +18,14 @@ package iot
 
 import (
 	"encoding/json"
-	"github.com/SENERGY-Platform/iot-device-repository/lib/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"net/url"
 )
 
 func (this *Iot) GetHub(id string, cred security.JwtToken) (hub model.Hub, err error) {
-	resp, err := cred.Get(this.semantic_url + "/hubs/" + url.QueryEscape(id))
+	resp, err := cred.Get(this.repo_url + "/hubs/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetGateway()", err)
 		return hub, err
@@ -39,58 +39,23 @@ func (this *Iot) GetHub(id string, cred security.JwtToken) (hub model.Hub, err e
 	return hub, err
 }
 
-func (this *Iot) GetHubHash(id string, cred security.JwtToken) (hash string, err error) {
-	err = cred.GetJSON(this.semantic_url+"/hubs/"+url.QueryEscape(id)+"/hash", &hash)
-	return
-}
-
-func (this *Iot) GetHubName(id string, cred security.JwtToken) (name string, err error) {
-	err = cred.GetJSON(this.semantic_url+"/hubs/"+url.QueryEscape(id)+"/name", &name)
-	return
-}
-
-func (this *Iot) GetHubDevices(id string, cred security.JwtToken) (devices []string, err error) {
-	err = cred.GetJSON(this.semantic_url+"/hubs/"+url.QueryEscape(id)+"/devices", &devices)
-	return
-}
-
-func (this *Iot) GetHubDevicesAsId(id string, cred security.JwtToken) (devices []string, err error) {
-	err = cred.GetJSON(this.semantic_url+"/hubs/"+url.QueryEscape(id)+"/devices?as=id", &devices)
-	return
-}
-
 func (this *Iot) CreateHub(hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {
-	err = cred.PostJSON(this.semantic_url+"/hubs", hub, &result)
+	err = cred.PostJSON(this.manager_url+"/hubs", hub, &result)
 	return
 }
 
 func (this *Iot) ExistsHub(id string, cred security.JwtToken) (exists bool, err error) {
-	exists, err = cred.Head(this.semantic_url + "/hubs/" + url.QueryEscape(id))
+	exists, err = cred.Head(this.repo_url + "/hubs/" + url.QueryEscape(id))
 	return
 }
 
 func (this *Iot) UpdateHub(id string, hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {
 	hub.Id = id
-	err = cred.PutJSON(this.semantic_url+"/hubs/"+url.QueryEscape(id), hub, &result)
-	return
-}
-
-func (this *Iot) UpdateHubHash(id string, hash string, cred security.JwtToken) (err error) {
-	err = cred.PutJSON(this.semantic_url+"/hubs/"+url.QueryEscape(id)+"/hash", hash, nil)
-	return
-}
-
-func (this *Iot) UpdateHubName(id string, name string, cred security.JwtToken) (err error) {
-	err = cred.PutJSON(this.semantic_url+"/hubs/"+url.QueryEscape(id)+"/name", name, nil)
-	return
-}
-
-func (this *Iot) UpdateHubDevices(id string, devices []string, cred security.JwtToken) (err error) {
-	err = cred.PutJSON(this.semantic_url+"/hubs/"+url.QueryEscape(id)+"/devices", devices, nil)
+	err = cred.PutJSON(this.manager_url+"/hubs/"+url.QueryEscape(id), hub, &result)
 	return
 }
 
 func (this *Iot) DeleteHub(id string, cred security.JwtToken) (err error) {
-	_, err = cred.Delete(this.semantic_url + "/hubs/" + url.QueryEscape(id))
+	_, err = cred.Delete(this.manager_url + "/hubs/" + url.QueryEscape(id))
 	return
 }

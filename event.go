@@ -18,63 +18,69 @@ package platform_connector_lib
 
 import (
 	"encoding/json"
+	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"strings"
 	"time"
-
-	"github.com/SENERGY-Platform/formatter-lib"
 )
 
-func (this *Connector) formatEvent(token security.JwtToken, deviceid string, serviceid string, event formatter_lib.EventMsg) (result string, err error) {
-	formatter, err := formatter_lib.NewTransformer(this.IotCache.WithToken(token), deviceid, serviceid)
+func (this *Connector) unmarshalMsg(token security.JwtToken, deviceid string, serviceid string, msg map[string]string) (result map[string]interface{}, err error) {
+	result = map[string]interface{}{}
+	iot := this.IotCache.WithToken(token)
+	device, err := iot.GetDevice(deviceid)
 	if err != nil {
-		return "", err
+		return result, err
 	}
-	result, err = formatter.Transform(event)
-	return
-}
-
-func (this *Connector) handleEndpointEvent(token security.JwtToken, endpoint string, protocolParts []model.ProtocolPart) (total int, success int, fail int, err error) {
-	endpoints, err := this.iot.GetInEndpoints(token, endpoint)
+	dt, err := iot.GetDeviceType(device.DeviceTypeId)
 	if err != nil {
-		log.Println("ERROR in handleEndpointEvent::GetInEndpoints(): ", err)
-		return total, success, fail, err
+		return result, err
 	}
-	total = len(endpoints)
-	if total == 0 {
-		log.Println("DEBUG: unknown device for endpoint ", endpoint)
-		_, err = this.iot.CreateNewEndpoint(token, endpoint, protocolParts) //async on iot-repo side
-		if err != nil {
-			log.Println("ERROR in handleEndpointEvent::CreateNewEndpoint(): ", err)
+	for _, service := range dt.Services {
+		if service.Id == serviceid {
+			for _, output := range service.Outputs {
+				marshaller, ok := marshalling.Get(output.Serialization)
+				if !ok {
+					return result, errors.New("unknown format " + output.Serialization)
+				}
+				protocol, err := iot.GetProtocol(service.ProtocolId)
+				if err != nil {
+					return result, err
+				}
+				for _, segment := range protocol.ProtocolSegments {
+					if segment.Id == output.ProtocolSegmentId {
+						segmentMsg, ok := msg[segment.Name]
+						if ok {
+							out, err := marshaller.Unmarshal(segmentMsg, output.ContentVariable)
+							if err != nil {
+								return result, err
+							}
+							result[output.ContentVariable.Name] = out
+						}
+					}
+				}
+			}
+			return result, nil
 		}
-		return total, success, fail, err
 	}
-	for _, endpoint := range endpoints {
-		err = this.handleDeviceEvent(token, endpoint.Device, endpoint.Service, protocolParts)
-		if err != nil {
-			fail++
-		} else {
-			success++
-		}
-	}
-	return
+	return result, errors.New("unknown service id")
 }
 
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, protocolParts []model.ProtocolPart) error {
-	device, err := this.IotCache.WithToken(token).DeviceUrlToIotDevice(deviceUri)
+	device, err := this.IotCache.WithToken(token).GetDeviceByLocalId(deviceUri)
 	if err != nil {
 		log.Println("ERROR: handleDeviceRefEvent::DeviceUrlToIotDevice", err)
 		return err
 	}
-	dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceType)
+	dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceTypeId)
 	if err != nil {
 		log.Println("ERROR: handleDeviceRefEvent::GetDeviceType", err)
 		return err
 	}
 	for _, service := range dt.Services {
-		if service.Url == serviceUri {
+		if service.LocalId == serviceUri {
 			err = this.handleDeviceEvent(token, device.Id, service.Id, protocolParts)
 			if err != nil {
 				log.Println("ERROR: handleDeviceRefEvent::handleDeviceEvent", err)
@@ -86,21 +92,14 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 }
 
 func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, protocolParts []model.ProtocolPart) (err error) {
-	eventMsg := formatter_lib.EventMsg{}
+	eventMsg := map[string]string{}
 	for _, part := range protocolParts {
-		eventMsg = append(eventMsg, formatter_lib.ProtocolPart{Name: part.Name, Value: part.Value})
-	}
-	formatedEvent, err := this.formatEvent(token, deviceId, serviceId, eventMsg)
-	if err != nil {
-		log.Println("ERROR: handleDeviceEvent::formatEvent() ", err)
-		return err
+		eventMsg[part.Name] = part.Value
 	}
 
-	var eventValue interface{}
-	err = json.Unmarshal([]byte(formatedEvent), &eventValue)
+	eventValue, err := this.unmarshalMsg(token, deviceId, serviceId, eventMsg)
 	if err != nil {
-		log.Println("ERROR: handleDeviceEvent::unmarshaling ", err)
-		return
+		return err
 	}
 
 	serviceTopic := formatId(serviceId)
@@ -121,13 +120,6 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 	err = this.producer.Produce(serviceTopic, string(jsonMsg))
 	if err != nil {
 		log.Println("ERROR: produce event on service topic ", err)
-		return err
-	}
-	if this.Config.KafkaEventTopic != "" {
-		err = this.producer.Produce(this.Config.KafkaEventTopic, string(jsonMsg))
-	}
-	if err != nil {
-		log.Println("ERROR: produce event on event topic", this.Config.KafkaEventTopic, err)
 		return err
 	}
 	return
