@@ -1,8 +1,8 @@
 package xml
 
 import (
-	"mapping/marshalling/base"
-	"mapping/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/marshalling/base"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"reflect"
 	"testing"
 )

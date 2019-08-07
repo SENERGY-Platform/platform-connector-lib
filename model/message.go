@@ -16,6 +16,8 @@
 
 package model
 
+import "strings"
+
 type ProtocolPart struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
@@ -38,4 +40,10 @@ type Envelope struct {
 	DeviceId  string      `json:"device_id,omitempty"`
 	ServiceId string      `json:"service_id,omitempty"`
 	Value     interface{} `json:"value"`
+}
+
+func ServiceIdToTopic(id string) string {
+	id = strings.ReplaceAll(id, "#", "_")
+	id = strings.ReplaceAll(id, ":", "_")
+	return id
 }

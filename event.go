@@ -23,7 +23,6 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -102,7 +101,7 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 		return err
 	}
 
-	serviceTopic := formatId(serviceId)
+	serviceTopic := model.ServiceIdToTopic(serviceId)
 	envelope := model.Envelope{DeviceId: deviceId, ServiceId: serviceId}
 	envelope.Value = eventValue
 
@@ -123,8 +122,4 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 		return err
 	}
 	return
-}
-
-func formatId(id string) string {
-	return strings.Replace(id, "#", "_", -1)
 }

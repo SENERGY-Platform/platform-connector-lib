@@ -22,7 +22,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"runtime/debug"
 	"time"
 )
 
@@ -44,12 +47,27 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 
 	if err == nil {
 		if resp.StatusCode == http.StatusNotFound {
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
 			return resp, ErrorNotFound
 		}
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
 			return resp, ErrorAccessDenied
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Println("ERROR: ", err)
+			}
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
+			log.Println("DEBUG: response:", resp.StatusCode, string(b))
+			debug.PrintStack()
 			return resp, ErrorUnexpectedStatus
 		}
 	}
@@ -85,12 +103,27 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 
 	if err == nil {
 		if resp.StatusCode == http.StatusNotFound {
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
 			return resp, ErrorNotFound
 		}
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
 			return resp, ErrorAccessDenied
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Println("ERROR: ", err)
+			}
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
+			log.Println("DEBUG: response:", resp.StatusCode, string(b))
+			debug.PrintStack()
 			return resp, ErrorUnexpectedStatus
 		}
 	}
@@ -119,12 +152,27 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 
 	if err == nil {
 		if resp.StatusCode == http.StatusNotFound {
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
 			return resp, ErrorNotFound
 		}
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
 			return resp, ErrorAccessDenied
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Println("ERROR: ", err)
+			}
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
+			log.Println("DEBUG: response:", resp.StatusCode, string(b))
+			debug.PrintStack()
 			return resp, ErrorUnexpectedStatus
 		}
 	}
@@ -145,12 +193,27 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 
 	if err == nil {
 		if resp.StatusCode == http.StatusNotFound {
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
 			return resp, ErrorNotFound
 		}
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
 			return resp, ErrorAccessDenied
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Println("ERROR: ", err)
+			}
+			if err := resp.Body.Close(); err != nil {
+				log.Println("ERROR: ", err)
+			}
+			log.Println("DEBUG: response:", resp.StatusCode, string(b))
+			debug.PrintStack()
 			return resp, ErrorUnexpectedStatus
 		}
 	}

@@ -2,8 +2,8 @@ package xml
 
 import (
 	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/clbanning/mxj"
-	"mapping/model"
 )
 
 func (Marshaller) Unmarshal(in string, variable model.ContentVariable) (out interface{}, err error) {

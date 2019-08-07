@@ -1,7 +1,7 @@
 package xml
 
 import (
-	"mapping/marshalling/base"
+	"github.com/SENERGY-Platform/platform-connector-lib/marshalling/base"
 )
 
 type Marshaller struct {
