@@ -25,7 +25,7 @@ import (
 )
 
 func (this *Iot) GetHub(id string, cred security.JwtToken) (hub model.Hub, err error) {
-	resp, err := cred.Get(this.repo_url + "/hubs/" + url.QueryEscape(id))
+	resp, err := cred.Get(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
 		log.Println("ERROR on GetGateway()", err)
 		return hub, err
@@ -45,7 +45,7 @@ func (this *Iot) CreateHub(hub model.Hub, cred security.JwtToken) (result model.
 }
 
 func (this *Iot) ExistsHub(id string, cred security.JwtToken) (exists bool, err error) {
-	exists, err = cred.Head(this.repo_url + "/hubs/" + url.QueryEscape(id))
+	exists, err = cred.Head(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?&p=x")
 	return
 }
 

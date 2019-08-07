@@ -25,7 +25,7 @@ import (
 )
 
 func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Device, err error) {
-	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(id))
+	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
 		log.Println("ERROR on GetDevice()", err)
 		return device, err
@@ -55,7 +55,7 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 }
 
 func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (device model.Device, err error) {
-	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(localId) + "?as=local_id")
+	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(localId) + "?as=local_id&p=x")
 	if err != nil {
 		log.Println("ERROR on GetDevice()", err)
 		return device, err
