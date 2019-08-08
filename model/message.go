@@ -24,17 +24,20 @@ type ProtocolPart struct {
 }
 
 type ProtocolMsg struct {
-	WorkerId         string         `json:"worker_id"`
-	TaskId           string         `json:"task_id"`
-	DeviceUrl        string         `json:"device_url"`
-	ServiceUrl       string         `json:"service_url"`
-	ProtocolParts    []ProtocolPart `json:"protocol_parts"`
-	DeviceInstanceId string         `json:"device_instance_id"`
-	ServiceId        string         `json:"service_id"`
-	OutputName       string         `json:"output_name"`
-	Time             string         `json:"time"`
-	Service          Service        `json:"service"`
+	WorkerId           string         `json:"worker_id"`
+	TaskId             string         `json:"task_id"`
+	CompletionStrategy string         `json:"completion_strategy"`
+	DeviceUrl          string         `json:"device_url"`
+	ServiceUrl         string         `json:"service_url"`
+	ProtocolParts      []ProtocolPart `json:"protocol_parts"`
+	DeviceInstanceId   string         `json:"device_instance_id"`
+	ServiceId          string         `json:"service_id"`
+	OutputName         string         `json:"output_name"`
+	Time               string         `json:"time"`
+	Service            Service        `json:"service"`
 }
+
+const Optimistic = "optimistic"
 
 type Envelope struct {
 	DeviceId  string      `json:"device_id,omitempty"`

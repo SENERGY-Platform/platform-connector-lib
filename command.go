@@ -21,9 +21,10 @@ import (
 	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"log"
+	"time"
 )
 
-func (this *Connector) handleCommand(msg []byte) (err error) {
+func (this *Connector) handleCommand(msg []byte, t time.Time) (err error) {
 	protocolmsg := model.ProtocolMsg{}
 	err = json.Unmarshal(msg, &protocolmsg)
 	if err != nil {
@@ -38,12 +39,15 @@ func (this *Connector) handleCommand(msg []byte) (err error) {
 		}
 		return this.HandleCommandResponse(protocolmsg, handlerResponse)
 	} else if this.asyncCommandHandler != nil {
-		return this.asyncCommandHandler(protocolmsg, protocolParts)
+		return this.asyncCommandHandler(protocolmsg, protocolParts, t)
 	}
 	return errors.New("missing command handler")
 }
 
 func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, commandResponse CommandResponseMsg) (err error) {
+	if commandRequest.CompletionStrategy == model.Optimistic {
+		return
+	}
 	resultProtocolParts := []model.ProtocolPart{}
 	for name, value := range commandResponse {
 		resultProtocolParts = append(resultProtocolParts, model.ProtocolPart{Name: name, Value: value})
