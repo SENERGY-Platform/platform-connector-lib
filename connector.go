@@ -25,6 +25,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	kgo "github.com/segmentio/kafka-go"
 	"log"
+	"time"
 )
 
 type ProtocolSegmentName = string
@@ -34,7 +35,7 @@ type EventMsg = map[ProtocolSegmentName]string
 
 type EndpointCommandHandler func(endpoint string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
 type DeviceCommandHandler func(deviceId string, deviceUri string, serviceId string, serviceUri string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
-type AsyncCommandHandler func(commandRequest model.ProtocolMsg, requestMsg CommandRequestMsg) (err error)
+type AsyncCommandHandler func(commandRequest model.ProtocolMsg, requestMsg CommandRequestMsg, t time.Time) (err error)
 
 type Connector struct {
 	Config Config
@@ -124,7 +125,7 @@ func (this *Connector) Start() (err error) {
 	if this.kafkalogger != nil {
 		this.producer.Log(this.kafkalogger)
 	}
-	this.consumer, err = kafka.NewConsumer(this.Config.ZookeeperUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte) error {
+	this.consumer, err = kafka.NewConsumer(this.Config.ZookeeperUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte, t time.Time) error {
 		if string(msg) == "topic_init" {
 			return nil
 		}
@@ -139,7 +140,7 @@ func (this *Connector) Start() (err error) {
 			log.Println("ERROR: ", err)
 			return nil //ignore marshaling errors --> no repeat; errors would definitely reoccur
 		}
-		return this.handleCommand(payload)
+		return this.handleCommand(payload, t)
 	}, func(err error, consumer *kafka.Consumer) {
 		if this.Config.FatalKafkaError {
 			log.Println("FATAL ERROR: kafka", err)

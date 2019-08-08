@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-func NewConsumer(zk string, groupid string, topic string, listener func(topic string, msg []byte) error, errorhandler func(err error, consumer *Consumer)) (consumer *Consumer, err error) {
+func NewConsumer(zk string, groupid string, topic string, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error, consumer *Consumer)) (consumer *Consumer, err error) {
 	consumer = &Consumer{groupId: groupid, zkUrl: zk, topic: topic, listener: listener, errorhandler: errorhandler}
 	err = consumer.start()
 	return
@@ -39,7 +39,7 @@ type Consumer struct {
 	topic        string
 	ctx          context.Context
 	cancel       context.CancelFunc
-	listener     func(topic string, msg []byte) error
+	listener     func(topic string, msg []byte, time time.Time) error
 	errorhandler func(err error, consumer *Consumer)
 	mux          sync.Mutex
 }
@@ -96,7 +96,7 @@ func (this *Consumer) start() error {
 						return
 					}
 				} else {
-					err = this.listener(m.Topic, m.Value)
+					err = this.listener(m.Topic, m.Value, m.Time)
 					if err != nil {
 						log.Println("ERROR: unable to handle message (no commit)", err)
 					} else {
