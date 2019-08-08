@@ -49,6 +49,9 @@ func (this *Connector) handleCommand(msg []byte, t time.Time) (err error) {
 }
 
 func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, commandResponse CommandResponseMsg) (err error) {
+	if commandRequest.CompletionStrategy == model.Optimistic {
+		return
+	}
 	resultProtocolParts := []model.ProtocolPart{}
 	for name, value := range commandResponse {
 		resultProtocolParts = append(resultProtocolParts, model.ProtocolPart{Name: name, Value: value})
