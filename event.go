@@ -21,6 +21,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -120,11 +121,12 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 	}
 	err = this.producer.Produce(serviceTopic, string(jsonMsg))
 	if err != nil {
+		if this.Config.FatalKafkaError {
+			debug.PrintStack()
+			log.Fatal("FATAL: ", err)
+		}
 		log.Println("ERROR: produce event on service topic ", err)
 		return err
-	}
-	if this.Config.KafkaEventTopic != "" {
-		err = this.producer.Produce(this.Config.KafkaEventTopic, string(jsonMsg))
 	}
 	if err != nil {
 		log.Println("ERROR: produce event on event topic", this.Config.KafkaEventTopic, err)

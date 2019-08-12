@@ -51,7 +51,7 @@ func TestProducer_Produce(t *testing.T) {
 
 	result := [][]byte{}
 
-	consumer, err := NewConsumer(zookeeperUrl, "test", "test", func(topic string, msg []byte) error {
+	consumer, err := NewConsumer(zookeeperUrl, "test", "test", func(topic string, msg []byte, t time.Time) error {
 		result = append(result, msg)
 		return nil
 	}, func(err error, consumer *Consumer) {
