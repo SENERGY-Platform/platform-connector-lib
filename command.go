@@ -21,6 +21,7 @@ import (
 	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"log"
+	"runtime/debug"
 	"time"
 )
 
@@ -58,7 +59,12 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
 		return err
 	}
-	return this.producer.Produce(this.Config.KafkaResponseTopic, string(responseMsg))
+	err = this.producer.Produce(this.Config.KafkaResponseTopic, string(responseMsg))
+	if err != nil && this.Config.FatalKafkaError {
+		debug.PrintStack()
+		log.Fatal("FATAL: ", err)
+	}
+	return err
 }
 
 func (this *Connector) useDeviceCommandHandler(msg model.ProtocolMsg, protocolParts map[string]string) (result map[string]string, err error) {

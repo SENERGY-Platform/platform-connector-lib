@@ -72,9 +72,15 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterfa
 		result := &AsyncProducer{broker: broker}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
-		sarama_conf.Producer.Return.Errors = false
+		sarama_conf.Producer.Return.Errors = true
 		sarama_conf.Producer.Return.Successes = false
 		result.producer, err = sarama.NewAsyncProducer(result.broker, sarama_conf)
+		go func() {
+			err, ok := <-result.producer.Errors()
+			if ok {
+				log.Fatal(err)
+			}
+		}()
 		return result, err
 	}
 }
@@ -90,38 +96,6 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
-	if err != nil {
-		if Fatal {
-			log.Fatal("FATAL: Produce():", err)
-		} else {
-			log.Println("ERROR: Produce() try reconnection:", err)
-			log.Println("close old producer: ", this.producer.Close())
-			var fatal error
-			broker, fatal := GetBroker(this.zk)
-			if fatal != nil {
-				log.Fatal("FATAL: GetBroker() ", fatal)
-			}
-			if len(broker) == 0 {
-				log.Fatal("FATAL: missing kafka broker")
-			}
-			log.Println("got brokers from zk", broker)
-			result := &SyncProducer{broker: broker}
-			sarama_conf := sarama.NewConfig()
-			sarama_conf.Version = sarama.V2_2_0_0
-			sarama_conf.Producer.Return.Errors = true
-			sarama_conf.Producer.Return.Successes = true
-			if this.syncIdempotent {
-				sarama_conf.Producer.Idempotent = true
-				sarama_conf.Net.MaxOpenRequests = 1
-				sarama_conf.Producer.RequiredAcks = sarama.WaitForAll
-			}
-			result.producer, fatal = sarama.NewSyncProducer(result.broker, sarama_conf)
-			if fatal != nil {
-				log.Fatal("FATAL: Produce():", fatal)
-			}
-			log.Println("DEBUG: successful producer reconnect")
-		}
-	}
 	return err
 }
 
