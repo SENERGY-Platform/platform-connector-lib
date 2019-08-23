@@ -18,23 +18,34 @@ package model
 
 import "strings"
 
-type ProtocolPart struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+type TaskInfo struct {
+	WorkerId           string `json:"worker_id"`
+	TaskId             string `json:"task_id"`
+	CompletionStrategy string `json:"completion_strategy"`
+	Time               string `json:"time"`
+}
+
+type ProtocolRequest struct {
+	Input map[string]string `json:"input"`
+}
+
+type ProtocolResponse struct {
+	Output map[string]string `json:"output"`
+}
+
+type Metadata struct {
+	Device               Device   `json:"device"`
+	Service              Service  `json:"service"`
+	Protocol             Protocol `json:"protocol"`
+	InputCharacteristic  string         `json:"input_characteristic,omitempty"`
+	OutputCharacteristic string         `json:"output_characteristic,omitempty"`
 }
 
 type ProtocolMsg struct {
-	WorkerId           string         `json:"worker_id"`
-	TaskId             string         `json:"task_id"`
-	CompletionStrategy string         `json:"completion_strategy"`
-	DeviceUrl          string         `json:"device_url"`
-	ServiceUrl         string         `json:"service_url"`
-	ProtocolParts      []ProtocolPart `json:"protocol_parts"`
-	DeviceInstanceId   string         `json:"device_instance_id"`
-	ServiceId          string         `json:"service_id"`
-	OutputName         string         `json:"output_name"`
-	Time               string         `json:"time"`
-	Service            Service        `json:"service"`
+	Request  ProtocolRequest  `json:"request"`
+	Response ProtocolResponse `json:"response"`
+	TaskInfo TaskInfo         `json:"task_info"`
+	Metadata Metadata         `json:"metadata"`
 }
 
 const Optimistic = "optimistic"

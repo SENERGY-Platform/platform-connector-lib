@@ -68,7 +68,7 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, deviceid string, se
 	return result, errors.New("unknown service id")
 }
 
-func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, protocolParts []model.ProtocolPart) error {
+func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg) error {
 	device, err := this.IotCache.WithToken(token).GetDeviceByLocalId(deviceUri)
 	if err != nil {
 		log.Println("ERROR: handleDeviceRefEvent::DeviceUrlToIotDevice", err)
@@ -81,7 +81,7 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 	}
 	for _, service := range dt.Services {
 		if service.LocalId == serviceUri {
-			err = this.handleDeviceEvent(token, device.Id, service.Id, protocolParts)
+			err = this.handleDeviceEvent(token, device.Id, service.Id, msg)
 			if err != nil {
 				log.Println("ERROR: handleDeviceRefEvent::handleDeviceEvent", err)
 				return err
@@ -91,13 +91,8 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 	return nil
 }
 
-func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, protocolParts []model.ProtocolPart) (err error) {
-	eventMsg := map[string]string{}
-	for _, part := range protocolParts {
-		eventMsg[part.Name] = part.Value
-	}
-
-	eventValue, err := this.unmarshalMsg(token, deviceId, serviceId, eventMsg)
+func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, msg EventMsg) (err error) {
+	eventValue, err := this.unmarshalMsg(token, deviceId, serviceId, msg)
 	if err != nil {
 		return err
 	}

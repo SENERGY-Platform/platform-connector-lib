@@ -32,7 +32,7 @@ func (this *Connector) handleCommand(msg []byte, t time.Time) (err error) {
 		log.Println("ERROR: handle command: ", err.Error())
 		return
 	}
-	protocolParts := getProtocolPartMap(protocolmsg.ProtocolParts)
+	protocolParts := protocolmsg.Request.Input
 	if this.deviceCommandHandler != nil {
 		handlerResponse, err := this.useDeviceCommandHandler(protocolmsg, protocolParts)
 		if err != nil {
@@ -46,14 +46,10 @@ func (this *Connector) handleCommand(msg []byte, t time.Time) (err error) {
 }
 
 func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, commandResponse CommandResponseMsg) (err error) {
-	if commandRequest.CompletionStrategy == model.Optimistic {
+	if commandRequest.TaskInfo.CompletionStrategy == model.Optimistic {
 		return
 	}
-	resultProtocolParts := []model.ProtocolPart{}
-	for name, value := range commandResponse {
-		resultProtocolParts = append(resultProtocolParts, model.ProtocolPart{Name: name, Value: value})
-	}
-	commandRequest.ProtocolParts = resultProtocolParts
+	commandRequest.Response.Output = commandResponse
 	responseMsg, err := json.Marshal(commandRequest)
 	if err != nil {
 		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
@@ -68,13 +64,5 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 }
 
 func (this *Connector) useDeviceCommandHandler(msg model.ProtocolMsg, protocolParts map[string]string) (result map[string]string, err error) {
-	return this.deviceCommandHandler(msg.DeviceInstanceId, msg.DeviceUrl, msg.ServiceId, msg.ServiceUrl, protocolParts)
-}
-
-func getProtocolPartMap(protocolParts []model.ProtocolPart) (result map[string]string) {
-	result = map[string]string{}
-	for _, pp := range protocolParts {
-		result[pp.Name] = pp.Value
-	}
-	return
+	return this.deviceCommandHandler(msg.Metadata.Device.Id, msg.Metadata.Device.LocalId, msg.Metadata.Service.Id, msg.Metadata.Service.LocalId, protocolParts)
 }

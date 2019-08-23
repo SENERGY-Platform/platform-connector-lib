@@ -17,7 +17,6 @@
 package platform_connector_lib
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
@@ -109,18 +108,7 @@ func (this *Connector) Start() (err error) {
 		if string(msg) == "topic_init" {
 			return nil
 		}
-		envelope := model.Envelope{}
-		err = json.Unmarshal(msg, &envelope)
-		if err != nil {
-			log.Println("ERROR: ", err)
-			return nil //ignore marshaling errors --> no repeat; errors would definitely reoccur
-		}
-		payload, err := json.Marshal(envelope.Value)
-		if err != nil {
-			log.Println("ERROR: ", err)
-			return nil //ignore marshaling errors --> no repeat; errors would definitely reoccur
-		}
-		return this.handleCommand(payload, t)
+		return this.handleCommand(msg, t)
 	}, func(err error, consumer *kafka.Consumer) {
 		if this.Config.FatalKafkaError {
 			log.Println("FATAL ERROR: kafka", err)
@@ -146,11 +134,7 @@ func (this *Connector) HandleDeviceEvent(username string, password string, devic
 }
 
 func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, deviceId string, serviceId string, eventMsg EventMsg) (err error) {
-	protocol := []model.ProtocolPart{}
-	for segmentName, value := range eventMsg {
-		protocol = append(protocol, model.ProtocolPart{Name: segmentName, Value: value})
-	}
-	return this.handleDeviceEvent(token, deviceId, serviceId, protocol)
+	return this.handleDeviceEvent(token, deviceId, serviceId, eventMsg)
 }
 
 func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg) (err error) {
@@ -163,11 +147,7 @@ func (this *Connector) HandleDeviceRefEvent(username string, password string, de
 }
 
 func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken, deviceUri string, serviceUri string, eventMsg EventMsg) (err error) {
-	protocol := []model.ProtocolPart{}
-	for segmentName, value := range eventMsg {
-		protocol = append(protocol, model.ProtocolPart{Name: segmentName, Value: value})
-	}
-	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, protocol)
+	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, eventMsg)
 }
 
 func (this *Connector) Security() *security.Security {
