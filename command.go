@@ -60,6 +60,7 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 		debug.PrintStack()
 		log.Fatal("FATAL: ", err)
 	}
+	this.trySendingResponseAsEvent(commandRequest, commandResponse)
 	return err
 }
 

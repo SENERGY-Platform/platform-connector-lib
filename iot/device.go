@@ -22,12 +22,14 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"net/url"
+	"runtime/debug"
 )
 
 func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Device, err error) {
 	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
 		log.Println("ERROR on GetDevice()", err)
+		debug.PrintStack()
 		return device, err
 	}
 	defer resp.Body.Close()
@@ -35,6 +37,7 @@ func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Dev
 	err = json.NewDecoder(resp.Body).Decode(&device)
 	if err != nil {
 		log.Println("ERROR on GetDevice() json decode", err)
+		debug.PrintStack()
 	}
 	return device, err
 }
@@ -43,6 +46,7 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 	resp, err := token.Get(this.repo_url + "/device-types/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetDeviceType()", err)
+		debug.PrintStack()
 		return dt, err
 	}
 	defer resp.Body.Close()
@@ -50,6 +54,7 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 	err = json.NewDecoder(resp.Body).Decode(&dt)
 	if err != nil {
 		log.Println("ERROR on GetDeviceType() json decode", err)
+		debug.PrintStack()
 	}
 	return dt, err
 }
@@ -58,6 +63,7 @@ func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (de
 	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(localId) + "?as=local_id&p=x")
 	if err != nil {
 		log.Println("ERROR on GetDevice()", err)
+		debug.PrintStack()
 		return device, err
 	}
 	defer resp.Body.Close()
@@ -65,6 +71,7 @@ func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (de
 	err = json.NewDecoder(resp.Body).Decode(&device)
 	if err != nil {
 		log.Println("ERROR on GetDevice() json decode", err)
+		debug.PrintStack()
 	}
 	return device, err
 }

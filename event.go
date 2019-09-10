@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-func (this *Connector) unmarshalMsg(token security.JwtToken, deviceid string, serviceid string, msg map[string]string) (result map[string]interface{}, err error) {
+func (this *Connector) unmarshalMsgFromRef(token security.JwtToken, deviceid string, serviceid string, msg map[string]string) (result map[string]interface{}, err error) {
 	result = map[string]interface{}{}
 	iot := this.IotCache.WithToken(token)
 	device, err := iot.GetDevice(deviceid)
@@ -40,32 +40,37 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, deviceid string, se
 	}
 	for _, service := range dt.Services {
 		if service.Id == serviceid {
-			for _, output := range service.Outputs {
-				marshaller, ok := marshalling.Get(output.Serialization)
-				if !ok {
-					return result, errors.New("unknown format " + output.Serialization)
-				}
-				protocol, err := iot.GetProtocol(service.ProtocolId)
-				if err != nil {
-					return result, err
-				}
-				for _, segment := range protocol.ProtocolSegments {
-					if segment.Id == output.ProtocolSegmentId {
-						segmentMsg, ok := msg[segment.Name]
-						if ok {
-							out, err := marshaller.Unmarshal(segmentMsg, output.ContentVariable)
-							if err != nil {
-								return result, err
-							}
-							result[output.ContentVariable.Name] = out
-						}
-					}
-				}
+			protocol, err := iot.GetProtocol(service.ProtocolId)
+			if err != nil {
+				return result, err
 			}
-			return result, nil
+			return this.unmarshalMsg(token, device, service, protocol, msg)
 		}
 	}
 	return result, errors.New("unknown service id")
+}
+
+func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device, service model.Service, protocol model.Protocol, msg map[string]string) (result map[string]interface{}, err error) {
+	result = map[string]interface{}{}
+	for _, output := range service.Outputs {
+		marshaller, ok := marshalling.Get(output.Serialization)
+		if !ok {
+			return result, errors.New("unknown format " + output.Serialization)
+		}
+		for _, segment := range protocol.ProtocolSegments {
+			if segment.Id == output.ProtocolSegmentId {
+				segmentMsg, ok := msg[segment.Name]
+				if ok {
+					out, err := marshaller.Unmarshal(segmentMsg, output.ContentVariable)
+					if err != nil {
+						return result, err
+					}
+					result[output.ContentVariable.Name] = out
+				}
+			}
+		}
+	}
+	return result, nil
 }
 
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg) error {
@@ -92,15 +97,41 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 }
 
 func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, msg EventMsg) (err error) {
-	eventValue, err := this.unmarshalMsg(token, deviceId, serviceId, msg)
+	eventValue, err := this.unmarshalMsgFromRef(token, deviceId, serviceId, msg)
 	if err != nil {
 		return err
 	}
-
-	serviceTopic := model.ServiceIdToTopic(serviceId)
 	envelope := model.Envelope{DeviceId: deviceId, ServiceId: serviceId}
 	envelope.Value = eventValue
+	return this.sendEventEnvelope(envelope)
+}
 
+func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp CommandResponseMsg) {
+	token, err := this.Security().Access()
+	if err != nil {
+		log.Println("ERROR: trySendingResponseAsEvent()", err)
+		debug.PrintStack()
+		return
+	}
+	eventValue, err := this.unmarshalMsg(token, cmd.Metadata.Device, cmd.Metadata.Service, cmd.Metadata.Protocol, resp)
+	if err != nil {
+		log.Println("ERROR: trySendingResponseAsEvent()", err)
+		debug.PrintStack()
+		return
+	}
+
+	envelope := model.Envelope{DeviceId: cmd.Metadata.Device.Id, ServiceId: cmd.Metadata.Service.Id}
+	envelope.Value = eventValue
+
+	err = this.sendEventEnvelope(envelope)
+	if err != nil {
+		log.Println("ERROR: trySendingResponseAsEvent()", err)
+		debug.PrintStack()
+		return
+	}
+}
+
+func (this *Connector) sendEventEnvelope(envelope model.Envelope)error{
 	jsonMsg, err := json.Marshal(envelope)
 	if err != nil {
 		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
@@ -112,14 +143,15 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 			log.Println("DEBUG: kafka produce in", time.Now().Sub(start))
 		}(now)
 	}
+	serviceTopic := model.ServiceIdToTopic(envelope.ServiceId)
 	err = this.producer.Produce(serviceTopic, string(jsonMsg))
 	if err != nil {
 		if this.Config.FatalKafkaError {
 			debug.PrintStack()
-			log.Fatal("FATAL: ", err)
+			log.Fatal("FATAL: while producing for topic: '", serviceTopic, "' :", err)
 		}
 		log.Println("ERROR: produce event on service topic ", err)
 		return err
 	}
-	return
+	return nil
 }
