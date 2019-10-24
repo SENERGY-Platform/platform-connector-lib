@@ -77,7 +77,7 @@ func (this *Connector) SetKafkaLogger(logger *log.Logger) {
 //asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 func (this *Connector) SetDeviceCommandHandler(handler DeviceCommandHandler) *Connector {
 	if this.asyncCommandHandler != nil {
-		panic("try setting endpoint command handler while async command handler exists")
+		panic("try setting command handler while async command handler exists")
 	}
 	this.deviceCommandHandler = handler
 	return this
@@ -86,7 +86,7 @@ func (this *Connector) SetDeviceCommandHandler(handler DeviceCommandHandler) *Co
 //asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Connector {
 	if this.deviceCommandHandler != nil {
-		panic("try setting endpoint command handler while device command handler exists")
+		panic("try setting async command handler while device command handler exists")
 	}
 	this.asyncCommandHandler = handler
 	return this
@@ -94,7 +94,7 @@ func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Conn
 
 func (this *Connector) Start() (err error) {
 	if this.deviceCommandHandler == nil && this.asyncCommandHandler == nil {
-		return errors.New("missing command handler; use SetAsyncCommandHandler(), SetDeviceCommandHandler() or SetEndpointCommandHandler()")
+		return errors.New("missing command handler; use SetAsyncCommandHandler() or SetDeviceCommandHandler()")
 	}
 	this.producer, err = kafka.PrepareProducer(this.Config.ZookeeperUrl, this.Config.SyncKafka, this.Config.SyncKafkaIdempotent)
 	if err != nil {
@@ -127,7 +127,7 @@ func (this *Connector) Stop() {
 func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string) (err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
-		log.Println("ERROR HandleEndpointEvent::GetUserToken()", err)
+		log.Println("ERROR HandleDeviceEvent::GetUserToken()", err)
 		return err
 	}
 	return this.HandleDeviceEventWithAuthToken(token, deviceId, serviceId, protocolParts)
@@ -140,7 +140,7 @@ func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, d
 func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg) (err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
-		log.Println("ERROR HandleEndpointEvent::GetUserToken()", err)
+		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
 		return err
 	}
 	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, eventMsg)
