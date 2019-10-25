@@ -59,7 +59,7 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterfa
 		return nil, errors.New("missing kafka broker")
 	}
 	if sync {
-		result := &SyncProducer{broker: broker, zk: zk, syncIdempotent: syncIdempotent}
+		result := &SyncProducer{broker: broker, zk: zk, syncIdempotent: syncIdempotent, usedTopics: map[string]bool{}}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
@@ -72,7 +72,7 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterfa
 		result.producer, err = sarama.NewSyncProducer(result.broker, sarama_conf)
 		return result, err
 	} else {
-		result := &AsyncProducer{broker: broker, zk: zk}
+		result := &AsyncProducer{broker: broker, zk: zk, usedTopics: map[string]bool{}}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
