@@ -85,7 +85,7 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 		return err
 	}
 	for _, service := range dt.Services {
-		if service.LocalId == serviceUri {
+		if service.LocalId == serviceUri && len(service.Outputs) > 0 {
 			err = this.handleDeviceEvent(token, device.Id, service.Id, msg)
 			if err != nil {
 				log.Println("ERROR: handleDeviceRefEvent::handleDeviceEvent", err)
