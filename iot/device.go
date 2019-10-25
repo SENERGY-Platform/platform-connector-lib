@@ -60,7 +60,7 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 }
 
 func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (device model.Device, err error) {
-	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(localId) + "?as=local_id&p=x")
+	resp, err := token.Get(this.manager_url + "/local-devices/" + url.QueryEscape(localId))
 	if err != nil {
 		log.Println("ERROR on GetDevice()", err)
 		debug.PrintStack()
@@ -74,4 +74,14 @@ func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (de
 		debug.PrintStack()
 	}
 	return device, err
+}
+
+
+func (this *Iot) CreateDevice(device model.Device, token security.JwtToken) (result model.Device, err error) {
+	err = token.PostJSON(this.manager_url + "/local-devices", device, &result)
+	if err != nil {
+		log.Println("ERROR on CreateDevice()", err)
+		debug.PrintStack()
+	}
+	return
 }

@@ -74,6 +74,23 @@ func (this *Cache) GetDeviceByLocalId(deviceUrl string) (result model.Device, er
 	return
 }
 
+func (this *Cache) CreateDevice(device model.Device) (result model.Device, err error) {
+	result, err = this.iot.CreateDevice(device, this.token)
+	if err == nil {
+		this.saveDeviceUrlToIotDeviceToCache(this.token, device.LocalId, result)
+		this.saveDeviceToCache(this.token, result)
+	}
+	return
+}
+
+func (this *Cache) EnsureLocalDeviceExistence(device model.Device) (result model.Device, err error) {
+	result, err = this.GetDeviceByLocalId(device.LocalId)
+	if err == security.ErrorNotFound {
+		result, err = this.CreateDevice(device)
+	}
+	return
+}
+
 func (this *Cache) GetDeviceType(id string) (result model.DeviceType, err error) {
 	if this.deviceTypeExpiration != 0 {
 		result, err = this.getDeviceTypeFromCache(this.token, id)
