@@ -22,7 +22,22 @@ import (
 	"github.com/wvanbergen/kazoo-go"
 	"io/ioutil"
 	"log"
+	"runtime/debug"
 )
+
+func EnsureTopic(topic string, zk string, knownTopics *map[string]bool)(err error){
+	if (*knownTopics)[topic] {
+		return nil
+	}
+	err = InitTopic(topic)
+	if err != nil {
+		log.Println("ERROR:", err)
+		debug.PrintStack()
+		return err
+	}
+	(*knownTopics)[topic] = true
+	return
+}
 
 func GetBroker(zk string) (brokers []string, err error) {
 	return getBroker(zk)

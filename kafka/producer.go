@@ -38,12 +38,15 @@ type SyncProducer struct {
 	zk             string
 	syncIdempotent bool
 	mux            sync.Mutex
+	usedTopics map[string]bool
 }
 
 type AsyncProducer struct {
 	broker   []string
 	logger   *log.Logger
 	producer sarama.AsyncProducer
+	zk             string
+	usedTopics map[string]bool
 }
 
 func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterface, error) {
@@ -69,7 +72,7 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterfa
 		result.producer, err = sarama.NewSyncProducer(result.broker, sarama_conf)
 		return result, err
 	} else {
-		result := &AsyncProducer{broker: broker}
+		result := &AsyncProducer{broker: broker, zk: zk}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
@@ -95,6 +98,10 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
+	err = EnsureTopic(topic, this.zk, &this.usedTopics)
+	if err != nil {
+		return err
+	}
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
 	return err
 }
@@ -102,6 +109,10 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
+	}
+	err = EnsureTopic(topic, this.zk, &this.usedTopics)
+	if err != nil {
+		return err
 	}
 	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()}
 	return
