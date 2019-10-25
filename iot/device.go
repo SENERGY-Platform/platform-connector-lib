@@ -62,8 +62,10 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (device model.Device, err error) {
 	resp, err := token.Get(this.manager_url + "/local-devices/" + url.QueryEscape(localId))
 	if err != nil {
-		log.Println("ERROR on GetDevice()", err)
-		debug.PrintStack()
+		if err != security.ErrorNotFound {
+			log.Println("ERROR on GetDevice()", err)
+			debug.PrintStack()
+		}
 		return device, err
 	}
 	defer resp.Body.Close()

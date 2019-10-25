@@ -29,7 +29,7 @@ func EnsureTopic(topic string, zk string, knownTopics *map[string]bool)(err erro
 	if (*knownTopics)[topic] {
 		return nil
 	}
-	err = InitTopic(topic)
+	err = InitTopic(zk, topic)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
