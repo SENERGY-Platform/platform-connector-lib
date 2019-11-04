@@ -18,109 +18,72 @@ package connectionlog
 
 import (
 	"encoding/json"
-	"errors"
-	"log"
+	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"time"
 )
 
-func New(amqpUrl string, connectorLogTopic string, gatewayLogTopic string, deviceLogTopic string) (logger *Logger, err error) {
-	logger = &Logger{amqpUrl: amqpUrl, connectorLogTopic: connectorLogTopic, gatewayLogTopic: gatewayLogTopic, deviceLogTopic: deviceLogTopic}
-	err = logger.start()
-	return
-}
-
-func (this *Logger) start() (err error) {
-	topics := []string{}
-	if this.deviceLogTopic != "" {
-		topics = append(topics, this.deviceLogTopic)
-	}
-	if this.gatewayLogTopic != "" {
-		topics = append(topics, this.gatewayLogTopic)
-	}
-	if this.connectorLogTopic != "" {
-		topics = append(topics, this.connectorLogTopic)
-	}
-	this.conn, err = NewPublisher(this.amqpUrl, topics...)
-	return
-}
-
-func (this *Logger) Stop() {
-	this.conn.Close()
-}
-
-type Logger struct {
-	amqpUrl           string
-	conn              *Publisher
-	deviceLogTopic    string
-	gatewayLogTopic   string
-	connectorLogTopic string
-	Debug             bool
-}
-
-func (this *Logger) sendEvent(topic string, event interface{}) error {
-	payload, err := json.Marshal(event)
+func New(zk string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string) (logger Logger, err error) {
+	producer, err := kafka.PrepareProducer(zk, sync, idempotent)
 	if err != nil {
-		log.Println("ERROR: event marshaling:", err)
+		return logger, err
+	}
+	return &LoggerImpl{producer: producer, deviceLogTopic: deviceLogTopic, hubLogTopic: hubLogTopic}, nil
+}
+
+type LoggerImpl struct {
+	producer       kafka.ProducerInterface
+	deviceLogTopic string
+	hubLogTopic    string
+}
+
+func (this *LoggerImpl) LogDeviceDisconnect(id string) error {
+	b, err := json.Marshal(DeviceLog{
+		Connected: false,
+		Id:        id,
+		Time:      time.Now(),
+	})
+	if err != nil {
 		return err
 	}
-	if this.Debug {
-		log.Println("DEBUG: send event", this.amqpUrl, topic, event)
-	}
-	return this.conn.Publish(topic, payload)
+	return this.producer.ProduceWithKey(this.deviceLogTopic, string(b), id)
 }
 
-func (this *Logger) LogDeviceState(state DeviceLog) error {
-	if this.deviceLogTopic == "" {
-		return errors.New("topic not configured")
-	}
-	state.Time = time.Now()
-	return this.sendEvent(this.deviceLogTopic, state)
-}
-
-func (this *Logger) LogGatewayState(state GatewayLog) error {
-	if this.gatewayLogTopic == "" {
-		return errors.New("topic not configured")
-	}
-	state.Time = time.Now()
-	return this.sendEvent(this.gatewayLogTopic, state)
-}
-
-func (this *Logger) LogConnectorState(state ConnectorLog) error {
-	if this.connectorLogTopic == "" {
-		return errors.New("topic not configured")
-	}
-	state.Time = time.Now()
-	return this.sendEvent(this.connectorLogTopic, state)
-}
-
-func (this *Logger) LogDeviceDisconnect(id string) error {
-	err := this.LogDeviceState(DeviceLog{Device: id, Connected: false})
+func (this *LoggerImpl) LogDeviceConnect(id string) error {
+	b, err := json.Marshal(DeviceLog{
+		Connected: true,
+		Id:        id,
+		Time:      time.Now(),
+	})
 	if err != nil {
-		log.Println("WARNING: unable to log device connection state ", err)
+		return err
 	}
-	return err
+	return this.producer.ProduceWithKey(this.deviceLogTopic, string(b), id)
 }
 
-func (this *Logger) LogDeviceConnect(id string) error {
-	err := this.LogDeviceState(DeviceLog{Device: id, Connected: true})
+func (this *LoggerImpl) LogHubConnect(id string) error {
+	b, err := json.Marshal(HubLog{
+		Connected: true,
+		Id:        id,
+		Time:      time.Now(),
+	})
 	if err != nil {
-		log.Println("WARNING: unable to log device connection state ", err)
+		return err
 	}
-	return err
+	return this.producer.ProduceWithKey(this.hubLogTopic, string(b), id)
 }
 
-func (this *Logger) LogGatewayConnect(gateway string) error {
-	err := this.LogGatewayState(GatewayLog{Gateway: gateway, Connected: true})
+func (this *LoggerImpl) LogHubDisconnect(id string) error {
+	b, err := json.Marshal(HubLog{
+		Connected: false,
+		Id:        id,
+		Time:      time.Now(),
+	})
 	if err != nil {
-		log.Println("WARNING: unable to log gateway connection state ", err)
+		return err
 	}
-	return err
+	return this.producer.ProduceWithKey(this.hubLogTopic, string(b), id)
 }
 
-func (this *Logger) LogGatewayDisconnect(gateway string) error {
-	err := this.LogGatewayState(GatewayLog{Gateway: gateway, Connected: false})
-	if err != nil {
-		log.Println("WARNING: unable to log gateway connection state ", err)
-	}
-	return err
+func (this *LoggerImpl) Close() {
+	this.producer.Close()
 }

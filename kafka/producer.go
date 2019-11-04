@@ -28,7 +28,9 @@ var Fatal = false
 
 type ProducerInterface interface {
 	Produce(topic string, message string) (err error)
+	ProduceWithKey(topic string, message string, key string) (err error)
 	Log(logger *log.Logger)
+	Close()
 }
 
 type SyncProducer struct {
@@ -38,15 +40,23 @@ type SyncProducer struct {
 	zk             string
 	syncIdempotent bool
 	mux            sync.Mutex
-	usedTopics map[string]bool
+	usedTopics     map[string]bool
+}
+
+func (this *SyncProducer) Close() {
+	this.producer.Close()
 }
 
 type AsyncProducer struct {
-	broker   []string
-	logger   *log.Logger
-	producer sarama.AsyncProducer
-	zk             string
+	broker     []string
+	logger     *log.Logger
+	producer   sarama.AsyncProducer
+	zk         string
 	usedTopics map[string]bool
+}
+
+func (this *AsyncProducer) Close() {
+	this.producer.Close()
 }
 
 func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterface, error) {
@@ -115,6 +125,32 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 		return err
 	}
 	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()}
+	return
+}
+
+func (this *SyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	if this.logger != nil {
+		this.logger.Println("DEBUG: produce ", topic, message)
+	}
+	err = EnsureTopic(topic, this.zk, &this.usedTopics)
+	if err != nil {
+		return err
+	}
+	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: time.Now()})
+	return err
+}
+
+func (this *AsyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
+	if this.logger != nil {
+		this.logger.Println("DEBUG: produce ", topic, message)
+	}
+	err = EnsureTopic(topic, this.zk, &this.usedTopics)
+	if err != nil {
+		return err
+	}
+	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: time.Now()}
 	return
 }
 

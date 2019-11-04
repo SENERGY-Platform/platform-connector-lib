@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 InfAI (CC SES)
+ * Copyright 2019 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,10 @@
 
 package connectionlog
 
-import "time"
-
-type HubLog struct {
-	Id        string    `json:"id"`
-	Connected bool      `json:"connected"`
-	Time      time.Time `json:"time"`
-}
-
-type DeviceLog struct {
-	Id        string    `json:"id"`
-	Connected bool      `json:"connected"`
-	Time      time.Time `json:"time"`
+type Logger interface {
+	LogDeviceDisconnect(id string) error
+	LogDeviceConnect(id string) error
+	LogHubConnect(gateway string) error
+	LogHubDisconnect(gateway string) error
+	Close()
 }
