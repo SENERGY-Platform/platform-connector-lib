@@ -87,8 +87,8 @@ func (this *Consumer) start() error {
 					this.errorhandler(err, this)
 					return
 				}
-				if time.Now().Sub(m.Time) > 30*time.Second {
-					log.Println("ERROR: kafka message older than 30s: ", this.topic, time.Now().Sub(m.Time))
+				if time.Now().Sub(m.Time) > 1*time.Hour { //floodgate to prevent old messages to DOS the consumer
+					log.Println("ERROR: kafka message older than 1h: ", this.topic, time.Now().Sub(m.Time))
 					err = r.CommitMessages(this.ctx, m)
 					if err != nil {
 						log.Println("ERROR: while committing message ", this.topic, err)
