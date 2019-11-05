@@ -87,7 +87,7 @@ func (this *Consumer) start() error {
 					this.errorhandler(err, this)
 					return
 				}
-				if time.Now().Sub(m.Time) > 30*time.Second {
+				if time.Now().Sub(m.Time) > 1*time.Hour {
 					log.Println("ERROR: kafka message older than 30s: ", this.topic, time.Now().Sub(m.Time))
 					err = r.CommitMessages(this.ctx, m)
 					if err != nil {
