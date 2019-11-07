@@ -8,8 +8,8 @@ import (
 	"sync"
 )
 
-var L1Expiration = 2          // 2sec
-var L1Size = 20 * 1024 * 1024 //20MB
+var L1Expiration = 2           // 2sec
+var L1Size = 100 * 1024 * 1024 //100MB
 var Debug = false
 
 type Cache struct {
