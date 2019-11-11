@@ -19,10 +19,12 @@ package model
 import "strings"
 
 type TaskInfo struct {
-	WorkerId           string `json:"worker_id"`
-	TaskId             string `json:"task_id"`
-	CompletionStrategy string `json:"completion_strategy"`
-	Time               string `json:"time"`
+	WorkerId            string `json:"worker_id"`
+	TaskId              string `json:"task_id"`
+	ProcessInstanceId   string `json:"process_instance_id"`
+	ProcessDefinitionId string `json:"process_definition_id"`
+	CompletionStrategy  string `json:"completion_strategy"`
+	Time                string `json:"time"`
 }
 
 type ProtocolRequest struct {
@@ -37,8 +39,8 @@ type Metadata struct {
 	Device               Device   `json:"device"`
 	Service              Service  `json:"service"`
 	Protocol             Protocol `json:"protocol"`
-	InputCharacteristic  string         `json:"input_characteristic,omitempty"`
-	OutputCharacteristic string         `json:"output_characteristic,omitempty"`
+	InputCharacteristic  string   `json:"input_characteristic,omitempty"`
+	OutputCharacteristic string   `json:"output_characteristic,omitempty"`
 }
 
 type ProtocolMsg struct {
