@@ -55,7 +55,7 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
 		return err
 	}
-	err = this.producer.Produce(this.Config.KafkaResponseTopic, string(responseMsg))
+	err = this.producer.ProduceWithKey(this.Config.KafkaResponseTopic, string(responseMsg), commandRequest.Metadata.Device.Id)
 	if err != nil && this.Config.FatalKafkaError {
 		debug.PrintStack()
 		log.Fatal("FATAL: ", err)

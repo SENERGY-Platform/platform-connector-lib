@@ -131,7 +131,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	}
 }
 
-func (this *Connector) sendEventEnvelope(envelope model.Envelope)error{
+func (this *Connector) sendEventEnvelope(envelope model.Envelope) error {
 	jsonMsg, err := json.Marshal(envelope)
 	if err != nil {
 		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
@@ -144,7 +144,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope)error{
 		}(now)
 	}
 	serviceTopic := model.ServiceIdToTopic(envelope.ServiceId)
-	err = this.producer.Produce(serviceTopic, string(jsonMsg))
+	err = this.producer.ProduceWithKey(serviceTopic, string(jsonMsg), envelope.DeviceId)
 	if err != nil {
 		if this.Config.FatalKafkaError {
 			debug.PrintStack()
