@@ -25,6 +25,7 @@ type TaskInfo struct {
 	ProcessDefinitionId string `json:"process_definition_id"`
 	CompletionStrategy  string `json:"completion_strategy"`
 	Time                string `json:"time"`
+	TenantId            string `json:"tenant_id"`
 }
 
 type ProtocolRequest struct {
