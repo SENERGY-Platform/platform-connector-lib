@@ -46,14 +46,15 @@ type Config struct {
 	JwtExpiration int64
 	JwtIssuer     string
 
-	DeviceExpiration     int32
-	DeviceTypeExpiration int32
-	TokenCacheExpiration int32
-	IotCacheUrl          []string
-	TokenCacheUrl        []string
-	SyncKafka            bool
-	SyncKafkaIdempotent  bool
-	Debug                bool
+	DeviceExpiration      int32
+	DeviceTypeExpiration  int32
+	TokenCacheExpiration  int32
+	IotCacheUrl           []string
+	TokenCacheUrl         []string
+	SyncKafka             bool
+	SyncKafkaIdempotent   bool
+	Debug                 bool
+	SerializationFallback string
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

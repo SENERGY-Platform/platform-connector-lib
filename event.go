@@ -52,6 +52,7 @@ func (this *Connector) unmarshalMsgFromRef(token security.JwtToken, deviceid str
 
 func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device, service model.Service, protocol model.Protocol, msg map[string]string) (result map[string]interface{}, err error) {
 	result = map[string]interface{}{}
+	fallback, fallbackKnown := marshalling.Get(this.Config.SerializationFallback)
 	for _, output := range service.Outputs {
 		marshaller, ok := marshalling.Get(output.Serialization)
 		if !ok {
@@ -62,6 +63,9 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 				segmentMsg, ok := msg[segment.Name]
 				if ok {
 					out, err := marshaller.Unmarshal(segmentMsg, output.ContentVariable)
+					if err != nil && fallbackKnown {
+						out, err = fallback.Unmarshal(segmentMsg, output.ContentVariable)
+					}
 					if err != nil {
 						return result, err
 					}

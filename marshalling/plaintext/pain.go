@@ -1,4 +1,4 @@
-package json
+package plaintext
 
 import (
 	"fmt"
