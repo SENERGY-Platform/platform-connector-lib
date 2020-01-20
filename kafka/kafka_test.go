@@ -37,6 +37,8 @@ func TestProducer_Produce(t *testing.T) {
 	}
 	defer closeKafka()
 
+	time.Sleep(2 * time.Second)
+
 	err = InitTopic(zookeeperUrl, "test")
 	if err != nil {
 		t.Error(err)
