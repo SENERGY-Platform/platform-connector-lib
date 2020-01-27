@@ -77,7 +77,7 @@ func (this *Security) Access() (token JwtToken, err error) {
 		return
 	}
 
-	if this.openid.RefreshToken != "" && this.openid.RefreshExpiresIn < duration+this.authExpirationTimeBuffer {
+	if this.openid.RefreshToken != "" && this.openid.RefreshExpiresIn > duration+this.authExpirationTimeBuffer {
 		log.Println("refresh token", this.openid.RefreshExpiresIn, duration)
 		openid, err := RefreshOpenidToken(this.authEndpoint, this.authClientId, this.authClientSecret, *this.openid)
 		if err != nil {
