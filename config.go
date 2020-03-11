@@ -55,6 +55,10 @@ type Config struct {
 	SyncKafkaIdempotent   bool
 	Debug                 bool
 	SerializationFallback string
+
+	Validate                  bool
+	ValidateAllowUnknownField bool
+	ValidateAllowMissingField bool
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

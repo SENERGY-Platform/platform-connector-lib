@@ -21,6 +21,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/msgvalidation"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"time"
@@ -156,4 +157,11 @@ func (this *Connector) Security() *security.Security {
 
 func (this *Connector) Iot() *iot.Iot {
 	return this.iot
+}
+
+func (this *Connector) ValidateMsg(msg map[string]interface{}, service model.Service) error {
+	if !this.Config.Validate {
+		return nil
+	}
+	return msgvalidation.Validate(msg, service, this.Config.ValidateAllowUnknownField, this.Config.ValidateAllowMissingField)
 }

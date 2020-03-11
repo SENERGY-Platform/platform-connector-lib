@@ -74,7 +74,8 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 			}
 		}
 	}
-	return result, nil
+	err = this.ValidateMsg(result, service)
+	return result, err
 }
 
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg) error {
