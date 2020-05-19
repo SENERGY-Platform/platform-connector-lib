@@ -78,6 +78,74 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 	return result, err
 }
 
+func fillUnitsInContent(content *model.Content) (err error) {
+	return fillUnitsForContentVariables(&content.ContentVariable, content)
+}
+
+func fillUnitsForContentVariables(variable *model.ContentVariable, content *model.Content) (err error) {
+	if variable.SubContentVariables != nil && len(variable.SubContentVariables) > 0 {
+		for _, subVariable := range variable.SubContentVariables {
+			err = fillUnitsForContentVariables(&subVariable, content)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if variable.UnitReference != "" {
+		parent, err := findParentOfContentVariable(variable, content)
+		if err != nil {
+			return err
+		}
+		characteristicId, err := findCharacteristicIdOfChildWithName(parent, variable.UnitReference)
+		if err != nil {
+			return err
+		}
+		characteristic, err := getCharacteristicById(characteristicId)
+		if err != nil {
+			return err
+		}
+		variable.Value = characteristic.Name
+	}
+	return nil
+}
+
+func findParentOfContentVariable(search *model.ContentVariable, content *model.Content) (parent *model.ContentVariable, err error) {
+	if content.ContentVariable.Id == search.Id {
+		return nil, errors.New("ContentVariable with id " + search.Id + " is ContentVariable of Content with id " + content.Id)
+	}
+	return findParentOfContentVariableInternal(search, &content.ContentVariable, nil)
+}
+
+func findParentOfContentVariableInternal(search *model.ContentVariable, current *model.ContentVariable, currentParent *model.ContentVariable) (parent *model.ContentVariable, err error) {
+	if current.Id == search.Id {
+		return currentParent, nil
+	}
+	if current.SubContentVariables == nil || len(current.SubContentVariables) == 0 {
+		return nil, errors.New("Reached bottom while looking for parent of ContentVariable with id " + search.Id)
+	}
+	for _, child := range current.SubContentVariables {
+		parent, err = findParentOfContentVariableInternal(search, &child, current)
+		if err != nil {
+			return parent, err
+		}
+	}
+	return nil, errors.New("Could not find parent of ContentVariable with id " + search.Id)
+}
+
+func findCharacteristicIdOfChildWithName(parent *model.ContentVariable, searchName string) (characteristicId string, err error) {
+	for _, neighbor := range parent.SubContentVariables {
+		if neighbor.Name == searchName {
+			return neighbor.CharacteristicId, nil
+		}
+	}
+	return "", errors.New("Could not find child with name " + searchName + " for parent with id " + parent.Id)
+}
+
+func getCharacteristicById(id string) (characteristic *model.Characteristic, err error) {
+	return &model.Characteristic{}, errors.New("not implemented: platform-connector-lib/event.go:getCharacteristicById") //TODO
+}
+
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg) error {
 	device, err := this.IotCache.WithToken(token).GetDeviceByLocalId(deviceUri)
 	if err != nil {
