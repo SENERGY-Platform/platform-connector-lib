@@ -62,4 +62,5 @@ type ContentVariable struct {
 	CharacteristicId     string            `json:"characteristic_id"`
 	Value                interface{}       `json:"value"`
 	SerializationOptions []string          `json:"serialization_options"`
+	UnitReference        string            `json:"unit_reference,omitempty"`
 }
