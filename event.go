@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/semantic"
 	"log"
 	"runtime/debug"
 	"time"
@@ -78,14 +79,14 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 	return result, err
 }
 
-func fillUnitsInContent(content *model.Content) (err error) {
-	return fillUnitsForContentVariables(&content.ContentVariable, content)
+func (this *Connector) fillUnitsInContent(content *model.Content, token security.JwtToken) (err error) {
+	return this.fillUnitsForContentVariables(&content.ContentVariable, content, token)
 }
 
-func fillUnitsForContentVariables(variable *model.ContentVariable, content *model.Content) (err error) {
+func (this *Connector) fillUnitsForContentVariables(variable *model.ContentVariable, content *model.Content, token security.JwtToken) (err error) {
 	if variable.SubContentVariables != nil && len(variable.SubContentVariables) > 0 {
 		for _, subVariable := range variable.SubContentVariables {
-			err = fillUnitsForContentVariables(&subVariable, content)
+			err = this.fillUnitsForContentVariables(&subVariable, content, token)
 			if err != nil {
 				return err
 			}
@@ -101,7 +102,7 @@ func fillUnitsForContentVariables(variable *model.ContentVariable, content *mode
 		if err != nil {
 			return err
 		}
-		characteristic, err := getCharacteristicById(characteristicId)
+		characteristic, err := semantic.GetCharacteristicById(characteristicId, this.Config, token)
 		if err != nil {
 			return err
 		}
@@ -140,10 +141,6 @@ func findCharacteristicIdOfChildWithName(parent *model.ContentVariable, searchNa
 		}
 	}
 	return "", errors.New("Could not find child with name " + searchName + " for parent with id " + parent.Id)
-}
-
-func getCharacteristicById(id string) (characteristic *model.Characteristic, err error) {
-	return &model.Characteristic{}, errors.New("not implemented: platform-connector-lib/event.go:getCharacteristicById") //TODO
 }
 
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg) error {
