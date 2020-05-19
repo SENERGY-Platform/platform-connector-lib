@@ -60,7 +60,8 @@ type Config struct {
 	ValidateAllowUnknownField bool
 	ValidateAllowMissingField bool
 
-	SemanticRepositoryUrl string
+	SemanticRepositoryUrl    string
+	CharacteristicExpiration int32
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

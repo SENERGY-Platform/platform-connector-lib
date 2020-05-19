@@ -23,6 +23,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/msgvalidation"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/semantic"
 	"log"
 	"time"
 )
@@ -49,6 +50,8 @@ type Connector struct {
 	IotCache *iot.PreparedCache
 
 	kafkalogger *log.Logger
+
+	semantic *semantic.SemanticRepository
 }
 
 func New(config Config) (connector *Connector) {
@@ -66,6 +69,7 @@ func New(config Config) (connector *Connector) {
 			config.TokenCacheExpiration,
 			config.TokenCacheUrl,
 		),
+		semantic: semantic.NewSemanticRepository(&config),
 	}
 	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.IotCacheUrl...)
 	return

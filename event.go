@@ -22,7 +22,6 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
-	"github.com/SENERGY-Platform/platform-connector-lib/semantic"
 	"log"
 	"runtime/debug"
 	"time"
@@ -102,7 +101,7 @@ func (this *Connector) fillUnitsForContentVariables(variable *model.ContentVaria
 		if err != nil {
 			return err
 		}
-		characteristic, err := semantic.GetCharacteristicById(characteristicId, this.Config, token)
+		characteristic, err := this.semantic.GetCharacteristicById(characteristicId, this.Config, token)
 		if err != nil {
 			return err
 		}
