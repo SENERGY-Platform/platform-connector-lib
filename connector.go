@@ -151,6 +151,60 @@ func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken
 	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, eventMsg)
 }
 
+func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg) (err error) {
+	token, err := this.security.GetUserToken(username, password)
+	if err != nil {
+		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
+		return err
+	}
+	return this.HandleDeviceIdentEventWithAuthToken(token, deviceId, localDeviceId, serviceId, localServiceId, eventMsg)
+}
+
+func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtToken, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg) (err error) {
+	var device model.Device
+	if deviceId == "" {
+		if localDeviceId == "" {
+			return errors.New("missing deviceId or localDeviceId")
+		} else {
+			device, err = this.IotCache.WithToken(token).GetDeviceByLocalId(localDeviceId)
+			if err != nil {
+				log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::DeviceUrlToIotDevice", err)
+				return err
+			}
+			deviceId = device.Id
+		}
+	}
+	if serviceId == "" {
+		if localServiceId == "" {
+			return errors.New("missing serviceId or localServiceId")
+		} else {
+			if device.Id == "" {
+				device, err = this.IotCache.WithToken(token).GetDevice(deviceId)
+				if err != nil {
+					log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDevice", err)
+					return err
+				}
+			}
+			dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceTypeId)
+			if err != nil {
+				log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDeviceType", err)
+				return err
+			}
+			for _, service := range dt.Services {
+				if service.LocalId == localDeviceId && len(service.Outputs) > 0 {
+					serviceId = service.Id
+				}
+			}
+		}
+	}
+	err = this.handleDeviceEvent(token, deviceId, serviceId, eventMsg)
+	if err != nil {
+		log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::handleDeviceEvent", err)
+		return err
+	}
+	return nil
+}
+
 func (this *Connector) Security() *security.Security {
 	return this.security
 }
