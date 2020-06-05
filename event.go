@@ -96,9 +96,10 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 				log.Println("ERROR: handleDeviceRefEvent::handleDeviceEvent", err)
 				return err
 			}
+			return nil
 		}
 	}
-	return nil
+	return ErrorUnknownLocalServiceId
 }
 
 func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, msg EventMsg) (err error) {

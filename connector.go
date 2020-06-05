@@ -36,6 +36,8 @@ type EndpointCommandHandler func(endpoint string, requestMsg CommandRequestMsg) 
 type DeviceCommandHandler func(deviceId string, deviceUri string, serviceId string, serviceUri string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
 type AsyncCommandHandler func(commandRequest model.ProtocolMsg, requestMsg CommandRequestMsg, t time.Time) (err error)
 
+var ErrorUnknownLocalServiceId = errors.New("unknown local service id")
+
 type Connector struct {
 	Config Config
 	//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
@@ -194,6 +196,9 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 				if service.LocalId == localServiceId && len(service.Outputs) > 0 {
 					serviceId = service.Id
 				}
+			}
+			if serviceId == "" {
+				return ErrorUnknownLocalServiceId
 			}
 		}
 	}
