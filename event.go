@@ -56,10 +56,6 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 	result = map[string]interface{}{}
 	fallback, fallbackKnown := marshalling.Get(this.Config.SerializationFallback)
 	for _, output := range service.Outputs {
-		err = unitreference.FillUnitsInContent(&output, token, this.semantic)
-		if err != nil {
-			return result, err
-		}
 		marshaller, ok := marshalling.Get(output.Serialization)
 		if !ok {
 			return result, errors.New("unknown format " + output.Serialization)
@@ -79,6 +75,10 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 				}
 			}
 		}
+	}
+	err = unitreference.FillUnitsForService(&service, token, this.semantic)
+	if err != nil {
+		return result, err
 	}
 	err = defaultvalues.FillDefaultValues(&result, service)
 	if err != nil {
