@@ -15,7 +15,7 @@ func TestUnmarshalSimpleInt(t *testing.T) {
 		return
 	}
 
-	out, err := marshaller.Unmarshal(value, model.ContentVariable{Name: "i", ValueType: model.Integer})
+	out, err := marshaller.Unmarshal(value, model.ContentVariable{Name: "i", Type: model.Integer})
 
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestUnmarshalSimpleString(t *testing.T) {
 		return
 	}
 
-	out, err := marshaller.Unmarshal(value, model.ContentVariable{Name: "s", ValueType: model.String})
+	out, err := marshaller.Unmarshal(value, model.ContentVariable{Name: "s", Type: model.String})
 
 	if err != nil {
 		t.Fatal(err)
@@ -54,8 +54,8 @@ func TestUnmarshalSimpleMap(t *testing.T) {
 	}
 
 	out, err := marshaller.Unmarshal(value, model.ContentVariable{
-		Name:      "example",
-		ValueType: model.Structure,
+		Name: "example",
+		Type: model.Structure,
 		SubContentVariables: []model.ContentVariable{
 			{Name: "-attr"},
 			{Name: "body"},
@@ -80,10 +80,10 @@ func TestUnmarshalSimpleList(t *testing.T) {
 	}
 
 	out, err := marshaller.Unmarshal(value, model.ContentVariable{
-		Name:      "list",
-		ValueType: model.List,
+		Name: "list",
+		Type: model.List,
 		SubContentVariables: []model.ContentVariable{
-			{Name: "*", ValueType: model.Integer},
+			{Name: "*", Type: model.Integer},
 		},
 	})
 

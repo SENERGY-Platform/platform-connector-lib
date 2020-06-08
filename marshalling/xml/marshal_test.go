@@ -74,8 +74,8 @@ func ExampleMarshal() {
 	}
 
 	fmt.Println(marshaller.Marshal(value, model.ContentVariable{
-		Name:      "example",
-		ValueType: model.Structure,
+		Name: "example",
+		Type: model.Structure,
 		SubContentVariables: []model.ContentVariable{
 			{Name: "-attr"},
 			{Name: "body"},
