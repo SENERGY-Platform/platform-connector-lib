@@ -19,9 +19,11 @@ package platform_connector_lib
 import (
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/defaultvalues"
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/unitreference"
 	"log"
 	"runtime/debug"
 	"time"
@@ -54,6 +56,10 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 	result = map[string]interface{}{}
 	fallback, fallbackKnown := marshalling.Get(this.Config.SerializationFallback)
 	for _, output := range service.Outputs {
+		err = unitreference.FillUnitsInContent(&output, token, this.semantic)
+		if err != nil {
+			return result, err
+		}
 		marshaller, ok := marshalling.Get(output.Serialization)
 		if !ok {
 			return result, errors.New("unknown format " + output.Serialization)
@@ -74,72 +80,12 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 			}
 		}
 	}
+	err = defaultvalues.FillDefaultValues(&result, service)
+	if err != nil {
+		return result, err
+	}
 	err = this.ValidateMsg(result, service)
 	return result, err
-}
-
-func (this *Connector) fillUnitsInContent(content *model.Content, token security.JwtToken) (err error) {
-	return this.fillUnitsForContentVariables(&content.ContentVariable, content, token)
-}
-
-func (this *Connector) fillUnitsForContentVariables(variable *model.ContentVariable, content *model.Content, token security.JwtToken) (err error) {
-	if variable.SubContentVariables != nil && len(variable.SubContentVariables) > 0 {
-		for _, subVariable := range variable.SubContentVariables {
-			err = this.fillUnitsForContentVariables(&subVariable, content, token)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if variable.UnitReference != "" {
-		parent, err := findParentOfContentVariable(variable, content)
-		if err != nil {
-			return err
-		}
-		characteristicId, err := findCharacteristicIdOfChildWithName(parent, variable.UnitReference)
-		if err != nil {
-			return err
-		}
-		characteristic, err := this.semantic.GetCharacteristicById(characteristicId, this.Config, token)
-		if err != nil {
-			return err
-		}
-		variable.Value = characteristic.Name
-	}
-	return nil
-}
-
-func findParentOfContentVariable(search *model.ContentVariable, content *model.Content) (parent *model.ContentVariable, err error) {
-	if content.ContentVariable.Id == search.Id {
-		return nil, errors.New("ContentVariable with id " + search.Id + " is ContentVariable of Content with id " + content.Id)
-	}
-	return findParentOfContentVariableInternal(search, &content.ContentVariable, nil)
-}
-
-func findParentOfContentVariableInternal(search *model.ContentVariable, current *model.ContentVariable, currentParent *model.ContentVariable) (parent *model.ContentVariable, err error) {
-	if current.Id == search.Id {
-		return currentParent, nil
-	}
-	if current.SubContentVariables == nil || len(current.SubContentVariables) == 0 {
-		return nil, errors.New("Reached bottom while looking for parent of ContentVariable with id " + search.Id)
-	}
-	for _, child := range current.SubContentVariables {
-		parent, err = findParentOfContentVariableInternal(search, &child, current)
-		if err != nil {
-			return parent, err
-		}
-	}
-	return nil, errors.New("Could not find parent of ContentVariable with id " + search.Id)
-}
-
-func findCharacteristicIdOfChildWithName(parent *model.ContentVariable, searchName string) (characteristicId string, err error) {
-	for _, neighbor := range parent.SubContentVariables {
-		if neighbor.Name == searchName {
-			return neighbor.CharacteristicId, nil
-		}
-	}
-	return "", errors.New("Could not find child with name " + searchName + " for parent with id " + parent.Id)
 }
 
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg) error {

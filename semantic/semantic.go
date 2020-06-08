@@ -17,18 +17,19 @@
 package semantic
 
 import (
-	platform_connector_lib "github.com/SENERGY-Platform/platform-connector-lib"
 	"github.com/SENERGY-Platform/platform-connector-lib/cache"
 )
 
 type SemanticRepository struct {
-	cache  *cache.Cache
-	config *platform_connector_lib.Config
+	cache                    *cache.Cache
+	semanticRepositoryUrl    string
+	characteristicExpiration int32
 }
 
-func NewSemanticRepository(config *platform_connector_lib.Config) *SemanticRepository {
+func NewSemanticRepository(tokenCacheUrl []string, semanticRepositoryUrl string, characteristicExpiration int32) *SemanticRepository {
 	return &SemanticRepository{
-		cache:  cache.New(config.TokenCacheUrl...),
-		config: config,
+		cache:                    cache.New(tokenCacheUrl...),
+		semanticRepositoryUrl:    semanticRepositoryUrl,
+		characteristicExpiration: characteristicExpiration,
 	}
 }

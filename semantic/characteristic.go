@@ -18,14 +18,13 @@ package semantic
 
 import (
 	"encoding/json"
-	platform_connector_lib "github.com/SENERGY-Platform/platform-connector-lib"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"io/ioutil"
 	"log"
 )
 
-func (this *SemanticRepository) GetCharacteristicById(id string, config platform_connector_lib.Config, token security.JwtToken) (characteristic model.Characteristic, err error) {
+func (this *SemanticRepository) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
 	get, err := this.cache.Get(id)
 	if err == nil {
 		err = json.Unmarshal(get.Value, &characteristic)
@@ -36,7 +35,7 @@ func (this *SemanticRepository) GetCharacteristicById(id string, config platform
 		}
 	}
 
-	resp, err := token.Get(config.SemanticRepositoryUrl + "/characteristics/" + id)
+	resp, err := token.Get(this.semanticRepositoryUrl + "/characteristics/" + id)
 	if err != nil {
 		return characteristic, err
 	}
@@ -50,6 +49,6 @@ func (this *SemanticRepository) GetCharacteristicById(id string, config platform
 	if err != nil {
 		return characteristic, err
 	}
-	this.cache.Set(id, body, this.config.CharacteristicExpiration)
+	this.cache.Set(id, body, this.characteristicExpiration)
 	return characteristic, err
 }
