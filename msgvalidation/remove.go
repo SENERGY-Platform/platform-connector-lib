@@ -106,7 +106,7 @@ func removeUnknownField(value interface{}, variable model.ContentVariable) (_ in
 						return v, err
 					}
 				} else {
-					return v, nil //if list element is not found -> return only known elements
+					return v[:i], nil //if list element is not found -> return only known elements
 				}
 			}
 		}
