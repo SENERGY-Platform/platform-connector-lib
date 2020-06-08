@@ -42,48 +42,17 @@ func TestFillComplex(t *testing.T) {
 		}}},
 	}
 	t.Run("str", func(t *testing.T) {
-		msg, complexMap := prepareMsgAndMap()
-		delete(complexMap, "str")
-		err := FillDefaultValues(&msg, service)
-		if err != nil {
-			t.Error(err)
-		}
-		if !isMsgOk(msg) {
-			t.Error("Could not fill string")
-		}
+		deleteKeyAndTest(t, "str", service)
 	})
 	t.Run("int", func(t *testing.T) {
-		msg, complexMap := prepareMsgAndMap()
-		delete(complexMap, "int")
-		err := FillDefaultValues(&msg, service)
-		if err != nil {
-			t.Error(err)
-		}
-		if !isMsgOk(msg) {
-			t.Error("Could not fill int")
-		}
+		deleteKeyAndTest(t, "int", service)
 	})
 	t.Run("float", func(t *testing.T) {
-		msg, complexMap := prepareMsgAndMap()
-		delete(complexMap, "float")
-		err := FillDefaultValues(&msg, service)
-		if err != nil {
-			t.Error(err)
-		}
-		if !isMsgOk(msg) {
-			t.Error("Could not fill float")
-		}
+		deleteKeyAndTest(t, "float", service)
+
 	})
 	t.Run("bool", func(t *testing.T) {
-		msg, complexMap := prepareMsgAndMap()
-		delete(complexMap, "bool")
-		err := FillDefaultValues(&msg, service)
-		if err != nil {
-			t.Error(err)
-		}
-		if !isMsgOk(msg) {
-			t.Error("Could not fill string")
-		}
+		deleteKeyAndTest(t, "bool", service)
 	})
 	t.Run("map", func(t *testing.T) {
 		msg, complexMap := prepareMsgAndMap()
@@ -258,4 +227,16 @@ func prepareMsgAndMap() (msg map[string]interface{}, complexMap map[string]inter
 	complexMsg, _ := msg["complex"]
 	complexMap, _ = complexMsg.(map[string]interface{})
 	return msg, complexMap
+}
+
+func deleteKeyAndTest(t *testing.T, key string, service model.Service) {
+	msg, complexMap := prepareMsgAndMap()
+	delete(complexMap, key)
+	err := FillDefaultValues(&msg, service)
+	if err != nil {
+		t.Error(err)
+	}
+	if !isMsgOk(msg) {
+		t.Error("Could not fill " + key)
+	}
 }
