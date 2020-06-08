@@ -51,7 +51,7 @@ type Connector struct {
 
 	kafkalogger *log.Logger
 
-	semantic *semantic.SemanticRepository
+	semantic semantic.RepositoryInterface
 }
 
 func New(config Config) (connector *Connector) {

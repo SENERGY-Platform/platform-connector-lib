@@ -18,18 +18,30 @@ package semantic
 
 import (
 	"github.com/SENERGY-Platform/platform-connector-lib/cache"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/security"
 )
 
-type SemanticRepository struct {
+type RepositoryInterface interface {
+	GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error)
+}
+
+type Repository struct {
 	cache                    *cache.Cache
 	semanticRepositoryUrl    string
 	characteristicExpiration int32
 }
 
-func NewSemanticRepository(tokenCacheUrl []string, semanticRepositoryUrl string, characteristicExpiration int32) *SemanticRepository {
-	return &SemanticRepository{
+type RepositoryMock struct{}
+
+func NewSemanticRepository(tokenCacheUrl []string, semanticRepositoryUrl string, characteristicExpiration int32) RepositoryInterface {
+	return &Repository{
 		cache:                    cache.New(tokenCacheUrl...),
 		semanticRepositoryUrl:    semanticRepositoryUrl,
 		characteristicExpiration: characteristicExpiration,
 	}
+}
+
+func NewSemanticRepositoryMock() RepositoryInterface {
+	return &RepositoryMock{}
 }

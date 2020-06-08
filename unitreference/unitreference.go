@@ -23,14 +23,29 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/semantic"
 )
 
-func FillUnitsInContent(content *model.Content, token security.JwtToken, semantic *semantic.SemanticRepository) (err error) {
-	return fillUnitsForContentVariables(nil, &content.ContentVariable, content, token, semantic)
+func FillUnitsForService(service *model.Service, token security.JwtToken, semantic semantic.RepositoryInterface) (err error) {
+	for _, output := range service.Outputs {
+		err = fillUnitsInContent(&output, token, semantic)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func fillUnitsForContentVariables(parent *model.ContentVariable, variable *model.ContentVariable, content *model.Content, token security.JwtToken, semantic *semantic.SemanticRepository) (err error) {
-	if variable.SubContentVariables != nil || len(variable.SubContentVariables) > 0 {
-		for _, subVariable := range variable.SubContentVariables {
-			err = fillUnitsForContentVariables(variable, &subVariable, content, token, semantic)
+func fillUnitsInContent(content *model.Content, token security.JwtToken, semantic semantic.RepositoryInterface) (err error) {
+	return fillUnitsForContentVariables(nil, -1, &content.ContentVariable, content, token, semantic)
+}
+
+func fillUnitsForContentVariables(parent *model.ContentVariable, parentIndex int, variable *model.ContentVariable,
+	content *model.Content, token security.JwtToken, semantic semantic.RepositoryInterface) (err error) {
+
+	if variable == nil {
+		return errors.New("variable may not be nil")
+	}
+	if variable.SubContentVariables != nil && len(variable.SubContentVariables) > 0 {
+		for i, subVariable := range variable.SubContentVariables {
+			err = fillUnitsForContentVariables(variable, i, &subVariable, content, token, semantic)
 			if err != nil {
 				return err
 			}
@@ -38,12 +53,12 @@ func fillUnitsForContentVariables(parent *model.ContentVariable, variable *model
 	}
 
 	if variable.UnitReference != "" {
-		/*
-			parent, err := findParentOfContentVariable(variable, content)
-			if err != nil {
-				return err
-			}
-		*/
+		if parent == nil {
+			return errors.New("top level variables may not have unit references yet")
+		}
+		if parentIndex < 0 {
+			return errors.New("invalid parent index")
+		}
 		characteristicId, err := findCharacteristicIdOfChildWithName(parent, variable.UnitReference)
 		if err != nil {
 			return err
@@ -52,36 +67,10 @@ func fillUnitsForContentVariables(parent *model.ContentVariable, variable *model
 		if err != nil {
 			return err
 		}
-		variable.Value = characteristic.Name
+		parent.SubContentVariables[parentIndex].Value = characteristic.Name
 	}
 	return nil
 }
-
-/*
-func findParentOfContentVariable(search *model.ContentVariable, content *model.Content) (parent *model.ContentVariable, err error) {
-	if content.ContentVariable.Id == search.Id {
-		return nil, errors.New("ContentVariable with id " + search.Id + " is ContentVariable of Content with id " + content.Id)
-	}
-	return findParentOfContentVariableInternal(search, &content.ContentVariable, nil)
-}
-
-func findParentOfContentVariableInternal(search *model.ContentVariable, current *model.ContentVariable, currentParent *model.ContentVariable) (parent *model.ContentVariable, err error) {
-	if current.Id == search.Id {
-		return currentParent, nil
-	}
-	if current.SubContentVariables == nil || len(current.SubContentVariables) == 0 {
-		return nil, errors.New("Reached bottom while looking for parent of ContentVariable with id " + search.Id)
-	}
-	for _, child := range current.SubContentVariables {
-		parent, err = findParentOfContentVariableInternal(search, &child, current)
-		if err != nil {
-			return parent, err
-		}
-	}
-	return nil, errors.New("Could not find parent of ContentVariable with id " + search.Id)
-}
-
-*/
 
 func findCharacteristicIdOfChildWithName(parent *model.ContentVariable, searchName string) (characteristicId string, err error) {
 	for _, neighbor := range parent.SubContentVariables {

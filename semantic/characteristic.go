@@ -24,7 +24,7 @@ import (
 	"log"
 )
 
-func (this *SemanticRepository) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
+func (this *Repository) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
 	get, err := this.cache.Get(id)
 	if err == nil {
 		err = json.Unmarshal(get.Value, &characteristic)

@@ -43,7 +43,7 @@ func TestFillComplex(t *testing.T) {
 	}
 	t.Run("str", func(t *testing.T) {
 		msg := getCorrectMsg()
-		complexMsg, ok := msg["complexMsg"]
+		complexMsg, ok := msg["complex"]
 		if !ok {
 			t.Error("unexpected message")
 		}
