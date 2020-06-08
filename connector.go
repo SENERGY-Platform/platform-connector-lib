@@ -69,7 +69,7 @@ func New(config Config) (connector *Connector) {
 			config.TokenCacheExpiration,
 			config.TokenCacheUrl,
 		),
-		semantic: semantic.NewSemanticRepository(config.TokenCacheUrl, config.SemanticRepositoryUrl, config.CharacteristicExpiration),
+		semantic: semantic.NewSemanticRepository(config.IotCacheUrl, config.SemanticRepositoryUrl, config.CharacteristicExpiration),
 	}
 	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.IotCacheUrl...)
 	return

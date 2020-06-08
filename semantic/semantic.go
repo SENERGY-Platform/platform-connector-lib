@@ -34,9 +34,9 @@ type Repository struct {
 
 type RepositoryMock struct{}
 
-func NewSemanticRepository(tokenCacheUrl []string, semanticRepositoryUrl string, characteristicExpiration int32) RepositoryInterface {
+func NewSemanticRepository(cacheUrls []string, semanticRepositoryUrl string, characteristicExpiration int32) RepositoryInterface {
 	return &Repository{
-		cache:                    cache.New(tokenCacheUrl...),
+		cache:                    cache.New(cacheUrls...),
 		semanticRepositoryUrl:    semanticRepositoryUrl,
 		characteristicExpiration: characteristicExpiration,
 	}
