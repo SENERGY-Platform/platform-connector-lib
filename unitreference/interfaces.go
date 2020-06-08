@@ -14,19 +14,13 @@
  * limitations under the License.
  */
 
-package semantic
+package unitreference
 
 import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 )
 
-func (this *RepositoryMock) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
-	switch id {
-	case "urn:infai:ses:characteristic:5b4eea52-e8e5-4e80-9455-0382f81a1b43":
-		characteristic.Name = "RGB"
-	case "urn:infai:ses:characteristic:64928e9f-98ca-42bb-a1e5-adf2a760a2f9":
-		characteristic.Name = "HSB"
-	}
-	return characteristic, err
+type SemanticRepository interface {
+	GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error)
 }

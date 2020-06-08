@@ -10,13 +10,14 @@ import (
 )
 
 type PreparedCache struct {
-	iot                  *Iot
-	cache                *cache.Cache
-	deviceExpiration     int32
-	deviceTypeExpiration int32
-	Debug                bool
-	protocol             map[string]model.Protocol
-	mux                  sync.RWMutex
+	iot                      *Iot
+	cache                    *cache.Cache
+	deviceExpiration         int32
+	deviceTypeExpiration     int32
+	characteristicExpiration int32
+	Debug                    bool
+	protocol                 map[string]model.Protocol
+	mux                      sync.RWMutex
 }
 
 type Cache struct {
@@ -24,8 +25,8 @@ type Cache struct {
 	token  security.JwtToken
 }
 
-func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, memcachedServer ...string) *PreparedCache {
-	return &PreparedCache{iot: iot, deviceExpiration: deviceExpiration, deviceTypeExpiration: deviceTypeExpiration, cache: cache.New(memcachedServer...), protocol: map[string]model.Protocol{}}
+func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, characteristicExpiration int32, memcachedServer ...string) *PreparedCache {
+	return &PreparedCache{iot: iot, deviceExpiration: deviceExpiration, deviceTypeExpiration: deviceTypeExpiration, characteristicExpiration: characteristicExpiration, cache: cache.New(memcachedServer...), protocol: map[string]model.Protocol{}}
 }
 
 func (this *PreparedCache) WithToken(token security.JwtToken) *Cache {

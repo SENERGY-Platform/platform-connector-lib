@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package semantic
+package iot
 
 import (
 	"encoding/json"
@@ -24,10 +24,10 @@ import (
 	"log"
 )
 
-const cachePrefix = "characteristic."
+const characteristicCachePrefix = "characteristic."
 
-func (this *Repository) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
-	get, err := this.cache.Get(cachePrefix + id)
+func (this *PreparedCache) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
+	get, err := this.cache.Get(characteristicCachePrefix + id)
 	if err == nil {
 		err = json.Unmarshal(get.Value, &characteristic)
 		if err == nil {
@@ -37,11 +37,26 @@ func (this *Repository) GetCharacteristicById(id string, token security.JwtToken
 		}
 	}
 
-	resp, err := token.Get(this.semanticRepositoryUrl + "/characteristics/" + id)
+	characteristic, err = this.iot.GetCharacteristicById(id, token)
 	if err != nil {
 		return characteristic, err
 	}
 
+	temp, err := json.Marshal(characteristic)
+	if err != nil {
+		log.Println("WARNING: unable to save characteristic into cache", err)
+		return
+	}
+
+	this.cache.Set(characteristicCachePrefix+id, temp, this.characteristicExpiration)
+	return characteristic, err
+}
+
+func (this *Iot) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
+	resp, err := token.Get(this.semanticRepositoryUrl + "/characteristics/" + id)
+	if err != nil {
+		return characteristic, err
+	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -51,6 +66,5 @@ func (this *Repository) GetCharacteristicById(id string, token security.JwtToken
 	if err != nil {
 		return characteristic, err
 	}
-	this.cache.Set(cachePrefix+id, body, this.characteristicExpiration)
 	return characteristic, err
 }

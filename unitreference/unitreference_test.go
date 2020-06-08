@@ -18,7 +18,6 @@ package unitreference
 
 import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
-	"github.com/SENERGY-Platform/platform-connector-lib/semantic"
 	"testing"
 )
 
@@ -55,7 +54,7 @@ func TestFillUnits(t *testing.T) {
 		},
 	}
 	t.Run("fill", func(t *testing.T) {
-		semanticRepo := semantic.NewSemanticRepositoryMock()
+		semanticRepo := NewSemanticRepositoryMock()
 		err := FillUnitsForService(&service, "", semanticRepo)
 		if err != nil {
 			t.Error(err)

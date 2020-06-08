@@ -76,7 +76,7 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 		}
 	}
 
-	err = unitreference.FillUnitsForService(&service, token, this.semantic)
+	err = unitreference.FillUnitsForService(&service, token, this.IotCache)
 	if err != nil {
 		return result, err
 	}

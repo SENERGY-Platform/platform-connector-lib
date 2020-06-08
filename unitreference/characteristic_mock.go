@@ -14,34 +14,25 @@
  * limitations under the License.
  */
 
-package semantic
+package unitreference
 
 import (
-	"github.com/SENERGY-Platform/platform-connector-lib/cache"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 )
 
-type RepositoryInterface interface {
-	GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error)
-}
-
-type Repository struct {
-	cache                    *cache.Cache
-	semanticRepositoryUrl    string
-	characteristicExpiration int32
-}
-
 type RepositoryMock struct{}
 
-func NewSemanticRepository(cacheUrls []string, semanticRepositoryUrl string, characteristicExpiration int32) RepositoryInterface {
-	return &Repository{
-		cache:                    cache.New(cacheUrls...),
-		semanticRepositoryUrl:    semanticRepositoryUrl,
-		characteristicExpiration: characteristicExpiration,
-	}
+func NewSemanticRepositoryMock() SemanticRepository {
+	return &RepositoryMock{}
 }
 
-func NewSemanticRepositoryMock() RepositoryInterface {
-	return &RepositoryMock{}
+func (this *RepositoryMock) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
+	switch id {
+	case "urn:infai:ses:characteristic:5b4eea52-e8e5-4e80-9455-0382f81a1b43":
+		characteristic.Name = "RGB"
+	case "urn:infai:ses:characteristic:64928e9f-98ca-42bb-a1e5-adf2a760a2f9":
+		characteristic.Name = "HSB"
+	}
+	return characteristic, err
 }

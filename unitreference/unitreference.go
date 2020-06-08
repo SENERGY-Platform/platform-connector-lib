@@ -20,10 +20,9 @@ import (
 	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
-	"github.com/SENERGY-Platform/platform-connector-lib/semantic"
 )
 
-func FillUnitsForService(service *model.Service, token security.JwtToken, semantic semantic.RepositoryInterface) (err error) {
+func FillUnitsForService(service *model.Service, token security.JwtToken, semantic SemanticRepository) (err error) {
 	for _, output := range service.Outputs {
 		err = fillUnitsInContent(&output, token, semantic)
 		if err != nil {
@@ -33,12 +32,12 @@ func FillUnitsForService(service *model.Service, token security.JwtToken, semant
 	return nil
 }
 
-func fillUnitsInContent(content *model.Content, token security.JwtToken, semantic semantic.RepositoryInterface) (err error) {
+func fillUnitsInContent(content *model.Content, token security.JwtToken, semantic SemanticRepository) (err error) {
 	return fillUnitsForContentVariables(nil, -1, &content.ContentVariable, content, token, semantic)
 }
 
 func fillUnitsForContentVariables(parent *model.ContentVariable, parentIndex int, variable *model.ContentVariable,
-	content *model.Content, token security.JwtToken, semantic semantic.RepositoryInterface) (err error) {
+	content *model.Content, token security.JwtToken, semantic SemanticRepository) (err error) {
 
 	if variable == nil {
 		return errors.New("variable may not be nil")
