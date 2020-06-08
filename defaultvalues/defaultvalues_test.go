@@ -42,15 +42,7 @@ func TestFillComplex(t *testing.T) {
 		}}},
 	}
 	t.Run("str", func(t *testing.T) {
-		msg := getCorrectMsg()
-		complexMsg, ok := msg["complex"]
-		if !ok {
-			t.Error("unexpected message")
-		}
-		complexMap, ok := complexMsg.(map[string]interface{})
-		if !ok {
-			t.Error("unexpected message")
-		}
+		msg, complexMap := prepareMsgAndMap()
 		delete(complexMap, "str")
 		err := FillDefaultValues(&msg, service)
 		if err != nil {
@@ -61,15 +53,7 @@ func TestFillComplex(t *testing.T) {
 		}
 	})
 	t.Run("int", func(t *testing.T) {
-		msg := getCorrectMsg()
-		complexMsg, ok := msg["complex"]
-		if !ok {
-			t.Error("unexpected message")
-		}
-		complexMap, ok := complexMsg.(map[string]interface{})
-		if !ok {
-			t.Error("unexpected message")
-		}
+		msg, complexMap := prepareMsgAndMap()
 		delete(complexMap, "int")
 		err := FillDefaultValues(&msg, service)
 		if err != nil {
@@ -80,15 +64,7 @@ func TestFillComplex(t *testing.T) {
 		}
 	})
 	t.Run("float", func(t *testing.T) {
-		msg := getCorrectMsg()
-		complexMsg, ok := msg["complex"]
-		if !ok {
-			t.Error("unexpected message")
-		}
-		complexMap, ok := complexMsg.(map[string]interface{})
-		if !ok {
-			t.Error("unexpected message")
-		}
+		msg, complexMap := prepareMsgAndMap()
 		delete(complexMap, "float")
 		err := FillDefaultValues(&msg, service)
 		if err != nil {
@@ -99,15 +75,7 @@ func TestFillComplex(t *testing.T) {
 		}
 	})
 	t.Run("bool", func(t *testing.T) {
-		msg := getCorrectMsg()
-		complexMsg, ok := msg["complex"]
-		if !ok {
-			t.Error("unexpected message")
-		}
-		complexMap, ok := complexMsg.(map[string]interface{})
-		if !ok {
-			t.Error("unexpected message")
-		}
+		msg, complexMap := prepareMsgAndMap()
 		delete(complexMap, "bool")
 		err := FillDefaultValues(&msg, service)
 		if err != nil {
@@ -118,15 +86,7 @@ func TestFillComplex(t *testing.T) {
 		}
 	})
 	t.Run("map", func(t *testing.T) {
-		msg := getCorrectMsg()
-		complexMsg, ok := msg["complex"]
-		if !ok {
-			t.Error("unexpected message")
-		}
-		complexMap, ok := complexMsg.(map[string]interface{})
-		if !ok {
-			t.Error("unexpected message")
-		}
+		msg, complexMap := prepareMsgAndMap()
 		delete(complexMap, "map")
 		err := FillDefaultValues(&msg, service)
 		if err != nil {
@@ -137,15 +97,7 @@ func TestFillComplex(t *testing.T) {
 		}
 	})
 	t.Run("map-partial", func(t *testing.T) {
-		msg := getCorrectMsg()
-		complexMsg, ok := msg["complex"]
-		if !ok {
-			t.Error("unexpected message")
-		}
-		complexMap, ok := complexMsg.(map[string]interface{})
-		if !ok {
-			t.Error("unexpected message")
-		}
+		msg, complexMap := prepareMsgAndMap()
 		complexMap["map"] = map[string]interface{}{"str2": "str2"}
 		err := FillDefaultValues(&msg, service)
 		if err != nil {
@@ -156,15 +108,7 @@ func TestFillComplex(t *testing.T) {
 		}
 	})
 	t.Run("list", func(t *testing.T) {
-		msg := getCorrectMsg()
-		complexMsg, ok := msg["complex"]
-		if !ok {
-			t.Error("unexpected message")
-		}
-		complexMap, ok := complexMsg.(map[string]interface{})
-		if !ok {
-			t.Error("unexpected message")
-		}
+		msg, complexMap := prepareMsgAndMap()
 		delete(complexMap, "list")
 		err := FillDefaultValues(&msg, service)
 		if err != nil {
@@ -175,15 +119,7 @@ func TestFillComplex(t *testing.T) {
 		}
 	})
 	t.Run("list-partial", func(t *testing.T) {
-		msg := getCorrectMsg()
-		complexMsg, ok := msg["complex"]
-		if !ok {
-			t.Error("unexpected message")
-		}
-		complexMap, ok := complexMsg.(map[string]interface{})
-		if !ok {
-			t.Error("unexpected message")
-		}
+		msg, complexMap := prepareMsgAndMap()
 		complexMap["list"] = []interface{}{"a"}
 		err := FillDefaultValues(&msg, service)
 		if err != nil {
@@ -219,59 +155,7 @@ func TestFillComplex(t *testing.T) {
 }
 
 func isMsgOk(msg map[string]interface{}) bool {
-	complexMsg, ok := msg["complex"]
-	if !ok {
-		return false
-	}
-	complexMap, ok := complexMsg.(map[string]interface{})
-	if !ok {
-		return false
-	}
-
-	actual, ok := complexMap["str"]
-	if !ok || actual != "str" {
-		return false
-	}
-	actual, ok = complexMap["int"]
-	if !ok || actual != 42 {
-		return false
-	}
-	actual, ok = complexMap["float"]
-	if !ok || actual != 2.4 {
-		return false
-	}
-	actual, ok = complexMap["bool"]
-	if !ok || actual != true {
-		return false
-	}
-
-	actual, ok = complexMap["map"]
-	if !ok {
-		return false
-	}
-	m, ok := actual.(map[string]interface{})
-	if !ok {
-		return false
-	}
-	actual, ok = m["str2"]
-	if !ok || actual != "str2" {
-		return false
-	}
-	actual, ok = m["str3"]
-	if !ok || actual != "str3" {
-		return false
-	}
-
-	actual, ok = complexMap["list"]
-	if !ok {
-		return false
-	}
-	l, ok := actual.([]interface{})
-	if !ok || len(l) != 2 || l[0] != "a" || l[1] != "b" {
-		return false
-	}
-
-	return true
+	return isBaseValuesOk(msg) && isMapValuesOk(msg) && isListValuesOk(msg)
 }
 
 func isBaseValuesOk(msg map[string]interface{}) bool {
@@ -367,4 +251,11 @@ func getCorrectMsg() map[string]interface{} {
 			"list":  []interface{}{"a", "b"},
 		},
 	}
+}
+
+func prepareMsgAndMap() (msg map[string]interface{}, complexMap map[string]interface{}) {
+	msg = getCorrectMsg()
+	complexMsg, _ := msg["complex"]
+	complexMap, _ = complexMsg.(map[string]interface{})
+	return msg, complexMap
 }
