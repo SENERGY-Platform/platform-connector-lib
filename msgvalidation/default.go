@@ -27,7 +27,7 @@ func DefaultMissingFields(msg map[string]interface{}, service model.Service) (re
 		if value, ok := msg[output.ContentVariable.Name]; ok {
 			msg[output.ContentVariable.Name], err = defaultMissingField(value, output.ContentVariable)
 		} else {
-			msg[output.ContentVariable.Name] = nil
+			msg[output.ContentVariable.Name] = output.ContentVariable.Value
 		}
 	}
 	return msg, nil
@@ -76,7 +76,7 @@ func defaultMissingField(value interface{}, variable model.ContentVariable) (_ i
 				if subValue, ok := v[subVariable.Name]; ok {
 					v[subVariable.Name], err = defaultMissingField(subValue, subVariable)
 				} else {
-					v[subVariable.Name] = nil
+					v[subVariable.Name] = subVariable.Value
 				}
 			}
 		}
@@ -101,7 +101,7 @@ func defaultMissingField(value interface{}, variable model.ContentVariable) (_ i
 				if index < len(v) {
 					v[index], err = defaultMissingField(v[index], subVariable)
 				} else {
-					v = append(v, nil)
+					v = append(v, subVariable.Value)
 				}
 			}
 		}
