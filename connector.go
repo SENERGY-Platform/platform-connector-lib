@@ -224,3 +224,7 @@ func (this *Connector) ValidateMsg(msg map[string]interface{}, service model.Ser
 	}
 	return msgvalidation.Validate(msg, service, this.Config.ValidateAllowUnknownField, this.Config.ValidateAllowMissingField)
 }
+
+func (this *Connector) CleanMsg(msg map[string]interface{}, service model.Service) (map[string]interface{}, error) {
+	return msgvalidation.Clean(msg, service)
+}

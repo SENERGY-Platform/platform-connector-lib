@@ -74,6 +74,10 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 			}
 		}
 	}
+	result, err = this.CleanMsg(result, service)
+	if err != nil {
+		return result, err
+	}
 	err = this.ValidateMsg(result, service)
 	return result, err
 }
