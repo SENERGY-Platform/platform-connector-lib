@@ -24,8 +24,10 @@ import (
 	"log"
 )
 
+const cachePrefix = "characteristic."
+
 func (this *Repository) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
-	get, err := this.cache.Get(id)
+	get, err := this.cache.Get(cachePrefix + id)
 	if err == nil {
 		err = json.Unmarshal(get.Value, &characteristic)
 		if err == nil {
@@ -49,6 +51,6 @@ func (this *Repository) GetCharacteristicById(id string, token security.JwtToken
 	if err != nil {
 		return characteristic, err
 	}
-	this.cache.Set(id, body, this.characteristicExpiration)
+	this.cache.Set(cachePrefix+id, body, this.characteristicExpiration)
 	return characteristic, err
 }
