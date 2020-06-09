@@ -17,6 +17,7 @@ func Mock(ctx context.Context) (ctrl *Controller, url string, err error) {
 	ctrl = &Controller{
 		mux:              sync.Mutex{},
 		devices:          map[string]model.Device{},
+		characteristics:  map[string]model.Characteristic{},
 		devicesByLocalId: map[string]string{},
 		deviceTypes:      map[string]model.DeviceType{},
 		hubs:             map[string]model.Hub{},
@@ -49,12 +50,14 @@ func getRouter(controller *Controller) (router *httprouter.Router, err error) {
 	DeviceTypesEndpoints(controller, router)
 	HubsEndpoints(controller, router)
 	ProtocolsEndpoints(controller, router)
+	CharacteristicsEndpoints(controller, router)
 	return
 }
 
 type Controller struct {
 	mux              sync.Mutex
 	devices          map[string]model.Device
+	characteristics  map[string]model.Characteristic
 	devicesByLocalId map[string]string
 	deviceTypes      map[string]model.DeviceType
 	hubs             map[string]model.Hub
@@ -218,5 +221,39 @@ func (this *Controller) PublishProtocolDelete(id string) (err error, code int) {
 	this.mux.Lock()
 	defer this.mux.Unlock()
 	delete(this.protocols, id)
+	return nil, 200
+}
+
+func (this *Controller) ReadCharacteristic(id string) (result interface{}, err error, code int) {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	var exists bool
+	result, exists = this.characteristics[id]
+	if exists {
+		return result, nil, 200
+	} else {
+		return nil, errors.New("404"), 404
+	}
+}
+
+func (this *Controller) PublishCharacteristicCreate(characteristic model.Characteristic) (result interface{}, err error, code int) {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	characteristic.Id = uuid.NewV4().String()
+	this.characteristics[characteristic.Id] = characteristic
+	return characteristic, nil, 200
+}
+
+func (this *Controller) PublishCharacteristicUpdate(id string, characteristic model.Characteristic) (result interface{}, err error, code int) {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	this.characteristics[id] = characteristic
+	return characteristic, nil, 200
+}
+
+func (this *Controller) PublishCharacteristicDelete(id string) (err error, code int) {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	delete(this.characteristics, id)
 	return nil, 200
 }

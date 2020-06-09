@@ -17,6 +17,9 @@
 package unitreference
 
 import (
+	"context"
+	"github.com/SENERGY-Platform/platform-connector-lib/iot"
+	iot2 "github.com/SENERGY-Platform/platform-connector-lib/iot/mock/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"testing"
 )
@@ -54,10 +57,22 @@ func TestFillUnits(t *testing.T) {
 		},
 	}
 	t.Run("fill", func(t *testing.T) {
-		semanticRepo := NewSemanticRepositoryMock()
-		err := FillUnitsForService(&service, "", semanticRepo)
+		mock, repo, cancel, err := NewSemanticRepositoryMock()
 		if err != nil {
 			t.Error(err)
+			return
+		}
+		defer cancel()
+		err = SetMockCHaracteristics(mock)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		err = FillUnitsForService(&service, "", repo)
+		if err != nil {
+			t.Error(err)
+			return
 		}
 
 		if service.Outputs[0].ContentVariable.SubContentVariables[1].Value != "RGB" {
@@ -74,4 +89,27 @@ func TestFillUnits(t *testing.T) {
 		}
 	})
 
+}
+
+func NewSemanticRepositoryMock() (mockCtrl *iot2.Controller, repo SemanticRepository, cancel func(), err error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	mock, iotMockUrl, err := iot2.Mock(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	iotrepo := iot.New(iotMockUrl, iotMockUrl, iotMockUrl)
+	cache := iot.NewCache(iotrepo, 60, 60, 60)
+	return mock, cache, cancel, nil
+}
+
+func SetMockCHaracteristics(mockCtrl *iot2.Controller) (err error) {
+	_, err, _ = mockCtrl.PublishCharacteristicUpdate("urn:infai:ses:characteristic:5b4eea52-e8e5-4e80-9455-0382f81a1b43", model.Characteristic{Id: "urn:infai:ses:characteristic:5b4eea52-e8e5-4e80-9455-0382f81a1b43", Name: "RGB"})
+	if err != nil {
+		return err
+	}
+	_, err, _ = mockCtrl.PublishCharacteristicUpdate("urn:infai:ses:characteristic:64928e9f-98ca-42bb-a1e5-adf2a760a2f9", model.Characteristic{Id: "urn:infai:ses:characteristic:64928e9f-98ca-42bb-a1e5-adf2a760a2f9", Name: "HSB"})
+	if err != nil {
+		return err
+	}
+	return nil
 }
