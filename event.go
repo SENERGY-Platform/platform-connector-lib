@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/unitreference"
 	"log"
 	"runtime/debug"
 	"time"
@@ -73,6 +74,15 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 				}
 			}
 		}
+	}
+
+	err = unitreference.FillUnitsForService(&service, token, this.IotCache)
+	if err != nil {
+		return result, err
+	}
+	result, err = this.CleanMsg(result, service)
+	if err != nil {
+		return result, err
 	}
 	err = this.ValidateMsg(result, service)
 	return result, err

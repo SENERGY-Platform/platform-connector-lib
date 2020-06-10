@@ -56,7 +56,7 @@ type Connector struct {
 func New(config Config) (connector *Connector) {
 	connector = &Connector{
 		Config: config,
-		iot:    iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl),
+		iot:    iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.SemanticRepositoryUrl),
 		security: security.New(
 			config.AuthEndpoint,
 			config.AuthClientId,
@@ -69,7 +69,7 @@ func New(config Config) (connector *Connector) {
 			config.TokenCacheUrl,
 		),
 	}
-	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.IotCacheUrl...)
+	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheUrl...)
 	return
 }
 
@@ -223,4 +223,8 @@ func (this *Connector) ValidateMsg(msg map[string]interface{}, service model.Ser
 		return nil
 	}
 	return msgvalidation.Validate(msg, service, this.Config.ValidateAllowUnknownField, this.Config.ValidateAllowMissingField)
+}
+
+func (this *Connector) CleanMsg(msg map[string]interface{}, service model.Service) (map[string]interface{}, error) {
+	return msgvalidation.Clean(msg, service)
 }
