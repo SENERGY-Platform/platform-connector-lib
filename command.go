@@ -32,6 +32,11 @@ func (this *Connector) handleCommand(msg []byte, t time.Time) (err error) {
 		log.Println("ERROR: handle command: ", err.Error())
 		return
 	}
+	protocolmsg.Trace = append(protocolmsg.Trace, model.Trace{
+		Timestamp: time.Now().UnixNano(),
+		TimeUnit:  "unix_nano",
+		Location:  "github.com/SENERGY-Platform/platform-connector-lib handleCommand() after unmarshal",
+	})
 	protocolParts := protocolmsg.Request.Input
 	if this.deviceCommandHandler != nil {
 		handlerResponse, err := this.useDeviceCommandHandler(protocolmsg, protocolParts)
@@ -50,6 +55,11 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 		return
 	}
 	commandRequest.Response.Output = commandResponse
+	commandRequest.Trace = append(commandRequest.Trace, model.Trace{
+		Timestamp: time.Now().UnixNano(),
+		TimeUnit:  "unix_nano",
+		Location:  "github.com/SENERGY-Platform/platform-connector-lib HandleCommandResponse() before marshal",
+	})
 	responseMsg, err := json.Marshal(commandRequest)
 	if err != nil {
 		log.Println("ERROR in handleCommand() json.Marshal(): ", err)

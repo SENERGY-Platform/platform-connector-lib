@@ -50,6 +50,13 @@ type ProtocolMsg struct {
 	Response ProtocolResponse `json:"response"`
 	TaskInfo TaskInfo         `json:"task_info"`
 	Metadata Metadata         `json:"metadata"`
+	Trace    []Trace          `json:"trace,omitempty"`
+}
+
+type Trace struct {
+	TimeUnit  string `json:"time_unit"`
+	Timestamp int64  `json:"timestamp"`
+	Location  string `json:"location"`
 }
 
 const Optimistic = "optimistic"
