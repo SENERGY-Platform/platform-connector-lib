@@ -180,7 +180,7 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 }
 
 func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
-	req, err := http.NewRequest("PUT", url, nil)
+	req, err := http.NewRequest("PUT", url, body)
 	if err != nil {
 		return nil, err
 	}
