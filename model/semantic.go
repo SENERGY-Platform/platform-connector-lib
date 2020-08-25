@@ -19,14 +19,15 @@ package model
 type DeviceClass struct {
 	Id      string `json:"id"`
 	Name    string `json:"name"`
+	Image   string `json:"image"`
 	RdfType string `json:"rdf_type"`
 }
 
 type Function struct {
-	Id         string   `json:"id"`
-	Name       string   `json:"name"`
-	ConceptIds []string `json:"concept_ids"`
-	RdfType    string   `json:"rdf_type"`
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+	ConceptId string `json:"concept_id"`
+	RdfType   string `json:"rdf_type"`
 }
 
 type Aspect struct {
@@ -36,19 +37,20 @@ type Aspect struct {
 }
 
 type Concept struct {
-	Id              string           `json:"id"`
-	Name            string           `json:"name"`
-	Characteristics []Characteristic `json:"characteristics"`
-	RdfType         string           `json:"rdf_type"`
+	Id                   string   `json:"id"`
+	Name                 string   `json:"name"`
+	CharacteristicIds    []string `json:"characteristic_ids"`
+	BaseCharacteristicId string   `json:"base_characteristic_id"`
+	RdfType              string   `json:"rdf_type"`
 }
 
 type Characteristic struct {
 	Id                 string           `json:"id"`
 	Name               string           `json:"name"`
 	Type               Type             `json:"type"`
-	MinValue           float64          `json:"min_value"`
-	MaxValue           float64          `json:"max_value"`
-	Value              interface{}      `json:"value"`
+	MinValue           interface{}      `json:"min_value,omitempty"`
+	MaxValue           interface{}      `json:"max_value,omitempty"`
+	Value              interface{}      `json:"value,omitempty"`
 	SubCharacteristics []Characteristic `json:"sub_characteristics"`
 	RdfType            string           `json:"rdf_type"`
 }

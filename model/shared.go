@@ -24,24 +24,44 @@ type Device struct {
 }
 
 type DeviceType struct {
-	Id          string      `json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Image       string      `json:"image"`
-	Services    []Service   `json:"services"`
-	DeviceClass DeviceClass `json:"device_class"`
-	RdfType     string      `json:"rdf_type"`
+	Id            string    `json:"id"`
+	Name          string    `json:"name"`
+	Description   string    `json:"description"`
+	Services      []Service `json:"services"`
+	DeviceClassId string    `json:"device_class_id"`
+	RdfType       string    `json:"rdf_type"`
 }
 
 type Service struct {
-	Id          string     `json:"id"`
-	LocalId     string     `json:"local_id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Aspects     []Aspect   `json:"aspects"`
-	ProtocolId  string     `json:"protocol_id"`
-	Inputs      []Content  `json:"inputs"`
-	Outputs     []Content  `json:"outputs"`
-	Functions   []Function `json:"functions"`
-	RdfType     string     `json:"rdf_type"`
+	Id          string      `json:"id"`
+	LocalId     string      `json:"local_id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Interaction Interaction `json:"interaction"`
+	AspectIds   []string    `json:"aspect_ids"`
+	ProtocolId  string      `json:"protocol_id"`
+	Inputs      []Content   `json:"inputs"`
+	Outputs     []Content   `json:"outputs"`
+	FunctionIds []string    `json:"function_ids"`
+	RdfType     string      `json:"rdf_type"`
+}
+
+type Interaction string
+
+const (
+	EVENT             Interaction = "event"
+	REQUEST           Interaction = "request"
+	EVENT_AND_REQUEST Interaction = "event+request"
+)
+
+type Protocol struct {
+	Id               string            `json:"id"`
+	Name             string            `json:"name"`
+	Handler          string            `json:"handler"`
+	ProtocolSegments []ProtocolSegment `json:"protocol_segments"`
+}
+
+type ProtocolSegment struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
