@@ -37,7 +37,7 @@ func defaultMissingField(value interface{}, variable model.ContentVariable) (_ i
 	switch v := value.(type) {
 	case string:
 		if variable.Type != model.String {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.String, variable.Type)
+			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v) %v", variable.Name, ErrUnexpectedType, model.String, variable.Type, value)
 		}
 		return value, nil
 	case int:
