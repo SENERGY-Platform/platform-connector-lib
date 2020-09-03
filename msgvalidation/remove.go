@@ -55,7 +55,7 @@ func removeUnknownField(value interface{}, variable model.ContentVariable) (_ in
 		return value, nil
 	case float64:
 		if variable.Type != model.Integer && variable.Type != model.Float {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.Float, variable.Type)
+			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v) %v", variable.Name, ErrUnexpectedType, model.Float, variable.Type, v)
 		}
 		return value, nil
 	case bool:

@@ -74,7 +74,7 @@ func ValidateMsgVariable(segment interface{}, variable model.ContentVariable, al
 		}
 	case float64:
 		if variable.Type != model.Integer && variable.Type != model.Float {
-			return fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.Float, variable.Type)
+			return fmt.Errorf("%v: %w (is: %v, expected: %v) %v", variable.Name, ErrUnexpectedType, model.Float, variable.Type, v)
 		}
 	case bool:
 		if variable.Type != model.Boolean {
