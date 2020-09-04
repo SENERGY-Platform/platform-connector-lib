@@ -18,6 +18,7 @@ package iot
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"io/ioutil"
@@ -53,6 +54,9 @@ func (this *PreparedCache) GetCharacteristicById(id string, token security.JwtTo
 }
 
 func (this *Iot) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
+	if id == "" {
+		return characteristic, errors.New("characteristid can not be empty")
+	}
 	resp, err := token.Get(this.semanticRepositoryUrl + "/characteristics/" + id)
 	if err != nil {
 		return characteristic, err
