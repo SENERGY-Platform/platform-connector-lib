@@ -98,7 +98,7 @@ func (this *Consumer) start() error {
 				} else {
 					err = this.listener(m.Topic, m.Value, m.Time)
 					if err != nil {
-						log.Println("ERROR: unable to handle message (no commit)", err)
+						log.Println("ERROR: unable to handle message (no commit)", err, m.Topic, string(m.Value))
 					} else {
 						err = r.CommitMessages(this.ctx, m)
 						if err != nil {
