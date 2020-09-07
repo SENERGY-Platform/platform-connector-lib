@@ -29,7 +29,7 @@ func (this *Connector) handleCommand(msg []byte, t time.Time) (err error) {
 	protocolmsg := model.ProtocolMsg{}
 	err = json.Unmarshal(msg, &protocolmsg)
 	if err != nil {
-		log.Println("ERROR: handle command: ", err.Error())
+		log.Println("ERROR: handle command: ", err.Error(), string(msg))
 		return
 	}
 	protocolmsg.Trace = append(protocolmsg.Trace, model.Trace{
