@@ -17,6 +17,7 @@
 package kafka
 
 import (
+	"context"
 	"errors"
 	"github.com/Shopify/sarama"
 	"log"
@@ -113,10 +114,21 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	if err != nil {
 		return err
 	}
+
 	start := time.Now()
+	if SlowProducerTimeout > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), SlowProducerTimeout)
+		defer cancel()
+		go func() {
+			<-ctx.Done()
+			if ctx.Err() != nil && ctx.Err() != context.Canceled {
+				log.Println("WARNING: slow produce call", topic, message)
+			}
+		}()
+	}
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
-		log.Println("WARNING: slow produce call", topic, time.Since(start), message)
+		log.Println("WARNING: finished slow produce call", topic, time.Since(start), message)
 	}
 	return err
 }
@@ -144,9 +156,19 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 		return err
 	}
 	start := time.Now()
+	if SlowProducerTimeout > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), SlowProducerTimeout)
+		defer cancel()
+		go func() {
+			<-ctx.Done()
+			if ctx.Err() != nil && ctx.Err() != context.Canceled {
+				log.Println("WARNING: slow produce call", topic, key, message)
+			}
+		}()
+	}
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: time.Now()})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
-		log.Println("WARNING: slow produce call", topic, key, time.Since(start), message)
+		log.Println("WARNING: finished slow produce call", topic, key, time.Since(start), message)
 	}
 	return err
 }
