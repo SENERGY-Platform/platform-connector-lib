@@ -25,6 +25,7 @@ import (
 )
 
 var Fatal = false
+var SlowProducerTimeout time.Duration = 2 * time.Second
 
 type ProducerInterface interface {
 	Produce(topic string, message string) (err error)
@@ -112,7 +113,11 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	if err != nil {
 		return err
 	}
+	start := time.Now()
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
+	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
+		log.Println("WARNING: slow produce call", topic, time.Since(start), message)
+	}
 	return err
 }
 
@@ -138,7 +143,11 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 	if err != nil {
 		return err
 	}
+	start := time.Now()
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: time.Now()})
+	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
+		log.Println("WARNING: slow produce call", topic, key, time.Since(start), message)
+	}
 	return err
 }
 
