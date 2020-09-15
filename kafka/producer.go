@@ -21,7 +21,6 @@ import (
 	"errors"
 	"github.com/Shopify/sarama"
 	"log"
-	"sync"
 	"time"
 )
 
@@ -41,7 +40,6 @@ type SyncProducer struct {
 	producer       sarama.SyncProducer
 	zk             string
 	syncIdempotent bool
-	mux            sync.Mutex
 	usedTopics     map[string]bool
 }
 
@@ -105,8 +103,6 @@ func (this *SyncProducer) Log(logger *log.Logger) {
 }
 
 func (this *SyncProducer) Produce(topic string, message string) (err error) {
-	this.mux.Lock()
-	defer this.mux.Unlock()
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
@@ -146,8 +142,6 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 }
 
 func (this *SyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
-	this.mux.Lock()
-	defer this.mux.Unlock()
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
