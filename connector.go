@@ -228,3 +228,7 @@ func (this *Connector) ValidateMsg(msg map[string]interface{}, service model.Ser
 func (this *Connector) CleanMsg(msg map[string]interface{}, service model.Service) (map[string]interface{}, error) {
 	return msgvalidation.Clean(msg, service)
 }
+
+func (this *Connector) GetProducer() kafka.ProducerInterface {
+	return this.producer
+}
