@@ -61,7 +61,7 @@ func TestProducer_Produce(t *testing.T) {
 	})
 	defer consumer.Stop()
 
-	producer, err := PrepareProducer(zookeeperUrl, true, true)
+	producer, err := PrepareProducer(zookeeperUrl, true, true, 2, 2)
 	if err != nil {
 		t.Error(err)
 		return

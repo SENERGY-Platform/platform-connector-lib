@@ -37,7 +37,7 @@ func Test(t *testing.T) {
 		return
 	}
 
-	logger, err := New(config.ZookeeperUrl, true, false, config.DeviceLogTopic, config.HubLogTopic)
+	logger, err := New(config.ZookeeperUrl, true, false, config.DeviceLogTopic, config.HubLogTopic, 2, 2)
 	if err != nil {
 		t.Error(err)
 		return

@@ -35,12 +35,14 @@ type ProducerInterface interface {
 }
 
 type SyncProducer struct {
-	broker         []string
-	logger         *log.Logger
-	producer       sarama.SyncProducer
-	zk             string
-	syncIdempotent bool
-	usedTopics     map[string]bool
+	broker            []string
+	logger            *log.Logger
+	producer          sarama.SyncProducer
+	zk                string
+	syncIdempotent    bool
+	usedTopics        map[string]bool
+	partitionsNum     int
+	replicationFactor int
 }
 
 func (this *SyncProducer) Close() {
@@ -48,18 +50,20 @@ func (this *SyncProducer) Close() {
 }
 
 type AsyncProducer struct {
-	broker     []string
-	logger     *log.Logger
-	producer   sarama.AsyncProducer
-	zk         string
-	usedTopics map[string]bool
+	broker            []string
+	logger            *log.Logger
+	producer          sarama.AsyncProducer
+	zk                string
+	usedTopics        map[string]bool
+	partitionsNum     int
+	replicationFactor int
 }
 
 func (this *AsyncProducer) Close() {
 	this.producer.Close()
 }
 
-func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterface, error) {
+func PrepareProducer(zk string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (ProducerInterface, error) {
 	var err error
 	broker, err := GetBroker(zk)
 	if err != nil {
@@ -69,7 +73,14 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterfa
 		return nil, errors.New("missing kafka broker")
 	}
 	if sync {
-		result := &SyncProducer{broker: broker, zk: zk, syncIdempotent: syncIdempotent, usedTopics: map[string]bool{}}
+		result := &SyncProducer{
+			broker:            broker,
+			zk:                zk,
+			syncIdempotent:    syncIdempotent,
+			usedTopics:        map[string]bool{},
+			partitionsNum:     partitionNum,
+			replicationFactor: replicationFactor,
+		}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
@@ -82,7 +93,13 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool) (ProducerInterfa
 		result.producer, err = sarama.NewSyncProducer(result.broker, sarama_conf)
 		return result, err
 	} else {
-		result := &AsyncProducer{broker: broker, zk: zk, usedTopics: map[string]bool{}}
+		result := &AsyncProducer{
+			broker:            broker,
+			zk:                zk,
+			usedTopics:        map[string]bool{},
+			partitionsNum:     partitionNum,
+			replicationFactor: replicationFactor,
+		}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
@@ -106,7 +123,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	err = EnsureTopic(topic, this.zk, &this.usedTopics)
+	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
 		return err
 	}
@@ -133,7 +150,7 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	err = EnsureTopic(topic, this.zk, &this.usedTopics)
+	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
 		return err
 	}
@@ -145,7 +162,7 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	err = EnsureTopic(topic, this.zk, &this.usedTopics)
+	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
 		return err
 	}
@@ -171,7 +188,7 @@ func (this *AsyncProducer) ProduceWithKey(topic string, message string, key stri
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	err = EnsureTopic(topic, this.zk, &this.usedTopics)
+	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
 		return err
 	}

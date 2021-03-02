@@ -25,11 +25,11 @@ import (
 	"runtime/debug"
 )
 
-func EnsureTopic(topic string, zk string, knownTopics *map[string]bool)(err error){
+func EnsureTopic(topic string, zk string, knownTopics *map[string]bool, partitions int, replicationFactor int) (err error) {
 	if (*knownTopics)[topic] {
 		return nil
 	}
-	err = InitTopic(zk, topic)
+	err = InitTopicWithConfig(zk, partitions, replicationFactor, topic)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()

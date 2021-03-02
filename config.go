@@ -62,6 +62,8 @@ type Config struct {
 
 	SemanticRepositoryUrl    string
 	CharacteristicExpiration int32
+	PartitionsNum            int
+	ReplicationFactor        int
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

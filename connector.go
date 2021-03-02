@@ -99,7 +99,15 @@ func (this *Connector) Start() (err error) {
 	if this.deviceCommandHandler == nil && this.asyncCommandHandler == nil {
 		return errors.New("missing command handler; use SetAsyncCommandHandler() or SetDeviceCommandHandler()")
 	}
-	this.producer, err = kafka.PrepareProducer(this.Config.ZookeeperUrl, this.Config.SyncKafka, this.Config.SyncKafkaIdempotent)
+	partitionsNum := 1
+	replFactor := 1
+	if this.Config.PartitionsNum != 0 {
+		partitionsNum = this.Config.PartitionsNum
+	}
+	if this.Config.ReplicationFactor != 0 {
+		replFactor = this.Config.ReplicationFactor
+	}
+	this.producer, err = kafka.PrepareProducer(this.Config.ZookeeperUrl, this.Config.SyncKafka, this.Config.SyncKafkaIdempotent, partitionsNum, replFactor)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err
