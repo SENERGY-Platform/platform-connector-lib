@@ -88,7 +88,7 @@ func (this *Consumer) start() error {
 					return
 				}
 				if time.Now().Sub(m.Time) > 1*time.Hour { //floodgate to prevent old messages to DOS the consumer
-					log.Println("ERROR: kafka message older than 1h: ", this.topic, time.Now().Sub(m.Time))
+					log.Println("WARNING: kafka message older than 1h: ", this.topic, time.Now().Sub(m.Time))
 					err = r.CommitMessages(this.ctx, m)
 					if err != nil {
 						log.Println("ERROR: while committing message ", this.topic, err)
