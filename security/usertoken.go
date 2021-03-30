@@ -19,8 +19,13 @@ package security
 import (
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"github.com/dgrijalva/jwt-go"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -28,6 +33,31 @@ import (
 func (this *Security) GetUserToken(username string, password string) (token JwtToken, err error) {
 	openid, err := GetOpenidPasswordToken(this.authEndpoint, this.authClientId, this.authClientSecret, username, password)
 	return openid.JwtToken(), err
+}
+
+func (this *Security) ExchangeUserToken(userid string) (token JwtToken, err error) {
+	resp, err := http.PostForm(this.authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
+		"client_id":         {this.authClientId},
+		"client_secret":     {this.authClientSecret},
+		"grant_type":        {"urn:ietf:params:oauth:grant-type:token-exchange"},
+		"requested_subject": {userid},
+	})
+	if err != nil {
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Println("ERROR: GetUserToken()", resp.StatusCode, string(body))
+		err = errors.New("access denied")
+		resp.Body.Close()
+		return
+	}
+	var openIdToken OpenidToken
+	err = json.NewDecoder(resp.Body).Decode(&openIdToken)
+	if err != nil {
+		return
+	}
+	return JwtToken("Bearer " + openIdToken.AccessToken), nil
 }
 
 func (this *Security) GenerateUserToken(username string) (token JwtToken, err error) {

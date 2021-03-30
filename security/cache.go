@@ -15,7 +15,7 @@ func (this *Security) GetCachedUserToken(username string) (token JwtToken, err e
 			log.Println("ERROR: GetCachedUserToken() ", err)
 		}
 	}
-	token, err = this.GenerateUserToken(username)
+	token, err = this.ExchangeUserToken(username)
 	if err != nil {
 		log.Println("ERROR: GetCachedUserToken::GenerateUserToken()", err, username)
 		return
