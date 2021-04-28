@@ -125,7 +125,8 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	}
 	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
-		return err
+		log.Println("WARNING: unable to ensure topic", err)
+		err = nil
 	}
 
 	start := time.Now()
@@ -152,7 +153,8 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 	}
 	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
-		return err
+		log.Println("WARNING: unable to ensure topic", err)
+		err = nil
 	}
 	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()}
 	return
@@ -164,7 +166,8 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 	}
 	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
-		return err
+		log.Println("WARNING: unable to ensure topic", err)
+		err = nil
 	}
 	start := time.Now()
 	if SlowProducerTimeout > 0 {
@@ -190,7 +193,8 @@ func (this *AsyncProducer) ProduceWithKey(topic string, message string, key stri
 	}
 	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
-		return err
+		log.Println("WARNING: unable to ensure topic", err)
+		err = nil
 	}
 	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: time.Now()}
 	return
