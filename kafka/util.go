@@ -17,19 +17,18 @@
 package kafka
 
 import (
-	"errors"
 	"github.com/segmentio/kafka-go"
-	"github.com/wvanbergen/kazoo-go"
-	"io/ioutil"
 	"log"
+	"net"
 	"runtime/debug"
+	"strconv"
 )
 
-func EnsureTopic(topic string, zk string, knownTopics *map[string]bool, partitions int, replicationFactor int) (err error) {
+func EnsureTopic(topic string, kafkaUrl string, knownTopics *map[string]bool, partitions int, replicationFactor int) (err error) {
 	if (*knownTopics)[topic] {
 		return nil
 	}
-	err = InitTopicWithConfig(zk, partitions, replicationFactor, topic)
+	err = InitTopicWithConfig(kafkaUrl, partitions, replicationFactor, topic)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
@@ -39,73 +38,57 @@ func EnsureTopic(topic string, zk string, knownTopics *map[string]bool, partitio
 	return
 }
 
-func GetBroker(zk string) (brokers []string, err error) {
-	return getBroker(zk)
+func GetBroker(bootstrapUrl string) (brokers []string, err error) {
+	return getBroker(bootstrapUrl)
 }
 
-func getBroker(zkUrl string) (brokers []string, err error) {
-	zookeeper := kazoo.NewConfig()
-	zookeeper.Logger = log.New(ioutil.Discard, "", 0)
-	zk, chroot := kazoo.ParseConnectionString(zkUrl)
-	zookeeper.Chroot = chroot
-	if kz, err := kazoo.NewKazoo(zk, zookeeper); err != nil {
-		return brokers, err
-	} else {
-		defer kz.Close()
-		return kz.BrokerList()
+func getBroker(bootstrapUrl string) (result []string, err error) {
+	conn, err := kafka.Dial("tcp", bootstrapUrl)
+	if err != nil {
+		return result, err
 	}
+	defer conn.Close()
+	brokers, err := conn.Brokers()
+	if err != nil {
+		return result, err
+	}
+	for _, broker := range brokers {
+		result = append(result, net.JoinHostPort(broker.Host, strconv.Itoa(broker.Port)))
+	}
+	return result, nil
 }
 
-func GetKafkaController(zkUrl string) (controller string, err error) {
-	zookeeper := kazoo.NewConfig()
-	zookeeper.Logger = log.New(ioutil.Discard, "", 0)
-	zk, chroot := kazoo.ParseConnectionString(zkUrl)
-	zookeeper.Chroot = chroot
-	kz, err := kazoo.NewKazoo(zk, zookeeper)
-	if err != nil {
-		return controller, err
-	}
-	controllerId, err := kz.Controller()
-	if err != nil {
-		return controller, err
-	}
-	brokers, err := kz.Brokers()
-	kz.Close()
-	if err != nil {
-		return controller, err
-	}
-	return brokers[controllerId], err
+func InitTopic(kafkaUrl string, topics ...string) (err error) {
+	return InitTopicWithConfig(kafkaUrl, 1, 1, topics...)
 }
 
-func InitTopic(zkUrl string, topics ...string) (err error) {
-	return InitTopicWithConfig(zkUrl, 1, 1, topics...)
-}
-
-func InitTopicWithConfig(zkUrl string, numPartitions int, replicationFactor int, topics ...string) (err error) {
-	controller, err := GetKafkaController(zkUrl)
+func InitTopicWithConfig(bootstrapUrl string, numPartitions int, replicationFactor int, topics ...string) (err error) {
+	conn, err := kafka.Dial("tcp", bootstrapUrl)
 	if err != nil {
-		log.Println("ERROR: unable to find controller", err)
 		return err
 	}
-	if controller == "" {
-		log.Println("ERROR: unable to find controller")
-		return errors.New("unable to find controller")
-	}
-	initConn, err := kafka.Dial("tcp", controller)
+	defer conn.Close()
+
+	controller, err := conn.Controller()
 	if err != nil {
-		log.Println("ERROR: while init topic connection ", err)
 		return err
 	}
-	defer initConn.Close()
+	var controllerConn *kafka.Conn
+	controllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+	if err != nil {
+		return err
+	}
+	defer controllerConn.Close()
+
+	topicConfigs := []kafka.TopicConfig{}
+
 	for _, topic := range topics {
-		err = initConn.CreateTopics(kafka.TopicConfig{
+		topicConfigs = append(topicConfigs, kafka.TopicConfig{
 			Topic:             topic,
 			NumPartitions:     numPartitions,
 			ReplicationFactor: replicationFactor,
 		})
-		if err != nil {
-			return
-		}
 	}
-	return nil
+
+	return controllerConn.CreateTopics(topicConfigs...)
 }

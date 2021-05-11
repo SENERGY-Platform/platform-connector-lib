@@ -19,6 +19,6 @@ package config
 type Config struct {
 	DeviceLogTopic   string
 	HubLogTopic      string
-	ZookeeperUrl     string
+	KafkaUrl         string
 	ConnectionlogUrl string
 }

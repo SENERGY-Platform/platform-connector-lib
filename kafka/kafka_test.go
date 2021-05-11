@@ -30,7 +30,7 @@ func TestProducer_Produce(t *testing.T) {
 	zookeeperUrl := zkIp + ":2181"
 
 	//kafka
-	closeKafka, err := Kafka(pool, zookeeperUrl)
+	kafkaUrl, closeKafka, err := Kafka(pool, zookeeperUrl)
 	if err != nil {
 		t.Error(err)
 		return
@@ -39,13 +39,13 @@ func TestProducer_Produce(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	err = InitTopic(zookeeperUrl, "test")
+	err = InitTopic(kafkaUrl, "test")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = InitTopic(zookeeperUrl, "test2")
+	err = InitTopic(kafkaUrl, "test2")
 	if err != nil {
 		t.Error(err)
 		return
@@ -53,7 +53,9 @@ func TestProducer_Produce(t *testing.T) {
 
 	result := [][]byte{}
 
-	consumer, err := NewConsumer(zookeeperUrl, "test", "test", func(topic string, msg []byte, t time.Time) error {
+	time.Sleep(1 * time.Second)
+
+	consumer, err := NewConsumer(kafkaUrl, "test", "test", func(topic string, msg []byte, t time.Time) error {
 		result = append(result, msg)
 		return nil
 	}, func(err error, consumer *Consumer) {
@@ -61,7 +63,9 @@ func TestProducer_Produce(t *testing.T) {
 	})
 	defer consumer.Stop()
 
-	producer, err := PrepareProducer(zookeeperUrl, true, true, 2, 2)
+	time.Sleep(1 * time.Second)
+
+	producer, err := PrepareProducer(kafkaUrl, true, true, 2, 2)
 	if err != nil {
 		t.Error(err)
 		return
@@ -98,7 +102,7 @@ func TestProducer_Produce(t *testing.T) {
 	}
 }
 
-func Kafka(pool *dockertest.Pool, zookeeperUrl string) (closer func(), err error) {
+func Kafka(pool *dockertest.Pool, zookeeperUrl string) (kafkaUrl string, closer func(), err error) {
 	kafkaport, err := getFreePort()
 	if err != nil {
 		log.Fatalf("Could not find new port: %s", err)
@@ -110,11 +114,13 @@ func Kafka(pool *dockertest.Pool, zookeeperUrl string) (closer func(), err error
 			hostIp = network.IPAM.Config[0].Gateway
 		}
 	}
+	kafkaUrl = hostIp + ":" + strconv.Itoa(kafkaport)
 	log.Println("host ip: ", hostIp)
+	log.Println("kafka url:", kafkaUrl)
 	env := []string{
 		"ALLOW_PLAINTEXT_LISTENER=yes",
 		"KAFKA_LISTENERS=OUTSIDE://:9092",
-		"KAFKA_ADVERTISED_LISTENERS=OUTSIDE://" + hostIp + ":" + strconv.Itoa(kafkaport),
+		"KAFKA_ADVERTISED_LISTENERS=OUTSIDE://" + kafkaUrl,
 		"KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=OUTSIDE:PLAINTEXT",
 		"KAFKA_INTER_BROKER_LISTENER_NAME=OUTSIDE",
 		"KAFKA_ZOOKEEPER_CONNECT=" + zookeeperUrl,
@@ -124,7 +130,7 @@ func Kafka(pool *dockertest.Pool, zookeeperUrl string) (closer func(), err error
 		"9092/tcp": {{HostIP: "", HostPort: strconv.Itoa(kafkaport)}},
 	}})
 	if err != nil {
-		return func() {}, err
+		return kafkaUrl, func() {}, err
 	}
 	err = pool.Retry(func() error {
 		log.Println("try kafka connection...")
@@ -136,7 +142,7 @@ func Kafka(pool *dockertest.Pool, zookeeperUrl string) (closer func(), err error
 		defer conn.Close()
 		return nil
 	})
-	return func() { kafkaContainer.Close() }, err
+	return kafkaUrl, func() { kafkaContainer.Close() }, err
 }
 
 func Zookeeper(pool *dockertest.Pool) (closer func(), hostPort string, ipAddress string, err error) {

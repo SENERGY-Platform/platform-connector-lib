@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
+	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/Shopify/sarama v1.22.0
@@ -17,7 +18,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
-	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/influxdata/influxdb v1.7.9
 	github.com/julienschmidt/httprouter v1.3.0
@@ -29,7 +29,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da // indirect
 	github.com/satori/go.uuid v1.2.0
-	github.com/segmentio/kafka-go v0.2.5
+	github.com/segmentio/kafka-go v0.4.15
 	github.com/sirupsen/logrus v1.5.0 // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a

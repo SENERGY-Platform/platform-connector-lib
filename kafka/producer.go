@@ -38,7 +38,7 @@ type SyncProducer struct {
 	broker            []string
 	logger            *log.Logger
 	producer          sarama.SyncProducer
-	zk                string
+	kafkaBootstrapUrl string
 	syncIdempotent    bool
 	usedTopics        map[string]bool
 	partitionsNum     int
@@ -53,7 +53,7 @@ type AsyncProducer struct {
 	broker            []string
 	logger            *log.Logger
 	producer          sarama.AsyncProducer
-	zk                string
+	kafkaBootstrapUrl string
 	usedTopics        map[string]bool
 	partitionsNum     int
 	replicationFactor int
@@ -63,9 +63,9 @@ func (this *AsyncProducer) Close() {
 	this.producer.Close()
 }
 
-func PrepareProducer(zk string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (ProducerInterface, error) {
+func PrepareProducer(kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (ProducerInterface, error) {
 	var err error
-	broker, err := GetBroker(zk)
+	broker, err := GetBroker(kafkaBootstrapUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool, partitionNum int
 	if sync {
 		result := &SyncProducer{
 			broker:            broker,
-			zk:                zk,
+			kafkaBootstrapUrl: kafkaBootstrapUrl,
 			syncIdempotent:    syncIdempotent,
 			usedTopics:        map[string]bool{},
 			partitionsNum:     partitionNum,
@@ -95,7 +95,7 @@ func PrepareProducer(zk string, sync bool, syncIdempotent bool, partitionNum int
 	} else {
 		result := &AsyncProducer{
 			broker:            broker,
-			zk:                zk,
+			kafkaBootstrapUrl: kafkaBootstrapUrl,
 			usedTopics:        map[string]bool{},
 			partitionsNum:     partitionNum,
 			replicationFactor: replicationFactor,
@@ -123,7 +123,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
+	err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
 		log.Println("WARNING: unable to ensure topic", err)
 		err = nil
@@ -151,7 +151,7 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
+	err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
 		log.Println("WARNING: unable to ensure topic", err)
 		err = nil
@@ -164,7 +164,7 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
+	err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
 		log.Println("WARNING: unable to ensure topic", err)
 		err = nil
@@ -191,7 +191,7 @@ func (this *AsyncProducer) ProduceWithKey(topic string, message string, key stri
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce ", topic, message)
 	}
-	err = EnsureTopic(topic, this.zk, &this.usedTopics, this.partitionsNum, this.replicationFactor)
+	err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
 		log.Println("WARNING: unable to ensure topic", err)
 		err = nil

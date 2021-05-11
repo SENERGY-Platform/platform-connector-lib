@@ -26,22 +26,22 @@ import (
 	"time"
 )
 
-func NewConsumer(zk string, groupid string, topic string, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error, consumer *Consumer)) (consumer *Consumer, err error) {
-	consumer = &Consumer{groupId: groupid, zkUrl: zk, topic: topic, listener: listener, errorhandler: errorhandler}
+func NewConsumer(kafkaBootstrapUrl string, groupid string, topic string, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error, consumer *Consumer)) (consumer *Consumer, err error) {
+	consumer = &Consumer{groupId: groupid, kafkaBootstrapUrl: kafkaBootstrapUrl, topic: topic, listener: listener, errorhandler: errorhandler}
 	err = consumer.start()
 	return
 }
 
 type Consumer struct {
-	count        int
-	zkUrl        string
-	groupId      string
-	topic        string
-	ctx          context.Context
-	cancel       context.CancelFunc
-	listener     func(topic string, msg []byte, time time.Time) error
-	errorhandler func(err error, consumer *Consumer)
-	mux          sync.Mutex
+	count             int
+	kafkaBootstrapUrl string
+	groupId           string
+	topic             string
+	ctx               context.Context
+	cancel            context.CancelFunc
+	listener          func(topic string, msg []byte, time time.Time) error
+	errorhandler      func(err error, consumer *Consumer)
+	mux               sync.Mutex
 }
 
 func (this *Consumer) Stop() {
@@ -51,12 +51,12 @@ func (this *Consumer) Stop() {
 func (this *Consumer) start() error {
 	log.Println("DEBUG: consume topic: \"" + this.topic + "\"")
 	this.ctx, this.cancel = context.WithCancel(context.Background())
-	broker, err := GetBroker(this.zkUrl)
+	broker, err := GetBroker(this.kafkaBootstrapUrl)
 	if err != nil {
 		log.Println("ERROR: unable to get broker list", err)
 		return err
 	}
-	err = InitTopic(this.zkUrl, this.topic)
+	err = InitTopic(this.kafkaBootstrapUrl, this.topic)
 	if err != nil {
 		log.Println("ERROR: unable to create topic", err)
 		return err

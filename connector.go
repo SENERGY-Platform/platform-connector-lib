@@ -107,7 +107,7 @@ func (this *Connector) Start() (err error) {
 	if this.Config.ReplicationFactor != 0 {
 		replFactor = this.Config.ReplicationFactor
 	}
-	this.producer, err = kafka.PrepareProducer(this.Config.ZookeeperUrl, this.Config.SyncKafka, this.Config.SyncKafkaIdempotent, partitionsNum, replFactor)
+	this.producer, err = kafka.PrepareProducer(this.Config.KafkaUrl, this.Config.SyncKafka, this.Config.SyncKafkaIdempotent, partitionsNum, replFactor)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err
@@ -115,7 +115,7 @@ func (this *Connector) Start() (err error) {
 	if this.kafkalogger != nil {
 		this.producer.Log(this.kafkalogger)
 	}
-	this.consumer, err = kafka.NewConsumer(this.Config.ZookeeperUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte, t time.Time) error {
+	this.consumer, err = kafka.NewConsumer(this.Config.KafkaUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte, t time.Time) error {
 		if string(msg) == "topic_init" {
 			return nil
 		}

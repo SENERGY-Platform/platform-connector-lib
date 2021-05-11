@@ -37,7 +37,7 @@ func Test(t *testing.T) {
 		return
 	}
 
-	logger, err := New(config.ZookeeperUrl, true, false, config.DeviceLogTopic, config.HubLogTopic, 2, 2)
+	logger, err := New(config.KafkaUrl, true, false, config.DeviceLogTopic, config.HubLogTopic, 2, 2)
 	if err != nil {
 		t.Error(err)
 		return
@@ -48,11 +48,11 @@ func Test(t *testing.T) {
 	var hubId string
 
 	t.Run("create device", func(t *testing.T) {
-		deviceId = createDevice(t, config.ZookeeperUrl)
+		deviceId = createDevice(t, config.KafkaUrl)
 	})
 
 	t.Run("create hub", func(t *testing.T) {
-		hubId = createHub(t, config.ZookeeperUrl)
+		hubId = createHub(t, config.KafkaUrl)
 	})
 
 	t.Run("send device log", func(t *testing.T) {
@@ -143,8 +143,13 @@ func checkHubState(t *testing.T, connectionlogUrl string, id string) {
 	}
 }
 
-func createDevice(t *testing.T, zk string) string {
-	broker, err := helper.GetBroker(zk)
+func createDevice(t *testing.T, kafkaUrl string) string {
+	err := helper.InitTopic(kafkaUrl, "devices")
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1 * time.Second)
+	broker, err := helper.GetBroker(kafkaUrl)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,8 +176,13 @@ func createDevice(t *testing.T, zk string) string {
 	return "device-id"
 }
 
-func createHub(t *testing.T, zk string) string {
-	broker, err := helper.GetBroker(zk)
+func createHub(t *testing.T, kafkaUrl string) string {
+	err := helper.InitTopic(kafkaUrl, "hubs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1 * time.Second)
+	broker, err := helper.GetBroker(kafkaUrl)
 	if err != nil {
 		t.Fatal(err)
 	}

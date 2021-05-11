@@ -22,8 +22,8 @@ import (
 	"time"
 )
 
-func New(zk string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string, partitionNum int, replicationFactor int) (logger Logger, err error) {
-	producer, err := kafka.PrepareProducer(zk, sync, idempotent, partitionNum, replicationFactor)
+func New(kafkaBootstrapUrl string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string, partitionNum int, replicationFactor int) (logger Logger, err error) {
+	producer, err := kafka.PrepareProducer(kafkaBootstrapUrl, sync, idempotent, partitionNum, replicationFactor)
 	if err != nil {
 		return logger, err
 	}

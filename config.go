@@ -28,7 +28,7 @@ import (
 )
 
 type Config struct {
-	ZookeeperUrl       string //host1:2181,host2:2181/chroot
+	KafkaUrl           string
 	KafkaResponseTopic string
 	KafkaGroupName     string
 	FatalKafkaError    bool
@@ -66,7 +66,7 @@ type Config struct {
 	ReplicationFactor        int
 }
 
-//loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
+//loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)
 func LoadConfig(location string) (config Config, err error) {
 	file, error := os.Open(location)
 	if error != nil {
