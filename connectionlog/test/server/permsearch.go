@@ -45,10 +45,10 @@ func Elasticsearch(pool *dockertest.Pool, ctx context.Context) (hostPort string,
 	return hostPort, repo.Container.NetworkSettings.IPAddress, err
 }
 
-func PermSearch(pool *dockertest.Pool, ctx context.Context, zk string, elasticIp string) (hostPort string, ipAddress string, err error) {
+func PermSearch(pool *dockertest.Pool, ctx context.Context, kafkaUrl string, elasticIp string) (hostPort string, ipAddress string, err error) {
 	log.Println("start permsearch")
 	container, err := pool.Run("fgseitsrancher.wifa.intern.uni-leipzig.de:5000/permission-search", "dev", []string{
-		"ZOOKEEPER_URL=" + zk,
+		"KAFKA_URL=" + kafkaUrl,
 		"ELASTIC_URL=" + "http://" + elasticIp + ":9200",
 	})
 	if err != nil {

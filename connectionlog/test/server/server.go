@@ -85,7 +85,7 @@ func New(parentCtx context.Context) (config config.Config, err error) {
 	}
 	mongoUrl := "mongodb://" + mongoIp
 
-	_, _, err = ConnectionlogWorker(pool, ctx, mongoUrl, influxdbUrl, zkUrl)
+	_, _, err = ConnectionlogWorker(pool, ctx, mongoUrl, influxdbUrl, config.KafkaUrl)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
@@ -93,7 +93,7 @@ func New(parentCtx context.Context) (config config.Config, err error) {
 		return config, err
 	}
 
-	_, permIp, err := PermSearch(pool, ctx, zkUrl, elasticIp)
+	_, permIp, err := PermSearch(pool, ctx, config.KafkaUrl, elasticIp)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()

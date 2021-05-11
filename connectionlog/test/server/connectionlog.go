@@ -55,7 +55,7 @@ func Connectionlog(pool *dockertest.Pool, ctx context.Context, mongourl string, 
 	return hostPort, repo.Container.NetworkSettings.IPAddress, err
 }
 
-func ConnectionlogWorker(pool *dockertest.Pool, ctx context.Context, mongourl string, influxurl string, zk string) (hostPort string, ipAddress string, err error) {
+func ConnectionlogWorker(pool *dockertest.Pool, ctx context.Context, mongourl string, influxurl string, kafkaUrl string) (hostPort string, ipAddress string, err error) {
 	log.Println("start connectionlog")
 	repo, err := pool.Run("fgseitsrancher.wifa.intern.uni-leipzig.de:5000/connection-log-worker", "dev", []string{
 		"MONGO_URL=" + mongourl,
@@ -63,7 +63,7 @@ func ConnectionlogWorker(pool *dockertest.Pool, ctx context.Context, mongourl st
 		"INFLUXDB_TIMEOUT=3",
 		"INFLUXDB_USER=user",
 		"INFLUXDB_PW=pw",
-		"ZOOKEEPER_URL=" + zk,
+		"KAFKA_URL=" + kafkaUrl,
 		"DEBUG=true",
 	})
 	if err != nil {
