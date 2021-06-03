@@ -64,6 +64,13 @@ type Config struct {
 	CharacteristicExpiration int32
 	PartitionsNum            int
 	ReplicationFactor        int
+
+	PublishToPostgres bool
+	PostgresHost      string
+	PostgresPort      int
+	PostgresUser      string
+	PostgresPw        string
+	PostgresDb        string
 }
 
 //loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

@@ -169,5 +169,12 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope) error {
 		log.Println("ERROR: produce event on service topic ", err)
 		return err
 	}
+	if this.Config.PublishToPostgres {
+		err = this.postgresPublisher.Publish(envelope)
+		if err != nil {
+			log.Println("ERROR: publish event to postgres ", err)
+			return err
+		}
+	}
 	return nil
 }

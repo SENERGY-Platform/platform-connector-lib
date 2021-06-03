@@ -17,13 +17,16 @@
 package platform_connector_lib
 
 import (
+	"context"
 	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/msgvalidation"
+	"github.com/SENERGY-Platform/platform-connector-lib/psql"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -44,6 +47,7 @@ type Connector struct {
 	deviceCommandHandler DeviceCommandHandler //must be able to handle concurrent calls
 	asyncCommandHandler  AsyncCommandHandler  //must be able to handle concurrent calls
 	producer             kafka.ProducerInterface
+	postgresPublisher    *psql.Publisher
 	consumer             *kafka.Consumer
 	iot                  *iot.Iot
 	security             *security.Security
@@ -54,6 +58,15 @@ type Connector struct {
 }
 
 func New(config Config) (connector *Connector) {
+	var publisher *psql.Publisher
+	var err error
+	if config.PublishToPostgres {
+		publisher, err = psql.New(config.PostgresHost, config.PostgresPort, config.PostgresUser, config.PostgresPw, config.PostgresDb, config.Debug, &sync.WaitGroup{}, context.Background())
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
+
 	connector = &Connector{
 		Config: config,
 		iot:    iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.SemanticRepositoryUrl),
@@ -68,6 +81,7 @@ func New(config Config) (connector *Connector) {
 			config.TokenCacheExpiration,
 			config.TokenCacheUrl,
 		),
+		postgresPublisher: publisher,
 	}
 	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheUrl...)
 	return
