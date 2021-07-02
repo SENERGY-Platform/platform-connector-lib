@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
 	"github.com/segmentio/kafka-go"
@@ -55,17 +56,18 @@ func TestProducer_Produce(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	consumer, err := NewConsumer(kafkaUrl, "test", "test", func(topic string, msg []byte, t time.Time) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err = NewConsumer(ctx, kafkaUrl, "test", "test", func(topic string, msg []byte, t time.Time) error {
 		result = append(result, msg)
 		return nil
 	}, func(err error, consumer *Consumer) {
 		t.Error(err)
 	})
-	defer consumer.Stop()
 
 	time.Sleep(1 * time.Second)
 
-	producer, err := PrepareProducer(kafkaUrl, true, true, 2, 2)
+	producer, err := PrepareProducer(ctx, kafkaUrl, true, true, 2, 2)
 	if err != nil {
 		t.Error(err)
 		return

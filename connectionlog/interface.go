@@ -21,5 +21,4 @@ type Logger interface {
 	LogDeviceConnect(id string) error
 	LogHubConnect(gateway string) error
 	LogHubDisconnect(gateway string) error
-	Close()
 }

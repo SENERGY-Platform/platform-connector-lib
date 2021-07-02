@@ -51,8 +51,6 @@ type Config struct {
 	TokenCacheExpiration  int32
 	IotCacheUrl           []string
 	TokenCacheUrl         []string
-	SyncKafka             bool
-	SyncKafkaIdempotent   bool
 	Debug                 bool
 	SerializationFallback string
 

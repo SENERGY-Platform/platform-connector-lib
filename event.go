@@ -88,7 +88,7 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 	return result, err
 }
 
-func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg) error {
+func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg, qos Qos) error {
 	device, err := this.IotCache.WithToken(token).GetDeviceByLocalId(deviceUri)
 	if err != nil {
 		log.Println("ERROR: handleDeviceRefEvent::DeviceUrlToIotDevice", err)
@@ -101,7 +101,7 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 	}
 	for _, service := range dt.Services {
 		if service.LocalId == serviceUri && len(service.Outputs) > 0 {
-			err = this.handleDeviceEvent(token, device.Id, service.Id, msg)
+			err = this.handleDeviceEvent(token, device.Id, service.Id, msg, qos)
 			if err != nil {
 				log.Println("ERROR: handleDeviceRefEvent::handleDeviceEvent", err)
 				return err
@@ -112,17 +112,17 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 	return ErrorUnknownLocalServiceId
 }
 
-func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, msg EventMsg) (err error) {
+func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, msg EventMsg, qos Qos) (err error) {
 	eventValue, err := this.unmarshalMsgFromRef(token, deviceId, serviceId, msg)
 	if err != nil {
 		return err
 	}
 	envelope := model.Envelope{DeviceId: deviceId, ServiceId: serviceId}
 	envelope.Value = eventValue
-	return this.sendEventEnvelope(envelope)
+	return this.sendEventEnvelope(envelope, qos)
 }
 
-func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp CommandResponseMsg) {
+func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp CommandResponseMsg, qos Qos) {
 	token, err := this.Security().Access()
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
@@ -139,7 +139,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	envelope := model.Envelope{DeviceId: cmd.Metadata.Device.Id, ServiceId: cmd.Metadata.Service.Id}
 	envelope.Value = eventValue
 
-	err = this.sendEventEnvelope(envelope)
+	err = this.sendEventEnvelope(envelope, qos)
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
 		debug.PrintStack()
@@ -147,7 +147,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	}
 }
 
-func (this *Connector) sendEventEnvelope(envelope model.Envelope) error {
+func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error {
 	jsonMsg, err := json.Marshal(envelope)
 	if err != nil {
 		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
@@ -160,7 +160,12 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope) error {
 		}(now)
 	}
 	serviceTopic := model.ServiceIdToTopic(envelope.ServiceId)
-	err = this.producer.ProduceWithKey(serviceTopic, string(jsonMsg), envelope.DeviceId)
+	producer, err := this.GetProducer(qos)
+	if err != nil {
+		log.Println("ERROR in sendEventEnvelope(): ", err)
+		return err
+	}
+	err = producer.ProduceWithKey(serviceTopic, string(jsonMsg), envelope.DeviceId)
 	if err != nil {
 		if this.Config.FatalKafkaError {
 			debug.PrintStack()

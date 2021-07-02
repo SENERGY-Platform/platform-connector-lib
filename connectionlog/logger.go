@@ -17,16 +17,21 @@
 package connectionlog
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"time"
 )
 
-func New(kafkaBootstrapUrl string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string, partitionNum int, replicationFactor int) (logger Logger, err error) {
-	producer, err := kafka.PrepareProducer(kafkaBootstrapUrl, sync, idempotent, partitionNum, replicationFactor)
+func New(ctx context.Context, kafkaBootstrapUrl string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string, partitionNum int, replicationFactor int) (logger Logger, err error) {
+	producer, err := kafka.PrepareProducer(ctx, kafkaBootstrapUrl, sync, idempotent, partitionNum, replicationFactor)
 	if err != nil {
 		return logger, err
 	}
+	return &LoggerImpl{producer: producer, deviceLogTopic: deviceLogTopic, hubLogTopic: hubLogTopic}, nil
+}
+
+func NewWithProducer(producer kafka.ProducerInterface, deviceLogTopic string, hubLogTopic string) (logger Logger, err error) {
 	return &LoggerImpl{producer: producer, deviceLogTopic: deviceLogTopic, hubLogTopic: hubLogTopic}, nil
 }
 
@@ -82,8 +87,4 @@ func (this *LoggerImpl) LogHubDisconnect(id string) error {
 		return err
 	}
 	return this.producer.ProduceWithKey(this.hubLogTopic, string(b), id)
-}
-
-func (this *LoggerImpl) Close() {
-	this.producer.Close()
 }

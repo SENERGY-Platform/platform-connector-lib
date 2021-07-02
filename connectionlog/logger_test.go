@@ -37,12 +37,11 @@ func Test(t *testing.T) {
 		return
 	}
 
-	logger, err := New(config.KafkaUrl, true, false, config.DeviceLogTopic, config.HubLogTopic, 2, 2)
+	logger, err := New(ctx, config.KafkaUrl, true, false, config.DeviceLogTopic, config.HubLogTopic, 2, 2)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	defer logger.Close()
 
 	var deviceId string
 	var hubId string

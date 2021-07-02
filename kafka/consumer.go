@@ -26,9 +26,9 @@ import (
 	"time"
 )
 
-func NewConsumer(kafkaBootstrapUrl string, groupid string, topic string, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error, consumer *Consumer)) (consumer *Consumer, err error) {
-	consumer = &Consumer{groupId: groupid, kafkaBootstrapUrl: kafkaBootstrapUrl, topic: topic, listener: listener, errorhandler: errorhandler}
-	err = consumer.start()
+func NewConsumer(ctx context.Context, kafkaBootstrapUrl string, groupid string, topic string, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error, consumer *Consumer)) (err error) {
+	consumer := &Consumer{groupId: groupid, kafkaBootstrapUrl: kafkaBootstrapUrl, topic: topic, listener: listener, errorhandler: errorhandler}
+	err = consumer.start(ctx)
 	return
 }
 
@@ -37,20 +37,13 @@ type Consumer struct {
 	kafkaBootstrapUrl string
 	groupId           string
 	topic             string
-	ctx               context.Context
-	cancel            context.CancelFunc
 	listener          func(topic string, msg []byte, time time.Time) error
 	errorhandler      func(err error, consumer *Consumer)
 	mux               sync.Mutex
 }
 
-func (this *Consumer) Stop() {
-	this.cancel()
-}
-
-func (this *Consumer) start() error {
+func (this *Consumer) start(ctx context.Context) error {
 	log.Println("DEBUG: consume topic: \"" + this.topic + "\"")
-	this.ctx, this.cancel = context.WithCancel(context.Background())
 	broker, err := GetBroker(this.kafkaBootstrapUrl)
 	if err != nil {
 		log.Println("ERROR: unable to get broker list", err)
@@ -73,11 +66,11 @@ func (this *Consumer) start() error {
 	go func() {
 		for {
 			select {
-			case <-this.ctx.Done():
+			case <-ctx.Done():
 				log.Println("close kafka reader ", this.topic)
 				return
 			default:
-				m, err := r.FetchMessage(this.ctx)
+				m, err := r.FetchMessage(ctx)
 				if err == io.EOF || err == context.Canceled {
 					log.Println("close consumer for topic ", this.topic)
 					return
@@ -89,7 +82,7 @@ func (this *Consumer) start() error {
 				}
 				if time.Now().Sub(m.Time) > 1*time.Hour { //floodgate to prevent old messages to DOS the consumer
 					log.Println("WARNING: kafka message older than 1h: ", this.topic, time.Now().Sub(m.Time))
-					err = r.CommitMessages(this.ctx, m)
+					err = r.CommitMessages(ctx, m)
 					if err != nil {
 						log.Println("ERROR: while committing message ", this.topic, err)
 						this.errorhandler(err, this)
@@ -100,7 +93,7 @@ func (this *Consumer) start() error {
 					if err != nil {
 						log.Println("ERROR: unable to handle message (no commit)", err, m.Topic, string(m.Value))
 					} else {
-						err = r.CommitMessages(this.ctx, m)
+						err = r.CommitMessages(ctx, m)
 						if err != nil {
 							log.Println("ERROR: while committing message ", this.topic, err)
 							this.errorhandler(err, this)
@@ -112,9 +105,4 @@ func (this *Consumer) start() error {
 		}
 	}()
 	return err
-}
-
-func (this *Consumer) Restart() {
-	this.Stop()
-	this.start()
 }

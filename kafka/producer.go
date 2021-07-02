@@ -31,7 +31,6 @@ type ProducerInterface interface {
 	Produce(topic string, message string) (err error)
 	ProduceWithKey(topic string, message string, key string) (err error)
 	Log(logger *log.Logger)
-	Close()
 }
 
 type SyncProducer struct {
@@ -45,10 +44,6 @@ type SyncProducer struct {
 	replicationFactor int
 }
 
-func (this *SyncProducer) Close() {
-	this.producer.Close()
-}
-
 type AsyncProducer struct {
 	broker            []string
 	logger            *log.Logger
@@ -59,12 +54,7 @@ type AsyncProducer struct {
 	replicationFactor int
 }
 
-func (this *AsyncProducer) Close() {
-	this.producer.Close()
-}
-
-func PrepareProducer(kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (ProducerInterface, error) {
-	var err error
+func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (result ProducerInterface, err error) {
 	broker, err := GetBroker(kafkaBootstrapUrl)
 	if err != nil {
 		return nil, err
@@ -73,7 +63,7 @@ func PrepareProducer(kafkaBootstrapUrl string, sync bool, syncIdempotent bool, p
 		return nil, errors.New("missing kafka broker")
 	}
 	if sync {
-		result := &SyncProducer{
+		temp := &SyncProducer{
 			broker:            broker,
 			kafkaBootstrapUrl: kafkaBootstrapUrl,
 			syncIdempotent:    syncIdempotent,
@@ -90,10 +80,17 @@ func PrepareProducer(kafkaBootstrapUrl string, sync bool, syncIdempotent bool, p
 			sarama_conf.Net.MaxOpenRequests = 1
 			sarama_conf.Producer.RequiredAcks = sarama.WaitForAll
 		}
-		result.producer, err = sarama.NewSyncProducer(result.broker, sarama_conf)
-		return result, err
+		temp.producer, err = sarama.NewSyncProducer(temp.broker, sarama_conf)
+		if err != nil {
+			return result, err
+		}
+		result = temp
+		go func() {
+			<-ctx.Done()
+			temp.producer.Close()
+		}()
 	} else {
-		result := &AsyncProducer{
+		temp := &AsyncProducer{
 			broker:            broker,
 			kafkaBootstrapUrl: kafkaBootstrapUrl,
 			usedTopics:        map[string]bool{},
@@ -104,15 +101,23 @@ func PrepareProducer(kafkaBootstrapUrl string, sync bool, syncIdempotent bool, p
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
 		sarama_conf.Producer.Return.Successes = false
-		result.producer, err = sarama.NewAsyncProducer(result.broker, sarama_conf)
+		temp.producer, err = sarama.NewAsyncProducer(temp.broker, sarama_conf)
+		if err != nil {
+			return result, err
+		}
 		go func() {
-			err, ok := <-result.producer.Errors()
+			err, ok := <-temp.producer.Errors()
 			if ok {
 				log.Fatal(err)
 			}
 		}()
-		return result, err
+		result = temp
+		go func() {
+			<-ctx.Done()
+			temp.producer.Close()
+		}()
 	}
+	return result, nil
 }
 
 func (this *SyncProducer) Log(logger *log.Logger) {

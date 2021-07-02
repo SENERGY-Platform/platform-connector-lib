@@ -39,18 +39,18 @@ func (this *Connector) handleCommand(msg []byte, t time.Time) (err error) {
 	})
 	protocolParts := protocolmsg.Request.Input
 	if this.deviceCommandHandler != nil {
-		handlerResponse, err := this.useDeviceCommandHandler(protocolmsg, protocolParts)
+		handlerResponse, qos, err := this.useDeviceCommandHandler(protocolmsg, protocolParts)
 		if err != nil {
 			return err
 		}
-		return this.HandleCommandResponse(protocolmsg, handlerResponse)
+		return this.HandleCommandResponse(protocolmsg, handlerResponse, qos)
 	} else if this.asyncCommandHandler != nil {
 		return this.asyncCommandHandler(protocolmsg, protocolParts, t)
 	}
 	return errors.New("missing command handler")
 }
 
-func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, commandResponse CommandResponseMsg) (err error) {
+func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, commandResponse CommandResponseMsg, qos Qos) (err error) {
 	if commandRequest.TaskInfo.CompletionStrategy == model.Optimistic {
 		return
 	}
@@ -65,15 +65,20 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
 		return err
 	}
-	err = this.producer.ProduceWithKey(this.Config.KafkaResponseTopic, string(responseMsg), commandRequest.Metadata.Device.Id)
+	producer, err := this.GetProducer(qos)
+	if err != nil {
+		log.Println("ERROR in handleCommand(): ", err)
+		return err
+	}
+	err = producer.ProduceWithKey(this.Config.KafkaResponseTopic, string(responseMsg), commandRequest.Metadata.Device.Id)
 	if err != nil && this.Config.FatalKafkaError {
 		debug.PrintStack()
 		log.Fatal("FATAL: ", err)
 	}
-	this.trySendingResponseAsEvent(commandRequest, commandResponse)
+	this.trySendingResponseAsEvent(commandRequest, commandResponse, qos)
 	return err
 }
 
-func (this *Connector) useDeviceCommandHandler(msg model.ProtocolMsg, protocolParts map[string]string) (result map[string]string, err error) {
+func (this *Connector) useDeviceCommandHandler(msg model.ProtocolMsg, protocolParts map[string]string) (result map[string]string, qos Qos, err error) {
 	return this.deviceCommandHandler(msg.Metadata.Device.Id, msg.Metadata.Device.LocalId, msg.Metadata.Service.Id, msg.Metadata.Service.LocalId, protocolParts)
 }

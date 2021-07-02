@@ -27,7 +27,7 @@ import (
 func (this *Iot) GetHub(id string, cred security.JwtToken) (hub model.Hub, err error) {
 	resp, err := cred.Get(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
-		log.Println("ERROR on GetGateway()", err)
+		log.Println("ERROR on GetGateway()", id, err)
 		return hub, err
 	}
 	defer resp.Body.Close()

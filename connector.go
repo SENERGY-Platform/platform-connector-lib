@@ -26,6 +26,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/psql"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -35,20 +36,26 @@ type CommandResponseMsg = map[ProtocolSegmentName]string
 type CommandRequestMsg = map[ProtocolSegmentName]string
 type EventMsg = map[ProtocolSegmentName]string
 
-type EndpointCommandHandler func(endpoint string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
-type DeviceCommandHandler func(deviceId string, deviceUri string, serviceId string, serviceUri string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, err error)
+type DeviceCommandHandler func(deviceId string, deviceUri string, serviceId string, serviceUri string, requestMsg CommandRequestMsg) (responseMsg CommandResponseMsg, qos Qos, err error)
 type AsyncCommandHandler func(commandRequest model.ProtocolMsg, requestMsg CommandRequestMsg, t time.Time) (err error)
 
 var ErrorUnknownLocalServiceId = errors.New("unknown local service id")
+
+type Qos int
+
+const (
+	Async Qos = iota
+	Sync
+	SyncIdempotent
+)
 
 type Connector struct {
 	Config Config
 	//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 	deviceCommandHandler DeviceCommandHandler //must be able to handle concurrent calls
 	asyncCommandHandler  AsyncCommandHandler  //must be able to handle concurrent calls
-	producer             kafka.ProducerInterface
+	producer             map[Qos]kafka.ProducerInterface
 	postgresPublisher    *psql.Publisher
-	consumer             *kafka.Consumer
 	iot                  *iot.Iot
 	security             *security.Security
 
@@ -109,82 +116,116 @@ func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Conn
 	return this
 }
 
-func (this *Connector) Start() (err error) {
+func (this *Connector) Start(ctx context.Context, qosList ...Qos) (err error) {
+	list := append([]Qos{}, qosList...)
+	if len(list) == 0 {
+		list = []Qos{Async, Sync, SyncIdempotent}
+	}
+	err = this.InitProducer(ctx, list)
+	if err != nil {
+		return err
+	}
+	return this.StartConsumer(ctx)
+}
+
+func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 	if this.deviceCommandHandler == nil && this.asyncCommandHandler == nil {
 		return errors.New("missing command handler; use SetAsyncCommandHandler() or SetDeviceCommandHandler()")
 	}
+	err = kafka.NewConsumer(ctx, this.Config.KafkaUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte, t time.Time) error {
+		if string(msg) == "topic_init" {
+			return nil
+		}
+		return this.handleCommand(msg, t)
+	}, func(err error, consumer *kafka.Consumer) {
+		log.Println("FATAL ERROR: kafka", err)
+		log.Fatal(err)
+	})
+	return
+}
+
+func (this *Connector) InitProducer(ctx context.Context, qosList []Qos) (err error) {
+	this.producer = map[Qos]kafka.ProducerInterface{}
+	for _, qos := range qosList {
+		err = this.initProducer(ctx, qos)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this *Connector) initProducer(ctx context.Context, qos Qos) (err error) {
 	partitionsNum := 1
 	replFactor := 1
+	sync := false
+	idempotent := false
 	if this.Config.PartitionsNum != 0 {
 		partitionsNum = this.Config.PartitionsNum
 	}
 	if this.Config.ReplicationFactor != 0 {
 		replFactor = this.Config.ReplicationFactor
 	}
-	this.producer, err = kafka.PrepareProducer(this.Config.KafkaUrl, this.Config.SyncKafka, this.Config.SyncKafkaIdempotent, partitionsNum, replFactor)
+	switch qos {
+	case Sync:
+		sync = true
+		idempotent = false
+	case Async:
+		sync = false
+		idempotent = false
+	case SyncIdempotent:
+		sync = true
+		idempotent = true
+	default:
+		return errors.New("unknown qos=" + strconv.Itoa(int(qos)))
+	}
+	this.producer[qos], err = kafka.PrepareProducer(ctx, this.Config.KafkaUrl, sync, idempotent, partitionsNum, replFactor)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err
 	}
 	if this.kafkalogger != nil {
-		this.producer.Log(this.kafkalogger)
+		this.producer[qos].Log(this.kafkalogger)
 	}
-	this.consumer, err = kafka.NewConsumer(this.Config.KafkaUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte, t time.Time) error {
-		if string(msg) == "topic_init" {
-			return nil
-		}
-		return this.handleCommand(msg, t)
-	}, func(err error, consumer *kafka.Consumer) {
-		if this.Config.FatalKafkaError {
-			log.Println("FATAL ERROR: kafka", err)
-			log.Fatal(err)
-		} else {
-			consumer.Restart()
-		}
-	})
 	return
 }
 
-func (this *Connector) Stop() {
-	this.consumer.Stop()
-}
-
-func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string) (err error) {
+func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string, qos Qos) (err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
 		log.Println("ERROR HandleDeviceEvent::GetUserToken()", err)
 		return err
 	}
-	return this.HandleDeviceEventWithAuthToken(token, deviceId, serviceId, protocolParts)
+	return this.HandleDeviceEventWithAuthToken(token, deviceId, serviceId, protocolParts, qos)
 }
 
-func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, deviceId string, serviceId string, eventMsg EventMsg) (err error) {
-	return this.handleDeviceEvent(token, deviceId, serviceId, eventMsg)
+func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, deviceId string, serviceId string, eventMsg EventMsg, qos Qos) (err error) {
+	return this.handleDeviceEvent(token, deviceId, serviceId, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg) (err error) {
+func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos) (err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
 		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
 		return err
 	}
-	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, eventMsg)
+	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken, deviceUri string, serviceUri string, eventMsg EventMsg) (err error) {
-	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, eventMsg)
+func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos) (err error) {
+	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg) (err error) {
+func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos) (err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
 		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
 		return err
 	}
-	return this.HandleDeviceIdentEventWithAuthToken(token, deviceId, localDeviceId, serviceId, localServiceId, eventMsg)
+	return this.HandleDeviceIdentEventWithAuthToken(token, deviceId, localDeviceId, serviceId, localServiceId, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtToken, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg) (err error) {
+func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtToken, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos) (err error) {
 	var device model.Device
 	if deviceId == "" {
 		if localDeviceId == "" {
@@ -224,7 +265,7 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 			}
 		}
 	}
-	err = this.handleDeviceEvent(token, deviceId, serviceId, eventMsg)
+	err = this.handleDeviceEvent(token, deviceId, serviceId, eventMsg, qos)
 	if err != nil {
 		log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::handleDeviceEvent", err)
 		return err
@@ -251,6 +292,10 @@ func (this *Connector) CleanMsg(msg map[string]interface{}, service model.Servic
 	return msgvalidation.Clean(msg, service)
 }
 
-func (this *Connector) GetProducer() kafka.ProducerInterface {
-	return this.producer
+func (this *Connector) GetProducer(qos Qos) (producer kafka.ProducerInterface, err error) {
+	producer, ok := this.producer[qos]
+	if !ok {
+		return producer, errors.New("no matching producer for qos=" + strconv.Itoa(int(qos)) + " found")
+	}
+	return producer, nil
 }
