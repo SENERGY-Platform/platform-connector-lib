@@ -175,11 +175,23 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 		return err
 	}
 	if this.Config.PublishToPostgres {
-		err = this.postgresPublisher.Publish(envelope)
-		if err != nil {
-			log.Println("ERROR: publish event to postgres ", err)
-			return err
+		f := func() error {
+			err = this.postgresPublisher.Publish(envelope)
+			if err != nil {
+				log.Println("ERROR: publish event to postgres ", err)
+				return err
+			}
+			return nil
 		}
+		if qos == Async {
+			go f()
+		} else {
+			err = f()
+			if err != nil {
+				return err
+			}
+		}
+
 	}
 	return nil
 }
