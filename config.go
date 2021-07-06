@@ -69,6 +69,8 @@ type Config struct {
 	PostgresUser      string
 	PostgresPw        string
 	PostgresDb        string
+
+	HttpCommandConsumerPort string
 }
 
 //loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

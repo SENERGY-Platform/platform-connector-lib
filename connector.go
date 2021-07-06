@@ -19,6 +19,7 @@ package platform_connector_lib
 import (
 	"context"
 	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/httpcommand"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
@@ -132,16 +133,39 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 	if this.deviceCommandHandler == nil && this.asyncCommandHandler == nil {
 		return errors.New("missing command handler; use SetAsyncCommandHandler() or SetDeviceCommandHandler()")
 	}
-	err = kafka.NewConsumer(ctx, this.Config.KafkaUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte, t time.Time) error {
-		if string(msg) == "topic_init" {
-			return nil
+
+	used := false
+
+	if this.Config.Protocol != "" && this.Config.Protocol != "-" {
+		used = true
+		err = kafka.NewConsumer(ctx, this.Config.KafkaUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte, t time.Time) error {
+			if string(msg) == "topic_init" {
+				return nil
+			}
+			return this.handleCommand(msg, t)
+		}, func(err error, consumer *kafka.Consumer) {
+			log.Println("FATAL ERROR: kafka", err)
+			log.Fatal(err)
+		})
+		if err != nil {
+			return err
 		}
-		return this.handleCommand(msg, t)
-	}, func(err error, consumer *kafka.Consumer) {
-		log.Println("FATAL ERROR: kafka", err)
-		log.Fatal(err)
-	})
-	return
+	}
+
+	if this.Config.HttpCommandConsumerPort != "" && this.Config.HttpCommandConsumerPort != "-" {
+		used = true
+		err = httpcommand.StartConsumer(ctx, this.Config.HttpCommandConsumerPort, func(msg []byte) error {
+			return this.handleCommand(msg, time.Now())
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if !used {
+		return errors.New("no command consumer set; at least one of the following config fields must be set: Protocol, HttpCommandConsumerPort")
+	}
+	return nil
 }
 
 func (this *Connector) InitProducer(ctx context.Context, qosList []Qos) (err error) {

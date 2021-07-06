@@ -17,11 +17,15 @@
 package platform_connector_lib
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"io"
 	"log"
+	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -65,16 +69,37 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
 		return err
 	}
-	producer, err := this.GetProducer(qos)
-	if err != nil {
-		log.Println("ERROR in handleCommand(): ", err)
-		return err
+
+	topic := commandRequest.Metadata.ResponseTo
+	if topic == "" {
+		topic = this.Config.KafkaResponseTopic
 	}
-	err = producer.ProduceWithKey(this.Config.KafkaResponseTopic, string(responseMsg), commandRequest.Metadata.Device.Id)
-	if err != nil && this.Config.FatalKafkaError {
-		debug.PrintStack()
-		log.Fatal("FATAL: ", err)
+
+	if strings.HasPrefix(topic, "http://") || strings.HasPrefix(topic, "https://") {
+		resp, err := http.Post(topic, "application/json", bytes.NewReader(responseMsg))
+		if err != nil {
+			log.Println("ERROR: http producer", topic, err)
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			respMsg, _ := io.ReadAll(resp.Body)
+			err = errors.New("http producer: " + resp.Status + " " + string(respMsg))
+			log.Println("ERROR:", topic, err)
+			return err
+		}
+	} else {
+		producer, err := this.GetProducer(qos)
+		if err != nil {
+			log.Println("ERROR in handleCommand(): ", err)
+			return err
+		}
+		err = producer.ProduceWithKey(topic, string(responseMsg), commandRequest.Metadata.Device.Id)
+		if err != nil && this.Config.FatalKafkaError {
+			debug.PrintStack()
+			log.Fatal("FATAL: ", err)
+		}
 	}
+
 	this.trySendingResponseAsEvent(commandRequest, commandResponse, qos)
 	return err
 }
