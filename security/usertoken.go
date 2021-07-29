@@ -21,7 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"io/ioutil"
 	"log"
 	"net/http"
