@@ -17,19 +17,26 @@
 package model
 
 type Device struct {
-	Id           string `json:"id"`
-	LocalId      string `json:"local_id"`
-	Name         string `json:"name"`
-	DeviceTypeId string `json:"device_type_id"`
+	Id           string      `json:"id"`
+	LocalId      string      `json:"local_id"`
+	Name         string      `json:"name"`
+	Attributes   []Attribute `json:"attributes"`
+	DeviceTypeId string      `json:"device_type_id"`
 }
 
 type DeviceType struct {
-	Id            string    `json:"id"`
-	Name          string    `json:"name"`
-	Description   string    `json:"description"`
-	Services      []Service `json:"services"`
-	DeviceClassId string    `json:"device_class_id"`
-	RdfType       string    `json:"rdf_type"`
+	Id            string      `json:"id"`
+	Name          string      `json:"name"`
+	Description   string      `json:"description"`
+	Services      []Service   `json:"services"`
+	DeviceClassId string      `json:"device_class_id"`
+	Attributes    []Attribute `json:"attributes"`
+	RdfType       string      `json:"rdf_type"`
+}
+
+type Attribute struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 type Service struct {

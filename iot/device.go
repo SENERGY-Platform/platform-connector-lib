@@ -53,6 +53,66 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 	return dt, err
 }
 
+func (this *Iot) FindDeviceTypesWithAttributes(attributes []model.Attribute, token security.JwtToken) (dt []model.DeviceType, err error) {
+	selection := []model.Selection{}
+	for _, attr := range attributes {
+		selection = append(selection, model.Selection{Condition: &model.ConditionConfig{
+			Feature:   "features.attributes.key",
+			Operation: model.QueryEqualOperation,
+			Value:     attr.Key}})
+		selection = append(selection, model.Selection{Condition: &model.ConditionConfig{
+			Feature:   "features.attributes.value",
+			Operation: model.QueryEqualOperation,
+			Value:     attr.Value}})
+	}
+	query := model.QueryMessage{
+		Resource: "device-types",
+		Find: &model.QueryFind{
+			Filter: &model.Selection{
+				And: selection,
+			},
+		},
+	}
+	permSearchDeviceTypes := []model.PermSearchDeviceType{}
+	err = token.PostJSON(this.permQueryUrl+"/v3/query", query, &permSearchDeviceTypes)
+	if err != nil {
+		log.Println("ERROR on FindDeviceTypesWithAttributes()", err)
+		debug.PrintStack()
+		return dt, err
+	}
+
+	for _, permDt := range permSearchDeviceTypes {
+		ok := make([]bool, len(attributes))
+		for i, attr := range attributes {
+			for _, dtAttr := range permDt.Attributes {
+				if dtAttr.Key == attr.Key && dtAttr.Value == attr.Value {
+					ok[i] = true
+					break
+				}
+			}
+		}
+		if allTrue(ok) {
+			fullDt, err := this.GetDeviceType(permDt.Id, token)
+			if err != nil {
+				log.Println("ERROR on FindDeviceTypesWithAttributes()", err)
+				debug.PrintStack()
+				return dt, err
+			}
+			dt = append(dt, fullDt)
+		}
+	}
+	return dt, err
+}
+
+func allTrue(arr []bool) bool {
+	for i := range arr {
+		if !arr[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (device model.Device, err error) {
 	resp, err := token.Get(this.manager_url + "/local-devices/" + url.QueryEscape(localId))
 	if err != nil {
@@ -79,4 +139,24 @@ func (this *Iot) CreateDevice(device model.Device, token security.JwtToken) (res
 		debug.PrintStack()
 	}
 	return
+}
+
+func (this *Iot) CreateDeviceType(deviceType model.DeviceType, token security.JwtToken) (dt model.DeviceType, err error) {
+	err = token.PostJSON(this.manager_url+"/device-types", deviceType, &dt)
+	if err != nil {
+		log.Println("ERROR on CreateDeviceType()", err)
+		debug.PrintStack()
+		return dt, err
+	}
+	return dt, err
+}
+
+func (this *Iot) UpdateDeviceType(deviceType model.DeviceType, token security.JwtToken) (dt model.DeviceType, err error) {
+	err = token.PutJSON(this.manager_url+"/device-types/"+deviceType.Id, deviceType, &dt)
+	if err != nil {
+		log.Println("ERROR on UpdateDeviceType()", err)
+		debug.PrintStack()
+		return dt, err
+	}
+	return dt, err
 }

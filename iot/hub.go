@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"net/url"
+	"runtime/debug"
 )
 
 func (this *Iot) GetHub(id string, cred security.JwtToken) (hub model.Hub, err error) {
@@ -37,6 +38,28 @@ func (this *Iot) GetHub(id string, cred security.JwtToken) (hub model.Hub, err e
 		log.Println("ERROR on GetGateway() json decode", err)
 	}
 	return hub, err
+}
+
+func (this *Iot) GetHubsByDeviceLocalId(localId string, token security.JwtToken) (hubs []model.Hub, err error) {
+	query := model.QueryMessage{
+		Resource: "hubs",
+		Find: &model.QueryFind{
+			Filter: &model.Selection{
+				Condition: &model.ConditionConfig{
+					Feature:   "features.device_local_ids",
+					Operation: "==",
+					Value:     localId,
+				},
+			},
+		},
+	}
+	err = token.PostJSON(this.permQueryUrl+"/v3/query", query, &hubs)
+	if err != nil {
+		log.Println("ERROR on FindDeviceTypesWithAttributes()", err)
+		debug.PrintStack()
+		return hubs, err
+	}
+	return hubs, nil
 }
 
 func (this *Iot) CreateHub(hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {
