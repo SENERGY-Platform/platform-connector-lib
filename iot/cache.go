@@ -82,6 +82,31 @@ func (this *PreparedCache) CreateDevice(token security.JwtToken, device model.De
 	return
 }
 
+func (this *PreparedCache) UpdateDevice(token security.JwtToken, device model.Device) (result model.Device, err error) {
+	result, err = this.iot.UpdateDevice(device, token)
+	if err == nil {
+		this.saveDeviceUrlToIotDeviceToCache(token, device.LocalId, result)
+		this.saveDeviceToCache(token, result)
+	}
+	return
+}
+
+func (this *PreparedCache) CreateDeviceType(token security.JwtToken, deviceType model.DeviceType) (result model.DeviceType, err error) {
+	result, err = this.iot.CreateDeviceType(deviceType, token)
+	if err == nil {
+		this.saveDeviceTypeToCache(result)
+	}
+	return
+}
+
+func (this *PreparedCache) UpdateDeviceType(token security.JwtToken, deviceType model.DeviceType) (result model.DeviceType, err error) {
+	result, err = this.iot.UpdateDeviceType(deviceType, token)
+	if err == nil {
+		this.saveDeviceTypeToCache(result)
+	}
+	return
+}
+
 func (this *PreparedCache) EnsureLocalDeviceExistence(token security.JwtToken, device model.Device) (result model.Device, err error) {
 	result, err = this.GetDeviceByLocalId(token, device.LocalId)
 	if err == security.ErrorNotFound {
