@@ -237,6 +237,39 @@ func (this *PreparedCache) writerotocolToCache(id string, protocol model.Protoco
 	return
 }
 
+func (this *PreparedCache) Get(key string) (value []byte, err error) {
+	item, err := this.cache.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	return item.Value, nil
+}
+
+func (this *PreparedCache) Set(key string, value []byte, expiration int32) {
+	this.cache.Set(key, value, expiration)
+}
+
+func (this *PreparedCache) Use(key string, getter func() (interface{}, error), result interface{}, expiration int32) (err error) {
+	key = "custom." + key
+	value, err := this.Get(key)
+	if err == nil {
+		err = json.Unmarshal(value, result)
+		return
+	} else if err != cache.ErrNotFound {
+		log.Println("WARNING: err in PreparedCache.Use()", err)
+	}
+	temp, err := getter()
+	if err != nil {
+		return err
+	}
+	value, err = json.Marshal(temp)
+	if err != nil {
+		return err
+	}
+	this.Set(key, value, expiration)
+	return json.Unmarshal(value, &result)
+}
+
 func (this *Cache) GetDevice(id string) (result model.Device, err error) {
 	return this.parent.GetDevice(this.token, id)
 }
