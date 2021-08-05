@@ -141,6 +141,15 @@ func (this *Iot) CreateDevice(device model.Device, token security.JwtToken) (res
 	return
 }
 
+func (this *Iot) UpdateDevice(device model.Device, token security.JwtToken) (result model.Device, err error) {
+	err = token.PutJSON(this.manager_url+"/local-devices/"+device.LocalId, device, &result)
+	if err != nil {
+		log.Println("ERROR on CreateDevice()", err)
+		debug.PrintStack()
+	}
+	return
+}
+
 func (this *Iot) CreateDeviceType(deviceType model.DeviceType, token security.JwtToken) (dt model.DeviceType, err error) {
 	err = token.PostJSON(this.manager_url+"/device-types", deviceType, &dt)
 	if err != nil {
