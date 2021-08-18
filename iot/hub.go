@@ -55,7 +55,7 @@ func (this *Iot) GetHubsByDeviceLocalId(localId string, token security.JwtToken)
 	}
 	err = token.PostJSON(this.permQueryUrl+"/v3/query", query, &hubs)
 	if err != nil {
-		log.Println("ERROR on FindDeviceTypesWithAttributes()", err)
+		log.Println("ERROR on GetHubsByDeviceLocalId()", err)
 		debug.PrintStack()
 		return hubs, err
 	}
@@ -64,6 +64,11 @@ func (this *Iot) GetHubsByDeviceLocalId(localId string, token security.JwtToken)
 
 func (this *Iot) CreateHub(hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {
 	err = cred.PostJSON(this.manager_url+"/hubs", hub, &result)
+	return
+}
+
+func (this *Iot) CreateHubWithFixedId(hub model.Hub, adminToken security.JwtToken, userId string) (result model.Hub, err error) {
+	err = adminToken.PutJSON(this.manager_url+"/hubs/"+hub.Id+"?user_id="+userId, hub, &result)
 	return
 }
 
