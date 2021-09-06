@@ -67,7 +67,7 @@ func TestProducer_Produce(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	producer, err := PrepareProducer(ctx, kafkaUrl, true, true, 2, 2)
+	producer, err := PrepareProducer(ctx, kafkaUrl, true, true, 2, 1)
 	if err != nil {
 		t.Error(err)
 		return

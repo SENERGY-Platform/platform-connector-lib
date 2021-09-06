@@ -63,6 +63,7 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 }
 
 func (publisher *Publisher) Publish(envelope model.Envelope) error {
+	start := time.Now()
 	jsonMsg, ok := envelope.Value.(map[string]interface{})
 	if !ok {
 		return errors.New("envelope.Value is no map[string]interface{}")
@@ -101,6 +102,9 @@ func (publisher *Publisher) Publish(envelope model.Envelope) error {
 	}
 
 	_, err = publisher.db.Exec(query)
+	if publisher.debug {
+		log.Println("Postgres publishing took ", time.Since(start))
+	}
 	return err
 }
 
