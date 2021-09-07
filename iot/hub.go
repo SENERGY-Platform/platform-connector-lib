@@ -18,6 +18,7 @@ package iot
 
 import (
 	"encoding/json"
+	"github.com/SENERGY-Platform/platform-connector-lib/iot/options"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
@@ -25,10 +26,12 @@ import (
 	"runtime/debug"
 )
 
-func (this *Iot) GetHub(id string, cred security.JwtToken) (hub model.Hub, err error) {
+func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.Option) (hub model.Hub, err error) {
 	resp, err := cred.Get(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
-		log.Println("ERROR on GetGateway()", id, err)
+		if !options.Silent.IsInOptions(optionals...) {
+			log.Println("ERROR on GetGateway()", id, err)
+		}
 		return hub, err
 	}
 	defer resp.Body.Close()
