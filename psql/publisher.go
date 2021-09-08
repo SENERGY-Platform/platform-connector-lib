@@ -91,7 +91,11 @@ func (publisher *Publisher) Publish(envelope model.Envelope) error {
 	i := 1
 	for k, v := range m {
 		fields[i] = "\"" + k + "\""
-		values[i] = fmt.Sprintf("%v", v)
+		if v != nil {
+			values[i] = fmt.Sprintf("%v", v)
+		} else {
+			values[i] = "NULL"
+		}
 		i++
 	}
 
