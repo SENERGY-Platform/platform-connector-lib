@@ -81,8 +81,9 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 			log.Println("ERROR: http producer", topic, err)
 			return err
 		}
+		defer resp.Body.Close()
+		respMsg, _ := io.ReadAll(resp.Body)
 		if resp.StatusCode != http.StatusOK {
-			respMsg, _ := io.ReadAll(resp.Body)
 			err = errors.New("http producer: " + resp.Status + " " + string(respMsg))
 			log.Println("ERROR:", topic, err)
 			return err
