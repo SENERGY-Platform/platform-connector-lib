@@ -147,7 +147,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	}
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
-		log.Println("WARNING: finished slow produce call", topic, time.Since(start), message)
+		log.Println("WARNING: finished slow produce call", time.Since(start), topic, message)
 	}
 	return err
 }

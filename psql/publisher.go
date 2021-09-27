@@ -62,6 +62,8 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 	}, nil
 }
 
+var SlowProducerTimeout time.Duration = 2 * time.Second
+
 func (publisher *Publisher) Publish(envelope model.Envelope) error {
 	start := time.Now()
 	jsonMsg, ok := envelope.Value.(map[string]interface{})
@@ -108,6 +110,9 @@ func (publisher *Publisher) Publish(envelope model.Envelope) error {
 	_, err = publisher.db.Exec(query)
 	if publisher.debug {
 		log.Println("Postgres publishing took ", time.Since(start))
+	}
+	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
+		log.Println("WARNING: finished slow timescale publisher call", time.Since(start), envelope.DeviceId, envelope.ServiceId)
 	}
 	return err
 }
