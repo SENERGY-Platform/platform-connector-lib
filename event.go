@@ -168,8 +168,6 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 	}
 
 	var pgErr error
-	var pgRollback func() error
-	var pgCommit func() error
 	var kafkaErr error
 
 	pgWg := sync.WaitGroup{}
@@ -177,13 +175,10 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 		pgWg.Add(1)
 		go func() {
 			defer pgWg.Done()
-			pgRollback, pgCommit, pgErr = this.postgresPublisher.Publish(envelope)
+			pgErr = this.postgresPublisher.Publish(envelope)
 			if pgErr != nil {
 				log.Println("ERROR: publish event to postgres ", pgErr)
 				return
-			}
-			if qos == Async {
-				pgCommit()
 			}
 			return
 		}()
@@ -197,19 +192,10 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 		log.Println("ERROR: produce event on service topic ", kafkaErr)
 	}
 
-	//optional wait for postgres
 	if qos != Async {
 		pgWg.Wait()
-		if pgErr == nil {
-			if kafkaErr != nil {
-				pgRollback()
-			} else {
-				pgCommit()
-			}
-		}
 	}
 
-	//error return
 	if kafkaErr != nil {
 		return kafkaErr
 	}
