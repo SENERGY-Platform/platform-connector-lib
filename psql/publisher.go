@@ -64,21 +64,21 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 
 var SlowProducerTimeout time.Duration = 2 * time.Second
 
-func (publisher *Publisher) Publish(envelope model.Envelope) error {
+func (publisher *Publisher) Publish(envelope model.Envelope) (rollback func() error, commit func() error, err error) {
 	start := time.Now()
 	jsonMsg, ok := envelope.Value.(map[string]interface{})
 	if !ok {
-		return errors.New("envelope.Value is no map[string]interface{}")
+		return rollback, commit, errors.New("envelope.Value is no map[string]interface{}")
 	}
 	m := flatten(jsonMsg)
 
 	shortDeviceId, err := ShortenId(envelope.DeviceId)
 	if err != nil {
-		return err
+		return rollback, commit, err
 	}
 	shortServiceId, err := ShortenId(envelope.ServiceId)
 	if err != nil {
-		return err
+		return rollback, commit, err
 	}
 	table := "device:" + shortDeviceId + "_" + "service:" + shortServiceId
 
@@ -107,14 +107,18 @@ func (publisher *Publisher) Publish(envelope model.Envelope) error {
 		log.Println("QUERY:", query)
 	}
 
-	_, err = publisher.db.Exec(query)
+	tx, err := publisher.db.Begin()
+	if err != nil {
+		return rollback, commit, err
+	}
+	_, err = tx.Exec(query)
 	if publisher.debug {
 		log.Println("Postgres publishing took ", time.Since(start))
 	}
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
 		log.Println("WARNING: finished slow timescale publisher call", time.Since(start), envelope.DeviceId, envelope.ServiceId)
 	}
-	return err
+	return tx.Rollback, tx.Commit, err
 }
 
 func flatten(m map[string]interface{}) (values map[string]interface{}) {

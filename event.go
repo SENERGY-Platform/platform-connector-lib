@@ -25,6 +25,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/unitreference"
 	"log"
 	"runtime/debug"
+	"sync"
 	"time"
 )
 
@@ -165,33 +166,55 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 		log.Println("ERROR in sendEventEnvelope(): ", err)
 		return err
 	}
-	err = producer.ProduceWithKey(serviceTopic, string(jsonMsg), envelope.DeviceId)
+
+	var pgErr error
+	var pgRollback func() error
+	var pgCommit func() error
+	var kafkaErr error
+
+	pgWg := sync.WaitGroup{}
+	if this.Config.PublishToPostgres {
+		pgWg.Add(1)
+		go func() {
+			defer pgWg.Done()
+			pgRollback, pgCommit, pgErr = this.postgresPublisher.Publish(envelope)
+			if pgErr != nil {
+				log.Println("ERROR: publish event to postgres ", pgErr)
+				return
+			}
+			if qos == Async {
+				pgCommit()
+			}
+			return
+		}()
+	}
+	kafkaErr = producer.ProduceWithKey(serviceTopic, string(jsonMsg), envelope.DeviceId)
 	if err != nil {
 		if this.Config.FatalKafkaError {
 			debug.PrintStack()
-			log.Fatal("FATAL: while producing for topic: '", serviceTopic, "' :", err)
+			log.Fatal("FATAL: while producing for topic: '", serviceTopic, "' :", kafkaErr)
 		}
-		log.Println("ERROR: produce event on service topic ", err)
-		return err
+		log.Println("ERROR: produce event on service topic ", kafkaErr)
 	}
-	if this.Config.PublishToPostgres {
-		f := func() error {
-			err = this.postgresPublisher.Publish(envelope)
-			if err != nil {
-				log.Println("ERROR: publish event to postgres ", err)
-				return err
-			}
-			return nil
-		}
-		if qos == Async {
-			go f()
-		} else {
-			err = f()
-			if err != nil {
-				return err
-			}
-		}
 
+	//optional wait for postgres
+	if qos != Async {
+		pgWg.Wait()
+		if pgErr == nil {
+			if kafkaErr != nil {
+				pgRollback()
+			} else {
+				pgCommit()
+			}
+		}
+	}
+
+	//error return
+	if kafkaErr != nil {
+		return kafkaErr
+	}
+	if pgErr != nil {
+		return pgErr
 	}
 	return nil
 }
