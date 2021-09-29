@@ -55,13 +55,13 @@ type AsyncProducer struct {
 }
 
 type Config struct {
-	AsyncFlushTime    time.Duration
-	AsyncCompression  sarama.CompressionCodec
-	SyncCompression   sarama.CompressionCodec
-	Sync              bool
-	SyncIdempotent    bool
-	PartitionNum      int
-	ReplicationFactor int
+	AsyncFlushFrequency time.Duration
+	AsyncCompression    sarama.CompressionCodec
+	SyncCompression     sarama.CompressionCodec
+	Sync                bool
+	SyncIdempotent      bool
+	PartitionNum        int
+	ReplicationFactor   int
 }
 
 func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, config Config) (result ProducerInterface, err error) {
@@ -112,7 +112,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
 		sarama_conf.Producer.Return.Successes = false
-		sarama_conf.Producer.Flush.Frequency = config.AsyncFlushTime
+		sarama_conf.Producer.Flush.Frequency = config.AsyncFlushFrequency
 		sarama_conf.Producer.Compression = config.AsyncCompression
 		temp.producer, err = sarama.NewAsyncProducer(temp.broker, sarama_conf)
 		if err != nil {
@@ -136,13 +136,13 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 //deprecated
 func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (result ProducerInterface, err error) {
 	return PrepareProducerWithConfig(ctx, kafkaBootstrapUrl, Config{
-		AsyncFlushTime:    500 * time.Second,
-		AsyncCompression:  sarama.CompressionSnappy,
-		SyncCompression:   sarama.CompressionSnappy,
-		Sync:              sync,
-		SyncIdempotent:    syncIdempotent,
-		PartitionNum:      partitionNum,
-		ReplicationFactor: replicationFactor,
+		AsyncFlushFrequency: 500 * time.Second,
+		AsyncCompression:    sarama.CompressionSnappy,
+		SyncCompression:     sarama.CompressionSnappy,
+		Sync:                sync,
+		SyncIdempotent:      syncIdempotent,
+		PartitionNum:        partitionNum,
+		ReplicationFactor:   replicationFactor,
 	})
 }
 

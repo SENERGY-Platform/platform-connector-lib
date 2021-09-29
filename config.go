@@ -76,9 +76,9 @@ type Config struct {
 
 	PermQueryUrl string
 
-	AsyncFlushTime   time.Duration
-	AsyncCompression sarama.CompressionCodec
-	SyncCompression  sarama.CompressionCodec
+	AsyncFlushFrequency time.Duration
+	AsyncCompression    sarama.CompressionCodec
+	SyncCompression     sarama.CompressionCodec
 }
 
 //loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)
