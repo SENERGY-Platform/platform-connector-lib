@@ -54,7 +54,17 @@ type AsyncProducer struct {
 	replicationFactor int
 }
 
-func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (result ProducerInterface, err error) {
+type Config struct {
+	AsyncFlushTime    time.Duration
+	AsyncCompression  sarama.CompressionCodec
+	SyncCompression   sarama.CompressionCodec
+	Sync              bool
+	SyncIdempotent    bool
+	PartitionNum      int
+	ReplicationFactor int
+}
+
+func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, config Config) (result ProducerInterface, err error) {
 	broker, err := GetBroker(kafkaBootstrapUrl)
 	if err != nil {
 		return nil, err
@@ -62,20 +72,21 @@ func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, s
 	if len(broker) == 0 {
 		return nil, errors.New("missing kafka broker")
 	}
-	if sync {
+	if config.Sync {
 		temp := &SyncProducer{
 			broker:            broker,
 			kafkaBootstrapUrl: kafkaBootstrapUrl,
-			syncIdempotent:    syncIdempotent,
+			syncIdempotent:    config.SyncIdempotent,
 			usedTopics:        map[string]bool{},
-			partitionsNum:     partitionNum,
-			replicationFactor: replicationFactor,
+			partitionsNum:     config.PartitionNum,
+			replicationFactor: config.ReplicationFactor,
 		}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
 		sarama_conf.Producer.Return.Successes = true
-		if syncIdempotent {
+		sarama_conf.Producer.Compression = config.SyncCompression
+		if config.SyncIdempotent {
 			sarama_conf.Producer.Idempotent = true
 			sarama_conf.Net.MaxOpenRequests = 1
 			sarama_conf.Producer.RequiredAcks = sarama.WaitForAll
@@ -94,13 +105,15 @@ func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, s
 			broker:            broker,
 			kafkaBootstrapUrl: kafkaBootstrapUrl,
 			usedTopics:        map[string]bool{},
-			partitionsNum:     partitionNum,
-			replicationFactor: replicationFactor,
+			partitionsNum:     config.PartitionNum,
+			replicationFactor: config.ReplicationFactor,
 		}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
 		sarama_conf.Producer.Return.Errors = true
 		sarama_conf.Producer.Return.Successes = false
+		sarama_conf.Producer.Flush.Frequency = config.AsyncFlushTime
+		sarama_conf.Producer.Compression = config.AsyncCompression
 		temp.producer, err = sarama.NewAsyncProducer(temp.broker, sarama_conf)
 		if err != nil {
 			return result, err
@@ -118,6 +131,19 @@ func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, s
 		}()
 	}
 	return result, nil
+}
+
+//deprecated
+func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (result ProducerInterface, err error) {
+	return PrepareProducerWithConfig(ctx, kafkaBootstrapUrl, Config{
+		AsyncFlushTime:    500 * time.Second,
+		AsyncCompression:  sarama.CompressionSnappy,
+		SyncCompression:   sarama.CompressionSnappy,
+		Sync:              sync,
+		SyncIdempotent:    syncIdempotent,
+		PartitionNum:      partitionNum,
+		ReplicationFactor: replicationFactor,
+	})
 }
 
 func (this *SyncProducer) Log(logger *log.Logger) {

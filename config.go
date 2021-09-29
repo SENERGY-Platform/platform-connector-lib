@@ -19,12 +19,14 @@ package platform_connector_lib
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Shopify/sarama"
 	"log"
 	"os"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -73,6 +75,10 @@ type Config struct {
 	HttpCommandConsumerPort string
 
 	PermQueryUrl string
+
+	AsyncFlushTime   time.Duration
+	AsyncCompression sarama.CompressionCodec
+	SyncCompression  sarama.CompressionCodec
 }
 
 //loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

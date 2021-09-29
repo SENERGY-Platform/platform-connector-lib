@@ -23,6 +23,15 @@ import (
 	"time"
 )
 
+func NewWithKafkaConfig(ctx context.Context, kafkaBootstrapUrl string, deviceLogTopic string, hubLogTopic string, config kafka.Config) (logger Logger, err error) {
+	producer, err := kafka.PrepareProducerWithConfig(ctx, kafkaBootstrapUrl, config)
+	if err != nil {
+		return logger, err
+	}
+	return &LoggerImpl{producer: producer, deviceLogTopic: deviceLogTopic, hubLogTopic: hubLogTopic}, nil
+}
+
+//deprecated
 func New(ctx context.Context, kafkaBootstrapUrl string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string, partitionNum int, replicationFactor int) (logger Logger, err error) {
 	producer, err := kafka.PrepareProducer(ctx, kafkaBootstrapUrl, sync, idempotent, partitionNum, replicationFactor)
 	if err != nil {
