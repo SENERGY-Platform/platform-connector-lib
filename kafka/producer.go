@@ -136,7 +136,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 //deprecated
 func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (result ProducerInterface, err error) {
 	return PrepareProducerWithConfig(ctx, kafkaBootstrapUrl, Config{
-		AsyncFlushFrequency: 500 * time.Second,
+		AsyncFlushFrequency: 500 * time.Millisecond,
 		AsyncCompression:    sarama.CompressionSnappy,
 		SyncCompression:     sarama.CompressionSnappy,
 		Sync:                sync,
