@@ -204,6 +204,7 @@ func (this *Connector) initProducer(ctx context.Context, qos Qos) (err error) {
 		return errors.New("unknown qos=" + strconv.Itoa(int(qos)))
 	}
 	this.producer[qos], err = kafka.PrepareProducerWithConfig(ctx, this.Config.KafkaUrl, kafka.Config{
+		AsyncFlushMessages:  this.Config.AsyncFlushMessages,
 		AsyncFlushFrequency: this.Config.AsyncFlushFrequency,
 		AsyncCompression:    this.Config.AsyncCompression,
 		SyncCompression:     this.Config.SyncCompression,

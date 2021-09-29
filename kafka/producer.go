@@ -62,6 +62,7 @@ type Config struct {
 	SyncIdempotent      bool
 	PartitionNum        int
 	ReplicationFactor   int
+	AsyncFlushMessages  int
 }
 
 func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, config Config) (result ProducerInterface, err error) {
@@ -113,6 +114,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 		sarama_conf.Producer.Return.Errors = true
 		sarama_conf.Producer.Return.Successes = false
 		sarama_conf.Producer.Flush.Frequency = config.AsyncFlushFrequency
+		sarama_conf.Producer.Flush.Messages = config.AsyncFlushMessages
 		sarama_conf.Producer.Compression = config.AsyncCompression
 		temp.producer, err = sarama.NewAsyncProducer(temp.broker, sarama_conf)
 		if err != nil {
@@ -136,6 +138,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 //deprecated
 func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (result ProducerInterface, err error) {
 	return PrepareProducerWithConfig(ctx, kafkaBootstrapUrl, Config{
+		AsyncFlushMessages:  0,
 		AsyncFlushFrequency: 500 * time.Millisecond,
 		AsyncCompression:    sarama.CompressionSnappy,
 		SyncCompression:     sarama.CompressionSnappy,
