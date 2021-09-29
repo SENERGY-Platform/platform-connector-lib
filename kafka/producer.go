@@ -155,7 +155,7 @@ func (this *SyncProducer) Log(logger *log.Logger) {
 
 func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
-		this.logger.Println("DEBUG: produce ", topic, message)
+		this.logger.Println("DEBUG: produce sync", topic, message)
 	}
 	err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
@@ -183,7 +183,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 
 func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 	if this.logger != nil {
-		this.logger.Println("DEBUG: produce ", topic, message)
+		this.logger.Println("DEBUG: produce async", topic, message)
 	}
 	err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
@@ -196,7 +196,7 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 
 func (this *SyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
 	if this.logger != nil {
-		this.logger.Println("DEBUG: produce ", topic, message)
+		this.logger.Println("DEBUG: produce sync", topic, message)
 	}
 	err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
@@ -223,7 +223,7 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 
 func (this *AsyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
 	if this.logger != nil {
-		this.logger.Println("DEBUG: produce ", topic, message)
+		this.logger.Println("DEBUG: produce async", topic, message)
 	}
 	err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.partitionsNum, this.replicationFactor)
 	if err != nil {
