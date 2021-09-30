@@ -76,6 +76,7 @@ type Config struct {
 
 	PermQueryUrl string
 
+	AsyncPgBackpressure int
 	AsyncFlushMessages  int
 	AsyncFlushFrequency time.Duration
 	AsyncCompression    sarama.CompressionCodec

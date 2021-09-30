@@ -18,10 +18,10 @@ package psql
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
 	"log"
 	"strings"
@@ -30,7 +30,7 @@ import (
 )
 
 type Publisher struct {
-	db    *sql.DB
+	db    *pgxpool.Pool
 	debug bool
 }
 
@@ -38,22 +38,26 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", postgresHost,
 		postgresPort, postgresUser, postgresPw, postgresDb)
 
-	// open database
-	db, err := sql.Open("postgres", psqlconn)
+	config, err := pgxpool.ParseConfig(psqlconn)
+	if err != nil {
+		return nil, err
+	}
+	config.MaxConns = 50
+	db, err := pgxpool.ConnectConfig(ctx, config)
 	if err != nil {
 		return nil, err
 	}
 
-	err = db.Ping()
+	err = db.Ping(ctx)
 	if err != nil {
-		_ = db.Close()
+		db.Close()
 		return nil, err
 	}
 
 	wg.Add(1)
 	go func() {
 		<-ctx.Done()
-		_ = db.Close()
+		db.Close()
 		wg.Done()
 	}()
 	return &Publisher{
@@ -107,7 +111,7 @@ func (publisher *Publisher) Publish(envelope model.Envelope) (err error) {
 		log.Println("QUERY:", query)
 	}
 
-	_, err = publisher.db.Exec(query)
+	_, err = publisher.db.Exec(context.Background(), query)
 	if publisher.debug {
 		log.Println("Postgres publishing took ", time.Since(start))
 	}

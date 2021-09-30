@@ -172,9 +172,20 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 
 	pgWg := sync.WaitGroup{}
 	if this.Config.PublishToPostgres {
-		pgWg.Add(1)
+		if qos == Async {
+			this.asyncPgBackpressure <- true //reserve one of the limited go routines
+		} else {
+			pgWg.Add(1)
+		}
+
 		go func() {
-			defer pgWg.Done()
+			defer func() {
+				if qos == Async {
+					<-this.asyncPgBackpressure //free one of the limited go routines
+				} else {
+					defer pgWg.Done()
+				}
+			}()
 			pgErr = this.postgresPublisher.Publish(envelope)
 			if pgErr != nil {
 				log.Println("ERROR: publish event to postgres ", pgErr)
@@ -192,9 +203,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 		log.Println("ERROR: produce event on service topic ", kafkaErr)
 	}
 
-	if qos != Async {
-		pgWg.Wait()
-	}
+	pgWg.Wait()
 
 	if kafkaErr != nil {
 		return kafkaErr

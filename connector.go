@@ -63,6 +63,8 @@ type Connector struct {
 	IotCache *iot.PreparedCache
 
 	kafkalogger *log.Logger
+
+	asyncPgBackpressure chan bool //used to limit go routines for async postgres publishing
 }
 
 func New(config Config) (connector *Connector) {
@@ -73,6 +75,11 @@ func New(config Config) (connector *Connector) {
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+	}
+
+	asyncPgBackpressure := config.AsyncPgBackpressure
+	if asyncPgBackpressure == 0 {
+		asyncPgBackpressure = 1000
 	}
 
 	connector = &Connector{
@@ -89,7 +96,8 @@ func New(config Config) (connector *Connector) {
 			config.TokenCacheExpiration,
 			config.TokenCacheUrl,
 		),
-		postgresPublisher: publisher,
+		postgresPublisher:   publisher,
+		asyncPgBackpressure: make(chan bool, asyncPgBackpressure),
 	}
 	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheUrl...)
 	return
