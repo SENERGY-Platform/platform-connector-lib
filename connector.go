@@ -77,9 +77,9 @@ func New(config Config) (connector *Connector) {
 		}
 	}
 
-	asyncPgBackpressure := config.AsyncPgBackpressure
-	if asyncPgBackpressure == 0 {
-		asyncPgBackpressure = 1000
+	asyncPgThreadMax := config.AsyncPgThreadMax
+	if asyncPgThreadMax == 0 {
+		asyncPgThreadMax = 1000
 	}
 
 	connector = &Connector{
@@ -97,7 +97,7 @@ func New(config Config) (connector *Connector) {
 			config.TokenCacheUrl,
 		),
 		postgresPublisher:   publisher,
-		asyncPgBackpressure: make(chan bool, asyncPgBackpressure),
+		asyncPgBackpressure: make(chan bool, asyncPgThreadMax),
 	}
 	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheUrl...)
 	return
