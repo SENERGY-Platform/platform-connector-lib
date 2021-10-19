@@ -81,6 +81,10 @@ type Config struct {
 	AsyncFlushFrequency time.Duration
 	AsyncCompression    sarama.CompressionCodec
 	SyncCompression     sarama.CompressionCodec
+
+	KafkaConsumerMaxWait  string
+	KafkaConsumerMinBytes int
+	KafkaConsumerMaxBytes int
 }
 
 //loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

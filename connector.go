@@ -145,13 +145,28 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 	used := false
 
 	if this.Config.Protocol != "" && this.Config.Protocol != "-" {
+		maxWait := 100 * time.Millisecond
+		if this.Config.KafkaConsumerMaxWait != "" && this.Config.KafkaConsumerMaxWait != "-" {
+			maxWait, err = time.ParseDuration(this.Config.KafkaConsumerMaxWait)
+			if err != nil {
+				return errors.New("unable to parse KafkaConsumerMaxWait as duration: " + err.Error())
+			}
+		}
+
 		used = true
-		err = kafka.NewConsumer(ctx, this.Config.KafkaUrl, this.Config.KafkaGroupName, this.Config.Protocol, func(topic string, msg []byte, t time.Time) error {
+		err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
+			KafkaUrl: this.Config.KafkaUrl,
+			GroupId:  this.Config.KafkaGroupName,
+			Topic:    this.Config.Protocol,
+			MinBytes: this.Config.KafkaConsumerMinBytes,
+			MaxBytes: this.Config.KafkaConsumerMaxBytes,
+			MaxWait:  maxWait,
+		}, func(topic string, msg []byte, t time.Time) error {
 			if string(msg) == "topic_init" {
 				return nil
 			}
 			return this.handleCommand(msg, t)
-		}, func(err error, consumer *kafka.Consumer) {
+		}, func(err error) {
 			log.Println("FATAL ERROR: kafka", err)
 			log.Fatal(err)
 		})

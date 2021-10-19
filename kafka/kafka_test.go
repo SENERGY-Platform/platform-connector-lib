@@ -58,10 +58,17 @@ func TestProducer_Produce(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	err = NewConsumer(ctx, kafkaUrl, "test", "test", func(topic string, msg []byte, t time.Time) error {
+	err = NewConsumer(ctx, ConsumerConfig{
+		KafkaUrl: kafkaUrl,
+		GroupId:  "test",
+		Topic:    "test",
+		MinBytes: 0,
+		MaxBytes: 0,
+		MaxWait:  0,
+	}, func(topic string, msg []byte, t time.Time) error {
 		result = append(result, msg)
 		return nil
-	}, func(err error, consumer *Consumer) {
+	}, func(err error) {
 		t.Error(err)
 	})
 

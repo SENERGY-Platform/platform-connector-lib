@@ -22,34 +22,26 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"sync"
 	"time"
 )
 
-func NewConsumer(ctx context.Context, kafkaBootstrapUrl string, groupid string, topic string, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error, consumer *Consumer)) (err error) {
-	consumer := &Consumer{groupId: groupid, kafkaBootstrapUrl: kafkaBootstrapUrl, topic: topic, listener: listener, errorhandler: errorhandler}
-	err = consumer.start(ctx)
-	return
+type ConsumerConfig struct {
+	KafkaUrl string
+	GroupId  string
+	Topic    string
+	MinBytes int
+	MaxBytes int
+	MaxWait  time.Duration
 }
 
-type Consumer struct {
-	count             int
-	kafkaBootstrapUrl string
-	groupId           string
-	topic             string
-	listener          func(topic string, msg []byte, time time.Time) error
-	errorhandler      func(err error, consumer *Consumer)
-	mux               sync.Mutex
-}
-
-func (this *Consumer) start(ctx context.Context) error {
-	log.Println("DEBUG: consume topic: \"" + this.topic + "\"")
-	broker, err := GetBroker(this.kafkaBootstrapUrl)
+func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error)) (err error) {
+	log.Println("DEBUG: consume topic: \"" + config.Topic + "\"")
+	broker, err := GetBroker(config.KafkaUrl)
 	if err != nil {
 		log.Println("ERROR: unable to get broker list", err)
 		return err
 	}
-	err = InitTopic(this.kafkaBootstrapUrl, this.topic)
+	err = InitTopic(config.KafkaUrl, config.Topic)
 	if err != nil {
 		log.Println("ERROR: unable to create topic", err)
 		return err
@@ -57,9 +49,11 @@ func (this *Consumer) start(ctx context.Context) error {
 	r := kafka.NewReader(kafka.ReaderConfig{
 		CommitInterval: 0, //synchronous commits
 		Brokers:        broker,
-		GroupID:        this.groupId,
-		Topic:          this.topic,
-		MaxWait:        1 * time.Second,
+		GroupID:        config.GroupId,
+		Topic:          config.Topic,
+		MinBytes:       config.MinBytes,
+		MaxBytes:       config.MaxBytes,
+		MaxWait:        config.MaxWait,
 		Logger:         log.New(ioutil.Discard, "", 0),
 		ErrorLogger:    log.New(ioutil.Discard, "", 0),
 	})
@@ -67,36 +61,36 @@ func (this *Consumer) start(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("close kafka reader ", this.topic)
+				log.Println("close kafka reader ", config.Topic)
 				return
 			default:
 				m, err := r.FetchMessage(ctx)
 				if err == io.EOF || err == context.Canceled {
-					log.Println("close consumer for topic ", this.topic)
+					log.Println("close consumer for topic ", config.Topic)
 					return
 				}
 				if err != nil {
-					log.Println("ERROR: while consuming topic ", this.topic, err)
-					this.errorhandler(err, this)
+					log.Println("ERROR: while consuming topic ", config.Topic, err)
+					errorhandler(err)
 					return
 				}
 				if time.Now().Sub(m.Time) > 1*time.Hour { //floodgate to prevent old messages to DOS the consumer
-					log.Println("WARNING: kafka message older than 1h: ", this.topic, time.Now().Sub(m.Time))
+					log.Println("WARNING: kafka message older than 1h: ", config.Topic, time.Now().Sub(m.Time))
 					err = r.CommitMessages(ctx, m)
 					if err != nil {
-						log.Println("ERROR: while committing message ", this.topic, err)
-						this.errorhandler(err, this)
+						log.Println("ERROR: while committing message ", config.Topic, err)
+						errorhandler(err)
 						return
 					}
 				} else {
-					err = this.listener(m.Topic, m.Value, m.Time)
+					err = listener(m.Topic, m.Value, m.Time)
 					if err != nil {
 						log.Println("ERROR: unable to handle message (no commit)", err, m.Topic, string(m.Value))
 					} else {
 						err = r.CommitMessages(ctx, m)
 						if err != nil {
-							log.Println("ERROR: while committing message ", this.topic, err)
-							this.errorhandler(err, this)
+							log.Println("ERROR: while committing message ", config.Topic, err)
+							errorhandler(err)
 							return
 						}
 					}
