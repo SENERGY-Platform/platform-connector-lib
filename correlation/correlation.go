@@ -21,6 +21,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/satori/go.uuid"
+	"time"
 )
 
 type CorrelationService struct {
@@ -28,8 +29,11 @@ type CorrelationService struct {
 	expiration int32
 }
 
-func New(expiration int32, memcachedServer ...string) *CorrelationService {
-	return &CorrelationService{expiration: expiration, memcached: memcache.New(memcachedServer...)}
+func New(expiration int32, maxIdleConns int, timeout time.Duration, memcachedServer ...string) *CorrelationService {
+	client := memcache.New(memcachedServer...)
+	client.MaxIdleConns = maxIdleConns
+	client.Timeout = timeout
+	return &CorrelationService{expiration: expiration, memcached: client}
 }
 
 func (this *CorrelationService) Save(msg model.ProtocolMsg) (correlationId string, err error) {

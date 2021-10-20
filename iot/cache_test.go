@@ -21,6 +21,7 @@ import (
 	iot2 "github.com/SENERGY-Platform/platform-connector-lib/iot/mock/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"testing"
+	"time"
 )
 
 func TestCache_GetProtocol(t *testing.T) {
@@ -32,7 +33,7 @@ func TestCache_GetProtocol(t *testing.T) {
 		return
 	}
 	iot := New(iotMockUrl, iotMockUrl, iotMockUrl, "")
-	cache := NewCache(iot, 60, 60, 60)
+	cache := NewCache(iot, 60, 60, 60, 2, 200*time.Millisecond)
 
 	protocol, err, _ := mock.PublishProtocolCreate(model.Protocol{
 		Name:             "test",

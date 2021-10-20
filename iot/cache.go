@@ -7,6 +7,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"log"
 	"sync"
+	"time"
 )
 
 type PreparedCache struct {
@@ -25,8 +26,8 @@ type Cache struct {
 	token  security.JwtToken
 }
 
-func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, characteristicExpiration int32, memcachedServer ...string) *PreparedCache {
-	return &PreparedCache{iot: iot, deviceExpiration: deviceExpiration, deviceTypeExpiration: deviceTypeExpiration, characteristicExpiration: characteristicExpiration, cache: cache.New(memcachedServer...), protocol: map[string]model.Protocol{}}
+func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, characteristicExpiration int32, maxIdleConns int, timeout time.Duration, memcachedServer ...string) *PreparedCache {
+	return &PreparedCache{iot: iot, deviceExpiration: deviceExpiration, deviceTypeExpiration: deviceTypeExpiration, characteristicExpiration: characteristicExpiration, cache: cache.New(maxIdleConns, timeout, memcachedServer...), protocol: map[string]model.Protocol{}}
 }
 
 func (this *PreparedCache) WithToken(token security.JwtToken) *Cache {

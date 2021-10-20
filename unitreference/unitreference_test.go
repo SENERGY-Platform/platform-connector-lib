@@ -22,6 +22,7 @@ import (
 	iot2 "github.com/SENERGY-Platform/platform-connector-lib/iot/mock/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"testing"
+	"time"
 )
 
 func TestFillUnits(t *testing.T) {
@@ -98,7 +99,7 @@ func NewSemanticRepositoryMock() (mockCtrl *iot2.Controller, repo SemanticReposi
 		return nil, nil, nil, err
 	}
 	iotrepo := iot.New(iotMockUrl, iotMockUrl, iotMockUrl, "")
-	cache := iot.NewCache(iotrepo, 60, 60, 60)
+	cache := iot.NewCache(iotrepo, 60, 60, 60, 2, 200*time.Millisecond)
 	return mock, cache, cancel, nil
 }
 

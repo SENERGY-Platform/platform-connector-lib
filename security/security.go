@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64, tokenCacheExpiration int32, cacheUrls []string) *Security {
+func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64, tokenCacheExpiration int32, cacheUrls []string, cacheMaxIdleConns int, cacheTimeout time.Duration) *Security {
 	result := &Security{
 		authEndpoint:             authEndpoint,
 		authClientSecret:         authClientSecret,
@@ -36,7 +36,7 @@ func New(authEndpoint string, authClientId string, authClientSecret string, jwtI
 		tokenCacheExpiration:     tokenCacheExpiration,
 	}
 	if tokenCacheExpiration != 0 && len(cacheUrls) > 0 {
-		result.cache = cache.New(cacheUrls...)
+		result.cache = cache.New(cacheMaxIdleConns, cacheTimeout, cacheUrls...)
 	}
 	return result
 }

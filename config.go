@@ -85,6 +85,9 @@ type Config struct {
 	KafkaConsumerMaxWait  string
 	KafkaConsumerMinBytes int
 	KafkaConsumerMaxBytes int
+
+	IotCacheTimeout      string
+	IotCacheMaxIdleConns int
 }
 
 //loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

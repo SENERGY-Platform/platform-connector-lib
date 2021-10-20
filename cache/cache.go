@@ -6,6 +6,7 @@ import (
 	"github.com/coocood/freecache"
 	"log"
 	"sync"
+	"time"
 )
 
 var L1Expiration = 2           // 2sec
@@ -25,8 +26,11 @@ type Item struct {
 
 var ErrNotFound = errors.New("key not found in cache")
 
-func New(memcacheUrl ...string) *Cache {
-	return &Cache{l1: freecache.NewCache(L1Size), l2: memcache.New(memcacheUrl...)}
+func New(maxIdleConns int, timeout time.Duration, memcacheUrl ...string) *Cache {
+	m := memcache.New(memcacheUrl...)
+	m.MaxIdleConns = maxIdleConns
+	m.Timeout = timeout
+	return &Cache{l1: freecache.NewCache(L1Size), l2: m}
 }
 
 func (this *Cache) Get(key string) (item Item, err error) {

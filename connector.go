@@ -95,11 +95,19 @@ func New(config Config) (connector *Connector) {
 			config.AuthExpirationTimeBuffer,
 			config.TokenCacheExpiration,
 			config.TokenCacheUrl,
+			5,
+			500*time.Millisecond,
 		),
 		postgresPublisher:   publisher,
 		asyncPgBackpressure: make(chan bool, asyncPgThreadMax),
 	}
-	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheUrl...)
+	iotCacheTimeout := 200 * time.Millisecond
+	if timeout, err := time.ParseDuration(config.IotCacheTimeout); err != nil {
+		log.Println("WARNING: invalid IotCacheTimeout; use default 200ms")
+	} else {
+		iotCacheTimeout = timeout
+	}
+	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheMaxIdleConns, iotCacheTimeout, config.IotCacheUrl...)
 	return
 }
 
