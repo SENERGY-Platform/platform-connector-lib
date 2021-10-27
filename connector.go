@@ -138,16 +138,7 @@ func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Conn
 }
 
 func (this *Connector) Start(ctx context.Context, qosList ...Qos) (err error) {
-	if this.Config.StatisticsInterval != "" && this.Config.StatisticsInterval != "-" {
-		interval, err := time.ParseDuration(this.Config.StatisticsInterval)
-		if err != nil {
-			log.Println("WARNING: invalid statistics interval --> no statistics logging")
-		} else {
-			this.statistics = statistics.New(ctx, interval)
-			this.iot.SetStatisticsCollector(this.statistics)
-			this.IotCache.SetStatisticsCollector(this.statistics)
-		}
-	}
+	this.StatisticsLogger(ctx)
 	list := append([]Qos{}, qosList...)
 	if len(list) == 0 {
 		list = []Qos{Async, Sync, SyncIdempotent}
@@ -157,6 +148,21 @@ func (this *Connector) Start(ctx context.Context, qosList ...Qos) (err error) {
 		return err
 	}
 	return this.StartConsumer(ctx)
+}
+
+func (this *Connector) StatisticsLogger(ctx context.Context) {
+	if this.Config.StatisticsInterval != "" && this.Config.StatisticsInterval != "-" {
+		interval, err := time.ParseDuration(this.Config.StatisticsInterval)
+		if err != nil {
+			log.Println("WARNING: invalid statistics interval --> no statistics logging")
+		} else {
+			this.statistics = statistics.New(ctx, interval)
+			this.iot.SetStatisticsCollector(this.statistics)
+			this.IotCache.SetStatisticsCollector(this.statistics)
+		}
+	} else {
+		log.Println("start without statistics logging")
+	}
 }
 
 func (this *Connector) StartConsumer(ctx context.Context) (err error) {

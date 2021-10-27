@@ -90,6 +90,7 @@ func (this *Implementation) KafkaWrite(duration time.Duration) {
 }
 
 func (this *Implementation) Start(ctx context.Context, interval time.Duration) {
+	log.Println("start statistics collector")
 	t := time.NewTicker(interval)
 	go func() {
 		for {
@@ -124,10 +125,10 @@ func (this *Implementation) log() {
 	go log.Println("LOG:",
 		"\n\tnum-goroutines:", numGoroutines,
 		"\n\tcache-misses:", cacheMiss,
-		"\n\t", iotLog.String(),
-		"\n\t", cacheLog.String(),
-		"\n\t", timescaleLog.String(),
-		"\n\t", kafkaLog.String())
+		"\n\t"+iotLog.String(),
+		"\n\t"+cacheLog.String(),
+		"\n\t"+timescaleLog.String(),
+		"\n\t"+kafkaLog.String())
 
 	this.iotReads = []time.Duration{}
 	this.cacheReads = []time.Duration{}
@@ -151,7 +152,7 @@ func (this statisticsElement) SetLabel(label string) statisticsElement {
 }
 
 func (this statisticsElement) String() string {
-	return fmt.Sprint(this.Label+":", "\n\tcount:", this.count, "\n\tmedian:", this.median.String(), "\n\tavg:", this.avg.String(), "\n\tmin:", this.min.String(), "\n\tmax:", this.max.String())
+	return fmt.Sprint(this.Label+":", "\n\t\tcount:", this.count, "\n\t\tmedian:", this.median.String(), "\n\t\tavg:", this.avg.String(), "\n\t\tmin:", this.min.String(), "\n\t\tmax:", this.max.String())
 }
 
 func statistics(list []time.Duration) (result statisticsElement) {
