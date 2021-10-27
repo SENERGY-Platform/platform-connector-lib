@@ -2,6 +2,7 @@ package cache
 
 import (
 	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/coocood/freecache"
 	"log"
@@ -14,9 +15,10 @@ var L1Size = 100 * 1024 * 1024 //100MB
 var Debug = false
 
 type Cache struct {
-	l1  *freecache.Cache
-	l2  *memcache.Client
-	mux sync.Mutex
+	l1         *freecache.Cache
+	l2         *memcache.Client
+	mux        sync.Mutex
+	statistics statistics.Interface
 }
 
 type Item struct {
@@ -30,12 +32,24 @@ func New(maxIdleConns int, timeout time.Duration, memcacheUrl ...string) *Cache 
 	m := memcache.New(memcacheUrl...)
 	m.MaxIdleConns = maxIdleConns
 	m.Timeout = timeout
-	return &Cache{l1: freecache.NewCache(L1Size), l2: m}
+	return &Cache{l1: freecache.NewCache(L1Size), l2: m, statistics: statistics.Void{}}
+}
+
+func (this *Cache) SetStatisticsCollector(collector statistics.Interface) *Cache {
+	this.statistics = collector
+	return this
 }
 
 func (this *Cache) Get(key string) (item Item, err error) {
 	this.mux.Lock()
 	defer this.mux.Unlock()
+	start := time.Now()
+	defer this.statistics.CacheRead(time.Since(start))
+	defer func() {
+		if err != nil {
+			this.statistics.CacheMiss()
+		}
+	}()
 	item.Value, err = this.l1.Get([]byte(key))
 	if err != nil && err != freecache.ErrNotFound {
 		log.Println("ERROR: in Cache::l1.Get()", err)

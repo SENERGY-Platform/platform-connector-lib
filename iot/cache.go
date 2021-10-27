@@ -5,6 +5,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/cache"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"log"
 	"sync"
 	"time"
@@ -28,6 +29,12 @@ type Cache struct {
 
 func NewCache(iot *Iot, deviceExpiration int32, deviceTypeExpiration int32, characteristicExpiration int32, maxIdleConns int, timeout time.Duration, memcachedServer ...string) *PreparedCache {
 	return &PreparedCache{iot: iot, deviceExpiration: deviceExpiration, deviceTypeExpiration: deviceTypeExpiration, characteristicExpiration: characteristicExpiration, cache: cache.New(maxIdleConns, timeout, memcachedServer...), protocol: map[string]model.Protocol{}}
+}
+
+func (this *PreparedCache) SetStatisticsCollector(collector statistics.Interface) *PreparedCache {
+	this.cache.SetStatisticsCollector(collector)
+	this.iot.SetStatisticsCollector(collector)
+	return this
 }
 
 func (this *PreparedCache) WithToken(token security.JwtToken) *Cache {

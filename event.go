@@ -186,14 +186,17 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 					defer pgWg.Done()
 				}
 			}()
+			timescaleStart := time.Now()
 			pgErr = this.postgresPublisher.Publish(envelope)
 			if pgErr != nil {
 				log.Println("ERROR: publish event to postgres ", pgErr)
 				return
 			}
+			this.statistics.TimescaleWrite(time.Since(timescaleStart))
 			return
 		}()
 	}
+	kafkaStart := time.Now()
 	kafkaErr = producer.ProduceWithKey(serviceTopic, string(jsonMsg), envelope.DeviceId)
 	if err != nil {
 		if this.Config.FatalKafkaError {
@@ -202,6 +205,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 		}
 		log.Println("ERROR: produce event on service topic ", kafkaErr)
 	}
+	this.statistics.KafkaWrite(time.Since(kafkaStart))
 
 	pgWg.Wait()
 

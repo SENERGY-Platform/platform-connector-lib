@@ -26,6 +26,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/msgvalidation"
 	"github.com/SENERGY-Platform/platform-connector-lib/psql"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"log"
 	"strconv"
 	"sync"
@@ -65,6 +66,8 @@ type Connector struct {
 	kafkalogger *log.Logger
 
 	asyncPgBackpressure chan bool //used to limit go routines for async postgres publishing
+
+	statistics statistics.Interface
 }
 
 func New(config Config) (connector *Connector) {
@@ -100,6 +103,7 @@ func New(config Config) (connector *Connector) {
 		),
 		postgresPublisher:   publisher,
 		asyncPgBackpressure: make(chan bool, asyncPgThreadMax),
+		statistics:          statistics.Void{},
 	}
 	iotCacheTimeout := 200 * time.Millisecond
 	if timeout, err := time.ParseDuration(config.IotCacheTimeout); err != nil {
@@ -134,6 +138,16 @@ func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Conn
 }
 
 func (this *Connector) Start(ctx context.Context, qosList ...Qos) (err error) {
+	if this.Config.StatisticsInterval != "" && this.Config.StatisticsInterval != "-" {
+		interval, err := time.ParseDuration(this.Config.StatisticsInterval)
+		if err != nil {
+			log.Println("WARNING: invalid statistics interval --> no statistics logging")
+		} else {
+			this.statistics = statistics.New(ctx, interval)
+			this.iot.SetStatisticsCollector(this.statistics)
+			this.IotCache.SetStatisticsCollector(this.statistics)
+		}
+	}
 	list := append([]Qos{}, qosList...)
 	if len(list) == 0 {
 		list = []Qos{Async, Sync, SyncIdempotent}

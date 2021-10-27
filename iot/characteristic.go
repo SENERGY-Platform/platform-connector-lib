@@ -23,6 +23,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"io/ioutil"
 	"log"
+	"time"
 )
 
 const characteristicCachePrefix = "characteristic."
@@ -54,6 +55,8 @@ func (this *PreparedCache) GetCharacteristicById(id string, token security.JwtTo
 }
 
 func (this *Iot) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
+	start := time.Now()
+	defer this.statistics.IotRead(time.Since(start))
 	if id == "" {
 		return characteristic, errors.New("characteristid can not be empty")
 	}
