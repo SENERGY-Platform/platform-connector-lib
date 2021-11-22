@@ -90,6 +90,8 @@ type Config struct {
 	IotCacheMaxIdleConns int
 
 	StatisticsInterval string
+
+	NotificationUrl string
 }
 
 //loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

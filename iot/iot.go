@@ -1,6 +1,8 @@
 package iot
 
-import "github.com/SENERGY-Platform/platform-connector-lib/statistics"
+import (
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
+)
 
 type Iot struct {
 	manager_url           string
