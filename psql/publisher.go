@@ -34,7 +34,9 @@ type Publisher struct {
 	debug bool
 }
 
-func New(postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, debug bool, wg *sync.WaitGroup, ctx context.Context) (*Publisher, error) {
+var ConnectionTimeout = 10 * time.Second
+
+func New(postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, debugLog bool, wg *sync.WaitGroup, basectx context.Context) (*Publisher, error) {
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", postgresHost,
 		postgresPort, postgresUser, postgresPw, postgresDb)
 
@@ -43,6 +45,18 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 		return nil, err
 	}
 	config.MaxConns = 50
+
+	ctx, cancel := context.WithCancel(basectx)
+	timeout, timeoutcancel := context.WithTimeout(basectx, ConnectionTimeout)
+	defer timeoutcancel()
+	go func() {
+		<-timeout.Done()
+		if timeout.Err() != context.Canceled {
+			log.Println("ERROR: psql publisher connection timeout")
+			cancel()
+		}
+	}()
+
 	db, err := pgxpool.ConnectConfig(ctx, config)
 	if err != nil {
 		return nil, err
@@ -62,7 +76,7 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 	}()
 	return &Publisher{
 		db:    db,
-		debug: debug,
+		debug: debugLog,
 	}, nil
 }
 
