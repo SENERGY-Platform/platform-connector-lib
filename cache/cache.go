@@ -6,7 +6,6 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/coocood/freecache"
 	"log"
-	"sync"
 	"time"
 )
 
@@ -17,7 +16,6 @@ var Debug = false
 type Cache struct {
 	l1         *freecache.Cache
 	l2         *memcache.Client
-	mux        sync.Mutex
 	statistics statistics.Interface
 }
 
@@ -41,8 +39,6 @@ func (this *Cache) SetStatisticsCollector(collector statistics.Interface) *Cache
 }
 
 func (this *Cache) Get(key string) (item Item, err error) {
-	this.mux.Lock()
-	defer this.mux.Unlock()
 	start := time.Now()
 	defer this.statistics.CacheRead(time.Since(start))
 	defer func() {
@@ -77,8 +73,6 @@ func (this *Cache) Get(key string) (item Item, err error) {
 }
 
 func (this *Cache) Set(key string, value []byte, expiration int32) {
-	this.mux.Lock()
-	defer this.mux.Unlock()
 	err := this.l1.Set([]byte(key), value, L1Expiration)
 	if err != nil {
 		log.Println("ERROR: in Cache::l1.Set()", err)
@@ -88,4 +82,9 @@ func (this *Cache) Set(key string, value []byte, expiration int32) {
 		log.Println("ERROR: in Cache::l2.Set()", err)
 	}
 	return
+}
+
+func (this *Cache) Remove(key string) {
+	this.l1.Del([]byte(key))
+	this.l2.Delete(key)
 }

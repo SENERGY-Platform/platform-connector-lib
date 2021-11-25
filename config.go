@@ -92,6 +92,8 @@ type Config struct {
 	StatisticsInterval string
 
 	NotificationUrl string
+
+	DeviceTypeTopic string
 }
 
 //loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

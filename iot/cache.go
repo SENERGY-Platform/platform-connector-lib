@@ -227,7 +227,7 @@ func (this *PreparedCache) GetProtocol(token security.JwtToken, id string) (resu
 	if err != nil {
 		return protocol, err
 	}
-	this.writerotocolToCache(id, protocol)
+	this.writeProtocolToCache(id, protocol)
 	return protocol, err
 }
 
@@ -238,7 +238,7 @@ func (this *PreparedCache) readProtocolFromCache(id string) (result model.Protoc
 	return
 }
 
-func (this *PreparedCache) writerotocolToCache(id string, protocol model.Protocol) {
+func (this *PreparedCache) writeProtocolToCache(id string, protocol model.Protocol) {
 	this.mux.Lock()
 	defer this.mux.Unlock()
 	this.protocol[id] = protocol
@@ -276,6 +276,10 @@ func (this *PreparedCache) Use(key string, getter func() (interface{}, error), r
 	}
 	this.Set(key, value, expiration)
 	return json.Unmarshal(value, &result)
+}
+
+func (this *PreparedCache) InvalidateDeviceTypeCache(deviceTypeId string) {
+	this.cache.Remove("dt." + deviceTypeId)
 }
 
 func (this *Cache) GetDevice(id string) (result model.Device, err error) {

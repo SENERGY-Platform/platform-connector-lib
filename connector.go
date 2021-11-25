@@ -18,6 +18,7 @@ package platform_connector_lib
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/httpcommand"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
@@ -171,9 +172,9 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 	}
 
 	used := false
+	maxWait := 100 * time.Millisecond
 
 	if this.Config.Protocol != "" && this.Config.Protocol != "-" {
-		maxWait := 100 * time.Millisecond
 		if this.Config.KafkaConsumerMaxWait != "" && this.Config.KafkaConsumerMaxWait != "-" {
 			maxWait, err = time.ParseDuration(this.Config.KafkaConsumerMaxWait)
 			if err != nil {
@@ -216,7 +217,42 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 	if !used {
 		return errors.New("no command consumer set; at least one of the following config fields must be set: Protocol, HttpCommandConsumerPort")
 	}
+
+	//iot cache invalidation
+	if this.Config.DeviceTypeTopic != "" && this.Config.DeviceTypeTopic != "-" {
+		err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
+			KafkaUrl: this.Config.KafkaUrl,
+			GroupId:  this.Config.KafkaGroupName,
+			Topic:    this.Config.DeviceTypeTopic,
+			MinBytes: this.Config.KafkaConsumerMinBytes,
+			MaxBytes: this.Config.KafkaConsumerMaxBytes,
+			MaxWait:  maxWait,
+		}, func(topic string, msg []byte, t time.Time) error {
+			if string(msg) == "topic_init" {
+				return nil
+			}
+			command := DeviceTypeCommand{}
+			err = json.Unmarshal(msg, &command)
+			if err != nil {
+				log.Println("ERROR: unable to unmarshal "+this.Config.DeviceTypeTopic+" message", err)
+				return nil
+			}
+			if command.Command == "DELETE" {
+				log.Println("invalidate cache for", command.Id)
+				this.IotCache.InvalidateDeviceTypeCache(command.Id)
+			}
+			return nil
+		}, func(err error) {
+			log.Println("ERROR: kafka consumer", this.Config.DeviceTypeTopic, err)
+		})
+	}
+
 	return nil
+}
+
+type DeviceTypeCommand struct {
+	Command string `json:"command"`
+	Id      string `json:"id"`
 }
 
 func (this *Connector) InitProducer(ctx context.Context, qosList []Qos) (err error) {
