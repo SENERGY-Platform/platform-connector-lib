@@ -237,10 +237,8 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 				log.Println("ERROR: unable to unmarshal "+this.Config.DeviceTypeTopic+" message", err)
 				return nil
 			}
-			if command.Command == "DELETE" {
-				log.Println("invalidate cache for", command.Id)
-				this.IotCache.InvalidateDeviceTypeCache(command.Id)
-			}
+			log.Println("invalidate cache for", command.Id)
+			this.IotCache.InvalidateDeviceTypeCache(command.Id)
 			return nil
 		}, func(err error) {
 			log.Println("ERROR: kafka consumer", this.Config.DeviceTypeTopic, err)
