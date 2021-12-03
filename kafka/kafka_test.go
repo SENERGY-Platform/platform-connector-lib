@@ -40,13 +40,13 @@ func TestProducer_Produce(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	err = InitTopic(kafkaUrl, "test")
+	err = InitTopic(kafkaUrl, nil, "test")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = InitTopic(kafkaUrl, "test2")
+	err = InitTopic(kafkaUrl, nil, "test2")
 	if err != nil {
 		t.Error(err)
 		return

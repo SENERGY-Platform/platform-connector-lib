@@ -28,6 +28,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/psql"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
+	kafka2 "github.com/segmentio/kafka-go"
 	"log"
 	"strconv"
 	"sync"
@@ -72,6 +73,7 @@ type Connector struct {
 }
 
 func New(config Config) (connector *Connector) {
+	config = setConfigDefaults(config)
 	var publisher *psql.Publisher
 	var err error
 	if config.PublishToPostgres {
@@ -114,6 +116,58 @@ func New(config Config) (connector *Connector) {
 	}
 	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheMaxIdleConns, iotCacheTimeout, config.IotCacheUrl...)
 	return
+}
+
+func setConfigDefaults(config Config) Config {
+	if config.KafkaTopicConfigs == nil {
+		config.KafkaTopicConfigs = map[string][]kafka2.ConfigEntry{
+			config.DeviceTypeTopic: {
+				{
+					ConfigName:  "retention.ms",
+					ConfigValue: "-1",
+				},
+				{
+					ConfigName:  "retention.bytes",
+					ConfigValue: "-1",
+				},
+				{
+					ConfigName:  "cleanup.policy",
+					ConfigValue: "compact",
+				},
+				{
+					ConfigName:  "delete.retention.ms",
+					ConfigValue: "86400000",
+				},
+				{
+					ConfigName:  "segment.ms",
+					ConfigValue: "604800000",
+				},
+				{
+					ConfigName:  "min.cleanable.dirty.ratio",
+					ConfigValue: "0.1",
+				},
+			},
+			config.KafkaResponseTopic: {
+				{
+					ConfigName:  "retention.ms",
+					ConfigValue: "86400000", //1000 * 60 * 60 * 24
+				},
+			},
+			config.Protocol: {
+				{
+					ConfigName:  "retention.ms",
+					ConfigValue: "86400000", //1000 * 60 * 60 * 24
+				},
+			},
+			"urn_infai_ses_service_": {
+				{
+					ConfigName:  "retention.ms",
+					ConfigValue: "31536000000", //365 * 1000 * 60 * 60 * 24
+				},
+			},
+		}
+	}
+	return config
 }
 
 func (this *Connector) SetKafkaLogger(logger *log.Logger) {
@@ -184,12 +238,13 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 
 		used = true
 		err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
-			KafkaUrl: this.Config.KafkaUrl,
-			GroupId:  this.Config.KafkaGroupName,
-			Topic:    this.Config.Protocol,
-			MinBytes: this.Config.KafkaConsumerMinBytes,
-			MaxBytes: this.Config.KafkaConsumerMaxBytes,
-			MaxWait:  maxWait,
+			KafkaUrl:       this.Config.KafkaUrl,
+			GroupId:        this.Config.KafkaGroupName,
+			Topic:          this.Config.Protocol,
+			MinBytes:       this.Config.KafkaConsumerMinBytes,
+			MaxBytes:       this.Config.KafkaConsumerMaxBytes,
+			MaxWait:        maxWait,
+			TopicConfigMap: this.Config.KafkaTopicConfigs,
 		}, func(topic string, msg []byte, t time.Time) error {
 			if string(msg) == "topic_init" {
 				return nil
@@ -221,12 +276,13 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 	//iot cache invalidation
 	if this.Config.DeviceTypeTopic != "" && this.Config.DeviceTypeTopic != "-" {
 		err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
-			KafkaUrl: this.Config.KafkaUrl,
-			GroupId:  this.Config.KafkaGroupName,
-			Topic:    this.Config.DeviceTypeTopic,
-			MinBytes: this.Config.KafkaConsumerMinBytes,
-			MaxBytes: this.Config.KafkaConsumerMaxBytes,
-			MaxWait:  maxWait,
+			KafkaUrl:       this.Config.KafkaUrl,
+			GroupId:        this.Config.KafkaGroupName,
+			Topic:          this.Config.DeviceTypeTopic,
+			MinBytes:       this.Config.KafkaConsumerMinBytes,
+			MaxBytes:       this.Config.KafkaConsumerMaxBytes,
+			MaxWait:        maxWait,
+			TopicConfigMap: this.Config.KafkaTopicConfigs,
 		}, func(topic string, msg []byte, t time.Time) error {
 			if string(msg) == "topic_init" {
 				return nil
@@ -297,6 +353,7 @@ func (this *Connector) initProducer(ctx context.Context, qos Qos) (err error) {
 		SyncIdempotent:      idempotent,
 		PartitionNum:        partitionsNum,
 		ReplicationFactor:   replFactor,
+		TopicConfigMap:      this.Config.KafkaTopicConfigs,
 	})
 	if err != nil {
 		log.Println("ERROR: ", err)

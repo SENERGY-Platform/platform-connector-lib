@@ -26,12 +26,13 @@ import (
 )
 
 type ConsumerConfig struct {
-	KafkaUrl string
-	GroupId  string
-	Topic    string
-	MinBytes int
-	MaxBytes int
-	MaxWait  time.Duration
+	KafkaUrl       string
+	GroupId        string
+	Topic          string
+	MinBytes       int
+	MaxBytes       int
+	MaxWait        time.Duration
+	TopicConfigMap map[string][]kafka.ConfigEntry
 }
 
 func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error)) (err error) {
@@ -41,7 +42,7 @@ func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic
 		log.Println("ERROR: unable to get broker list", err)
 		return err
 	}
-	err = InitTopic(config.KafkaUrl, config.Topic)
+	err = InitTopic(config.KafkaUrl, config.TopicConfigMap, config.Topic)
 	if err != nil {
 		log.Println("ERROR: unable to create topic", err)
 		return err

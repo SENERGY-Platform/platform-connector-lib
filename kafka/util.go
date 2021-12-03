@@ -22,13 +22,14 @@ import (
 	"net"
 	"runtime/debug"
 	"strconv"
+	"strings"
 )
 
-func EnsureTopic(topic string, kafkaUrl string, knownTopics *map[string]bool, partitions int, replicationFactor int) (err error) {
+func EnsureTopic(topic string, kafkaUrl string, knownTopics *map[string]bool, configMap map[string][]kafka.ConfigEntry, partitions int, replicationFactor int) (err error) {
 	if (*knownTopics)[topic] {
 		return nil
 	}
-	err = InitTopicWithConfig(kafkaUrl, partitions, replicationFactor, topic)
+	err = InitTopicWithConfig(kafkaUrl, configMap, partitions, replicationFactor, topic)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
@@ -58,11 +59,11 @@ func getBroker(bootstrapUrl string) (result []string, err error) {
 	return result, nil
 }
 
-func InitTopic(kafkaUrl string, topics ...string) (err error) {
-	return InitTopicWithConfig(kafkaUrl, 1, 1, topics...)
+func InitTopic(kafkaUrl string, configMap map[string][]kafka.ConfigEntry, topics ...string) (err error) {
+	return InitTopicWithConfig(kafkaUrl, configMap, 1, 1, topics...)
 }
 
-func InitTopicWithConfig(bootstrapUrl string, numPartitions int, replicationFactor int, topics ...string) (err error) {
+func InitTopicWithConfig(bootstrapUrl string, configMap map[string][]kafka.ConfigEntry, numPartitions int, replicationFactor int, topics ...string) (err error) {
 	conn, err := kafka.Dial("tcp", bootstrapUrl)
 	if err != nil {
 		return err
@@ -87,8 +88,25 @@ func InitTopicWithConfig(bootstrapUrl string, numPartitions int, replicationFact
 			Topic:             topic,
 			NumPartitions:     numPartitions,
 			ReplicationFactor: replicationFactor,
+			ConfigEntries:     GetTopicConfig(configMap, topic),
 		})
 	}
 
 	return controllerConn.CreateTopics(topicConfigs...)
+}
+
+func GetTopicConfig(configMap map[string][]kafka.ConfigEntry, topic string) []kafka.ConfigEntry {
+	if configMap == nil {
+		return nil
+	}
+	result, exists := configMap[topic]
+	if exists {
+		return result
+	}
+	for key, conf := range configMap {
+		if strings.HasPrefix(topic, key) {
+			return conf
+		}
+	}
+	return nil
 }
