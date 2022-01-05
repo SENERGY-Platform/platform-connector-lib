@@ -81,7 +81,11 @@ func (this *Iot) CreateHubWithFixedId(hub model.Hub, adminToken security.JwtToke
 }
 
 func (this *Iot) ExistsHub(id string, cred security.JwtToken) (exists bool, err error) {
-	exists, err = cred.Head(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?&p=x")
+	var code int
+	code, err = cred.Head(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?p=x")
+	if code < 300 {
+		exists = true
+	}
 	return
 }
 
