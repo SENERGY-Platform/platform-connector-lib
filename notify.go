@@ -29,7 +29,15 @@ import (
 	"time"
 )
 
-func (this *Connector) notifyMessageError(device model.Device, service model.Service, errMsg error) {
+func (this *Connector) notifyMessageFormatError(device model.Device, service model.Service, errMsg error) {
+	if this.Config.NotificationUrl == "" {
+		log.Println("WARNING: no NotificationUrl configured")
+		return
+	}
+	this.notifyDeviceOnwners(device, createMessageFormatErrorNotification(device, service, errMsg))
+}
+
+func (this *Connector) notifyDeviceOnwners(device model.Device, message Notification) {
 	if this.Config.NotificationUrl == "" {
 		log.Println("WARNING: no NotificationUrl configured")
 		return
@@ -46,11 +54,10 @@ func (this *Connector) notifyMessageError(device model.Device, service model.Ser
 		debug.PrintStack()
 		return
 	}
-	message := createNotifierMessage(device, service, errMsg)
 	for user, userRights := range rights.UserRights {
 		if userRights.Administrate {
 			message.UserId = user
-			err = this.sendNotification(message)
+			err = this.SendNotification(message)
 			if err != nil {
 				log.Println(err)
 				debug.PrintStack()
@@ -60,14 +67,14 @@ func (this *Connector) notifyMessageError(device model.Device, service model.Ser
 	}
 }
 
-func createNotifierMessage(device model.Device, service model.Service, err error) Notification {
+func createMessageFormatErrorNotification(device model.Device, service model.Service, err error) Notification {
 	return Notification{
 		Title:   "Device-Message Format-Error",
 		Message: "Error: " + err.Error() + "\n\nDevice: " + device.Name + " (" + device.Id + ")" + "\nService: " + service.Name + " (" + service.LocalId + ")",
 	}
 }
 
-func (this *Connector) sendNotification(message Notification) error {
+func (this *Connector) SendNotification(message Notification) error {
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(message)
 	if err != nil {

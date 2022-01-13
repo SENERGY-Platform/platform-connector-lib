@@ -44,6 +44,7 @@ type Metadata struct {
 	OutputCharacteristic string   `json:"output_characteristic,omitempty"`
 	ContentVariableHints []string `json:"content_variable_hints,omitempty"`
 	ResponseTo           string   `json:"response_to,omitempty"`
+	ErrorTo              string   `json:"error_to,omitempty"`
 }
 
 type ProtocolMsg struct {

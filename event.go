@@ -79,17 +79,17 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 
 	err = unitreference.FillUnitsForService(&service, token, this.IotCache)
 	if err != nil {
-		this.notifyMessageError(device, service, err)
+		this.notifyMessageFormatError(device, service, err)
 		return result, err
 	}
 	result, err = this.CleanMsg(result, service)
 	if err != nil {
-		this.notifyMessageError(device, service, err)
+		this.notifyMessageFormatError(device, service, err)
 		return result, err
 	}
 	err = this.ValidateMsg(result, service)
 	if err != nil {
-		this.notifyMessageError(device, service, err)
+		this.notifyMessageFormatError(device, service, err)
 		return result, err
 	}
 	return result, err
