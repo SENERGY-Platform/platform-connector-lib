@@ -73,6 +73,7 @@ func (this *Connector) HandleCommandError(userId string, commandRequest model.Pr
 
 	topic := commandRequest.Metadata.ErrorTo
 	if topic == "" {
+		log.Println("WARNING: no Metadata.ErrorTo value set in command --> error will not be forwarded")
 		return
 	}
 
