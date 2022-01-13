@@ -77,6 +77,9 @@ func (this *Connector) HandleCommandError(userId string, commandRequest model.Pr
 		return
 	}
 
+	if commandRequest.Response.Output == nil {
+		commandRequest.Response.Output = map[string]string{}
+	}
 	commandRequest.Response.Output["error"] = errorMessage
 	responseMsg, err := json.Marshal(commandRequest)
 	if err != nil {
