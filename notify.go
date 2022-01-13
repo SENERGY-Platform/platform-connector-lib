@@ -75,6 +75,10 @@ func createMessageFormatErrorNotification(device model.Device, service model.Ser
 }
 
 func (this *Connector) SendNotification(message Notification) error {
+	if this.Config.NotificationUrl == "" {
+		log.Println("WARNING: no NotificationUrl configured")
+		return nil
+	}
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(message)
 	if err != nil {
