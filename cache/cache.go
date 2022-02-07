@@ -27,9 +27,12 @@ type Item struct {
 var ErrNotFound = errors.New("key not found in cache")
 
 func New(maxIdleConns int, timeout time.Duration, memcacheUrl ...string) *Cache {
-	m := memcache.New(memcacheUrl...)
-	m.MaxIdleConns = maxIdleConns
-	m.Timeout = timeout
+	var m *memcache.Client
+	if len(memcacheUrl) != 0 {
+		m = memcache.New(memcacheUrl...)
+		m.MaxIdleConns = maxIdleConns
+		m.Timeout = timeout
+	}
 	return &Cache{l1: freecache.NewCache(L1Size), l2: m, statistics: statistics.Void{}}
 }
 
@@ -51,6 +54,10 @@ func (this *Cache) Get(key string) (item Item, err error) {
 		log.Println("ERROR: in Cache::l1.Get()", err)
 	}
 	if err != nil {
+		if this.l2 == nil {
+			err = ErrNotFound
+			return
+		}
 		if Debug {
 			log.Println("DEBUG: use l2 cache", key, err)
 		}
@@ -77,14 +84,18 @@ func (this *Cache) Set(key string, value []byte, expiration int32) {
 	if err != nil {
 		log.Println("ERROR: in Cache::l1.Set()", err)
 	}
-	err = this.l2.Set(&memcache.Item{Value: value, Expiration: expiration, Key: key})
-	if err != nil {
-		log.Println("ERROR: in Cache::l2.Set()", err)
+	if this.l2 != nil {
+		err = this.l2.Set(&memcache.Item{Value: value, Expiration: expiration, Key: key})
+		if err != nil {
+			log.Println("ERROR: in Cache::l2.Set()", err)
+		}
 	}
 	return
 }
 
 func (this *Cache) Remove(key string) {
 	this.l1.Del([]byte(key))
-	this.l2.Delete(key)
+	if this.l2 != nil {
+		this.l2.Delete(key)
+	}
 }
