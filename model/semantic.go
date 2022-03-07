@@ -17,23 +17,24 @@
 package model
 
 type DeviceClass struct {
-	Id      string `json:"id"`
-	Name    string `json:"name"`
-	Image   string `json:"image"`
-	RdfType string `json:"rdf_type"`
+	Id    string `json:"id"`
+	Image string `json:"image"`
+	Name  string `json:"name"`
 }
 
 type Function struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
-	ConceptId string `json:"concept_id"`
-	RdfType   string `json:"rdf_type"`
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	DisplayName string `json:"display_name"`
+	Description string `json:"description"`
+	ConceptId   string `json:"concept_id"`
+	RdfType     string `json:"rdf_type"`
 }
 
 type Aspect struct {
-	Id      string `json:"id"`
-	Name    string `json:"name"`
-	RdfType string `json:"rdf_type"`
+	Id         string   `json:"id"`
+	Name       string   `json:"name"`
+	SubAspects []Aspect `json:"sub_aspects"`
 }
 
 type Concept struct {
@@ -41,16 +42,37 @@ type Concept struct {
 	Name                 string   `json:"name"`
 	CharacteristicIds    []string `json:"characteristic_ids"`
 	BaseCharacteristicId string   `json:"base_characteristic_id"`
-	RdfType              string   `json:"rdf_type"`
 }
 
 type Characteristic struct {
 	Id                 string           `json:"id"`
 	Name               string           `json:"name"`
+	DisplayUnit        string           `json:"display_unit"`
 	Type               Type             `json:"type"`
 	MinValue           interface{}      `json:"min_value,omitempty"`
 	MaxValue           interface{}      `json:"max_value,omitempty"`
 	Value              interface{}      `json:"value,omitempty"`
 	SubCharacteristics []Characteristic `json:"sub_characteristics"`
-	RdfType            string           `json:"rdf_type"`
+}
+
+type ConceptWithCharacteristics struct {
+	Id                   string           `json:"id"`
+	Name                 string           `json:"name"`
+	BaseCharacteristicId string           `json:"base_characteristic_id"`
+	Characteristics      []Characteristic `json:"characteristics"`
+}
+
+type Location struct {
+	Id             string   `json:"id"`
+	Name           string   `json:"name"`
+	Description    string   `json:"description"`
+	Image          string   `json:"image"`
+	DeviceIds      []string `json:"device_ids"`
+	DeviceGroupIds []string `json:"device_group_ids"`
+}
+
+type FilterCriteria struct {
+	FunctionId    string `json:"function_id"`
+	DeviceClassId string `json:"device_class_id"`
+	AspectId      string `json:"aspect_id"`
 }

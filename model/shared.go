@@ -40,17 +40,16 @@ type Attribute struct {
 }
 
 type Service struct {
-	Id          string      `json:"id"`
-	LocalId     string      `json:"local_id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Interaction Interaction `json:"interaction"`
-	AspectIds   []string    `json:"aspect_ids"`
-	ProtocolId  string      `json:"protocol_id"`
-	Inputs      []Content   `json:"inputs"`
-	Outputs     []Content   `json:"outputs"`
-	FunctionIds []string    `json:"function_ids"`
-	RdfType     string      `json:"rdf_type"`
+	Id              string      `json:"id"`
+	LocalId         string      `json:"local_id"`
+	Name            string      `json:"name"`
+	Description     string      `json:"description"`
+	Interaction     Interaction `json:"interaction"`
+	ProtocolId      string      `json:"protocol_id"`
+	Inputs          []Content   `json:"inputs"`
+	Outputs         []Content   `json:"outputs"`
+	Attributes      []Attribute `json:"attributes"`
+	ServiceGroupKey string      `json:"service_group_key"`
 }
 
 type Interaction string

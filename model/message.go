@@ -37,14 +37,18 @@ type ProtocolResponse struct {
 }
 
 type Metadata struct {
-	Device               Device   `json:"device"`
-	Service              Service  `json:"service"`
-	Protocol             Protocol `json:"protocol"`
-	InputCharacteristic  string   `json:"input_characteristic,omitempty"`
-	OutputCharacteristic string   `json:"output_characteristic,omitempty"`
-	ContentVariableHints []string `json:"content_variable_hints,omitempty"`
-	ResponseTo           string   `json:"response_to,omitempty"`
-	ErrorTo              string   `json:"error_to,omitempty"`
+	Version              int64       `json:"version,omitempty"`
+	Device               Device      `json:"device"`
+	Service              Service     `json:"service"`
+	Protocol             Protocol    `json:"protocol"`
+	OutputPath           string      `json:"output_path,omitempty"`        //only for version >= 3
+	OutputFunctionId     string      `json:"output_function_id,omitempty"` //only for version >= 3 if no OutputPath is known
+	OutputAspectNode     *AspectNode `json:"output_aspect_node,omitempty"` //only for version >= 3 if no OutputPath is known
+	InputCharacteristic  string      `json:"input_characteristic,omitempty"`
+	OutputCharacteristic string      `json:"output_characteristic,omitempty"`
+	ContentVariableHints []string    `json:"content_variable_hints,omitempty"`
+	ResponseTo           string      `json:"response_to,omitempty"`
+	ErrorTo              string      `json:"error_to,omitempty"`
 }
 
 type ProtocolMsg struct {
