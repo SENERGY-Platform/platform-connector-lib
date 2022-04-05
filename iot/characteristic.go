@@ -60,7 +60,7 @@ func (this *Iot) GetCharacteristicById(id string, token security.JwtToken) (char
 	if id == "" {
 		return characteristic, errors.New("characteristid can not be empty")
 	}
-	resp, err := token.Get(this.semanticRepositoryUrl + "/characteristics/" + id)
+	resp, err := token.Get(this.repo_url + "/characteristics/" + id)
 	if err != nil {
 		return characteristic, err
 	}

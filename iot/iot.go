@@ -5,15 +5,14 @@ import (
 )
 
 type Iot struct {
-	manager_url           string
-	repo_url              string
-	semanticRepositoryUrl string
-	permQueryUrl          string
-	statistics            statistics.Interface
+	manager_url  string
+	repo_url     string
+	permQueryUrl string
+	statistics   statistics.Interface
 }
 
-func New(deviceManagerUrl string, deviceRepoUrl string, semanticRepoUrl string, permQueryUrl string) *Iot {
-	return &Iot{manager_url: deviceManagerUrl, repo_url: deviceRepoUrl, semanticRepositoryUrl: semanticRepoUrl, permQueryUrl: permQueryUrl, statistics: statistics.Void{}}
+func New(deviceManagerUrl string, deviceRepoUrl string, permQueryUrl string) *Iot {
+	return &Iot{manager_url: deviceManagerUrl, repo_url: deviceRepoUrl, permQueryUrl: permQueryUrl, statistics: statistics.Void{}}
 }
 
 func (this *Iot) SetStatisticsCollector(collector statistics.Interface) *Iot {

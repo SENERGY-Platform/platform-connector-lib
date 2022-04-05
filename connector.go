@@ -90,7 +90,7 @@ func New(config Config) (connector *Connector) {
 
 	connector = &Connector{
 		Config: config,
-		iot:    iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.SemanticRepositoryUrl, config.PermQueryUrl),
+		iot:    iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.PermQueryUrl),
 		security: security.New(
 			config.AuthEndpoint,
 			config.AuthClientId,

@@ -61,7 +61,6 @@ type Config struct {
 	ValidateAllowUnknownField bool
 	ValidateAllowMissingField bool
 
-	SemanticRepositoryUrl    string
 	CharacteristicExpiration int32
 	PartitionsNum            int
 	ReplicationFactor        int

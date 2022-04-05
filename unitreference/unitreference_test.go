@@ -98,7 +98,7 @@ func NewSemanticRepositoryMock() (mockCtrl *iot2.Controller, repo SemanticReposi
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	iotrepo := iot.New(iotMockUrl, iotMockUrl, iotMockUrl, "")
+	iotrepo := iot.New(iotMockUrl, iotMockUrl, "")
 	cache := iot.NewCache(iotrepo, 60, 60, 60, 2, 200*time.Millisecond)
 	return mock, cache, cancel, nil
 }
