@@ -106,6 +106,7 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 		log.Println("ERROR: handleDeviceRefEvent::GetDeviceType", err)
 		return err
 	}
+	found := false
 	for _, service := range dt.Services {
 		if service.LocalId == serviceUri && len(service.Outputs) > 0 {
 			err = this.handleDeviceEvent(token, device.Id, service.Id, msg, qos)
@@ -113,10 +114,13 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 				log.Println("ERROR: handleDeviceRefEvent::handleDeviceEvent", err)
 				return err
 			}
-			return nil
+			found = true
 		}
 	}
-	return ErrorUnknownLocalServiceId
+	if !found {
+		return ErrorUnknownLocalServiceId
+	}
+	return nil
 }
 
 func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, msg EventMsg, qos Qos) (err error) {
