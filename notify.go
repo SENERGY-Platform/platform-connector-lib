@@ -86,8 +86,8 @@ func (this *Connector) SendNotification(message Notification) error {
 		return err
 	}
 	ignoreDuplicatesWithinS := "3600"
-	if this.Config.IgnoreDuplicatesWithinS > 0 {
-		ignoreDuplicatesWithinS = strconv.Itoa(this.Config.IgnoreDuplicatesWithinS)
+	if this.Config.NotificationsIgnoreDuplicatesWithinS > 0 {
+		ignoreDuplicatesWithinS = strconv.Itoa(this.Config.NotificationsIgnoreDuplicatesWithinS)
 	}
 	req, err := http.NewRequest("POST", this.Config.NotificationUrl+"/notifications?ignore_duplicates_within_seconds="+ignoreDuplicatesWithinS, b)
 	if err != nil {
