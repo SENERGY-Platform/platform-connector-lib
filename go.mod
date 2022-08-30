@@ -6,10 +6,8 @@ require (
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Shopify/sarama v1.22.0
 	github.com/bradfitz/gomemcache v0.0.0-20180710155616-bc664df96737
-	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/clbanning/mxj v1.8.4
 	github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb // indirect
-	github.com/coocood/freecache v1.1.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/influxdata/influxdb v1.7.9
 	github.com/jackc/pgx/v4 v4.13.0
@@ -26,6 +24,8 @@ require (
 	go.mongodb.org/mongo-driver v1.7.0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 )
+
+require github.com/patrickmn/go-cache v2.1.0+incompatible
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
