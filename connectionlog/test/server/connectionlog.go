@@ -27,7 +27,7 @@ import (
 
 func Connectionlog(pool *dockertest.Pool, ctx context.Context, mongourl string, permurl string, influxurl string) (hostPort string, ipAddress string, err error) {
 	log.Println("start connectionlog")
-	repo, err := pool.Run("fgseitsrancher.wifa.intern.uni-leipzig.de:5000/connection-log", "dev", []string{
+	repo, err := pool.Run("ghcr.io/senergy-platform/connectionlog", "dev", []string{
 		"MONGO_URL=" + mongourl,
 		"PERMISSIONS_URL=" + permurl,
 		"INFLUXDB_URL=" + influxurl,
@@ -57,7 +57,7 @@ func Connectionlog(pool *dockertest.Pool, ctx context.Context, mongourl string, 
 
 func ConnectionlogWorker(pool *dockertest.Pool, ctx context.Context, mongourl string, influxurl string, kafkaUrl string) (hostPort string, ipAddress string, err error) {
 	log.Println("start connectionlog")
-	repo, err := pool.Run("fgseitsrancher.wifa.intern.uni-leipzig.de:5000/connection-log-worker", "dev", []string{
+	repo, err := pool.Run("ghcr.io/senergy-platform/connectionlog-worker", "dev", []string{
 		"MONGO_URL=" + mongourl,
 		"INFLUXDB_URL=" + influxurl,
 		"INFLUXDB_TIMEOUT=3",

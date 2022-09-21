@@ -47,7 +47,7 @@ func Elasticsearch(pool *dockertest.Pool, ctx context.Context) (hostPort string,
 
 func PermSearch(pool *dockertest.Pool, ctx context.Context, kafkaUrl string, elasticIp string) (hostPort string, ipAddress string, err error) {
 	log.Println("start permsearch")
-	container, err := pool.Run("fgseitsrancher.wifa.intern.uni-leipzig.de:5000/permission-search", "dev", []string{
+	container, err := pool.Run("ghcr.io/senergy-platform/permission-search", "dev", []string{
 		"KAFKA_URL=" + kafkaUrl,
 		"ELASTIC_URL=" + "http://" + elasticIp + ":9200",
 	})
