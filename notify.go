@@ -35,10 +35,10 @@ func (this *Connector) notifyMessageFormatError(device model.Device, service mod
 		log.Println("WARNING: no NotificationUrl configured")
 		return
 	}
-	this.notifyDeviceOnwners(device, createMessageFormatErrorNotification(device, service, errMsg))
+	this.notifyDeviceOnwners(device.Id, createMessageFormatErrorNotification(device, service, errMsg))
 }
 
-func (this *Connector) notifyDeviceOnwners(device model.Device, message Notification) {
+func (this *Connector) notifyDeviceOnwners(deviceId string, message Notification) {
 	if this.Config.NotificationUrl == "" {
 		log.Println("WARNING: no NotificationUrl configured")
 		return
@@ -49,7 +49,7 @@ func (this *Connector) notifyDeviceOnwners(device model.Device, message Notifica
 		debug.PrintStack()
 		return
 	}
-	rights, err := this.Iot().GetDeviceUserRights(token, device.Id)
+	rights, err := this.Iot().GetDeviceUserRights(token, deviceId)
 	if err != nil {
 		log.Println(err)
 		debug.PrintStack()

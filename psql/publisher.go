@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/SENERGY-Platform/converter/lib/converter"
+	"github.com/SENERGY-Platform/converter/lib/converter/characteristics"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
@@ -30,11 +32,20 @@ import (
 )
 
 type Publisher struct {
-	db    *pgxpool.Pool
-	debug bool
+	db                               *pgxpool.Pool
+	debug                            bool
+	serviceIdTimeCharacteristicCache map[string]characteristicIdTimestamp
+	conv                             *converter.Converter
+}
+
+type characteristicIdTimestamp struct {
+	CharacteristicId string
+	Timestamp        time.Time
 }
 
 var ConnectionTimeout = 10 * time.Second
+var timeAttributeKey = "senergy/time_path"
+var cacheDuration = 5 * time.Minute
 
 func New(postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, debugLog bool, wg *sync.WaitGroup, basectx context.Context) (*Publisher, error) {
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", postgresHost,
@@ -45,6 +56,11 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 		return nil, err
 	}
 	config.MaxConns = 50
+
+	conv, err := converter.New()
+	if err != nil {
+		return nil, err
+	}
 
 	ctx, cancel := context.WithCancel(basectx)
 	timeout, timeoutcancel := context.WithTimeout(basectx, ConnectionTimeout)
@@ -75,28 +91,30 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 		wg.Done()
 	}()
 	return &Publisher{
-		db:    db,
-		debug: debugLog,
+		db:                               db,
+		debug:                            debugLog,
+		serviceIdTimeCharacteristicCache: map[string]characteristicIdTimestamp{},
+		conv:                             conv,
 	}, nil
 }
 
 var SlowProducerTimeout time.Duration = 2 * time.Second
 
-func (publisher *Publisher) Publish(envelope model.Envelope) (err error) {
+func (publisher *Publisher) Publish(envelope model.Envelope, service model.Service) (err error, notifyUsers bool) {
 	start := time.Now()
 	jsonMsg, ok := envelope.Value.(map[string]interface{})
 	if !ok {
-		return errors.New("envelope.Value is no map[string]interface{}")
+		return errors.New("envelope.Value is no map[string]interface{}"), false
 	}
 	m := flatten(jsonMsg)
 
 	shortDeviceId, err := ShortenId(envelope.DeviceId)
 	if err != nil {
-		return err
+		return err, false
 	}
 	shortServiceId, err := ShortenId(envelope.ServiceId)
 	if err != nil {
-		return err
+		return err, false
 	}
 	table := "device:" + shortDeviceId + "_" + "service:" + shortServiceId
 
@@ -106,7 +124,42 @@ func (publisher *Publisher) Publish(envelope model.Envelope) (err error) {
 	values := make([]string, len(m)+1)
 
 	fields[0] = "\"time\""
-	values[0] = "'" + time.Now().Format(time.RFC3339Nano) + "'"
+
+	timeStr := time.Now().UTC().Format(time.RFC3339Nano)
+	for _, attr := range service.Attributes {
+		if attr.Key == timeAttributeKey && len(attr.Value) > 0 {
+			cachedCharacteristicIdTimestamp, ok := publisher.serviceIdTimeCharacteristicCache[service.Id]
+			if !ok || time.Now().Sub(cachedCharacteristicIdTimestamp.Timestamp) > cacheDuration {
+				pathParts := strings.Split(attr.Value, ".")
+				for _, output := range service.Outputs {
+					if output.ContentVariable.Name != pathParts[0] {
+						continue
+					}
+					timeContentVariable := getDeepContentVariable(output.ContentVariable, pathParts[1:])
+					if timeContentVariable == nil {
+						return errors.New("Can't find content variable with path " + attr.Value), true
+					}
+					cachedCharacteristicIdTimestamp = characteristicIdTimestamp{
+						CharacteristicId: timeContentVariable.CharacteristicId,
+						Timestamp:        time.Now(),
+					}
+					publisher.serviceIdTimeCharacteristicCache[service.Id] = cachedCharacteristicIdTimestamp
+				}
+			}
+			timeVal, ok := m[attr.Value]
+			if !ok {
+				return errors.New("Can't find value with path " + attr.Value + " in message"), true
+			}
+			timeVal, err = publisher.conv.Cast(timeVal, cachedCharacteristicIdTimestamp.CharacteristicId, characteristics.UnixNanoSeconds)
+			if err != nil {
+				return err, true
+			}
+			timeStr = time.Unix(0, timeVal.(int64)).UTC().Format(time.RFC3339Nano)
+			break
+		}
+	}
+
+	values[0] = "'" + timeStr + "'"
 
 	i := 1
 	for k, v := range m {
@@ -132,7 +185,7 @@ func (publisher *Publisher) Publish(envelope model.Envelope) (err error) {
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
 		log.Println("WARNING: finished slow timescale publisher call", time.Since(start), envelope.DeviceId, envelope.ServiceId)
 	}
-	return err
+	return err, false
 }
 
 func flatten(m map[string]interface{}) (values map[string]interface{}) {
@@ -151,4 +204,19 @@ func flatten(m map[string]interface{}) (values map[string]interface{}) {
 		}
 	}
 	return values
+}
+
+func getDeepContentVariable(root model.ContentVariable, path []string) *model.ContentVariable {
+	if len(path) == 0 {
+		return &root
+	}
+	if root.SubContentVariables == nil {
+		return nil
+	}
+	for _, sub := range root.SubContentVariables {
+		if sub.Name == path[0] {
+			return getDeepContentVariable(sub, path[1:])
+		}
+	}
+	return nil
 }

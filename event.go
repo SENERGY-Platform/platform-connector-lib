@@ -19,6 +19,7 @@ package platform_connector_lib
 import (
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
@@ -29,27 +30,13 @@ import (
 	"time"
 )
 
-func (this *Connector) unmarshalMsgFromRef(token security.JwtToken, deviceid string, serviceid string, msg map[string]string) (result map[string]interface{}, err error) {
+func (this *Connector) unmarshalMsgFromRef(token security.JwtToken, device model.Device, service model.Service, msg map[string]string, iot *iot.Cache) (result map[string]interface{}, err error) {
 	result = map[string]interface{}{}
-	iot := this.IotCache.WithToken(token)
-	device, err := iot.GetDevice(deviceid)
+	protocol, err := iot.GetProtocol(service.ProtocolId)
 	if err != nil {
 		return result, err
 	}
-	dt, err := iot.GetDeviceType(device.DeviceTypeId)
-	if err != nil {
-		return result, err
-	}
-	for _, service := range dt.Services {
-		if service.Id == serviceid {
-			protocol, err := iot.GetProtocol(service.ProtocolId)
-			if err != nil {
-				return result, err
-			}
-			return this.unmarshalMsg(token, device, service, protocol, msg)
-		}
-	}
-	return result, errors.New("unknown service id")
+	return this.unmarshalMsg(token, device, service, protocol, msg)
 }
 
 func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device, service model.Service, protocol model.Protocol, msg map[string]string) (result map[string]interface{}, err error) {
@@ -124,13 +111,32 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 }
 
 func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, msg EventMsg, qos Qos) (err error) {
-	eventValue, err := this.unmarshalMsgFromRef(token, deviceId, serviceId, msg)
+	cache := this.IotCache.WithToken(token)
+	device, err := cache.GetDevice(deviceId)
+	if err != nil {
+		return err
+	}
+	dt, err := cache.GetDeviceType(device.DeviceTypeId)
+	if err != nil {
+		return err
+	}
+	service := model.Service{}
+	for _, s := range dt.Services {
+		if s.Id == serviceId {
+			service = s
+			break
+		}
+	}
+	if len(service.Id) == 0 {
+		return errors.New("unknown service id")
+	}
+	eventValue, err := this.unmarshalMsgFromRef(token, device, service, msg, cache)
 	if err != nil {
 		return err
 	}
 	envelope := model.Envelope{DeviceId: deviceId, ServiceId: serviceId}
 	envelope.Value = eventValue
-	return this.sendEventEnvelope(envelope, qos)
+	return this.sendEventEnvelope(envelope, qos, service)
 }
 
 func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp CommandResponseMsg, qos Qos) {
@@ -150,7 +156,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	envelope := model.Envelope{DeviceId: cmd.Metadata.Device.Id, ServiceId: cmd.Metadata.Service.Id}
 	envelope.Value = eventValue
 
-	err = this.sendEventEnvelope(envelope, qos)
+	err = this.sendEventEnvelope(envelope, qos, cmd.Metadata.Service)
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
 		debug.PrintStack()
@@ -158,7 +164,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	}
 }
 
-func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error {
+func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, service model.Service) error {
 	jsonMsg, err := json.Marshal(envelope)
 	if err != nil {
 		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
@@ -197,9 +203,15 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos) error
 				}
 			}()
 			timescaleStart := time.Now()
-			pgErr = this.postgresPublisher.Publish(envelope)
+			pgErr, shouldNotify := this.postgresPublisher.Publish(envelope, service)
 			if pgErr != nil {
 				log.Println("ERROR: publish event to postgres ", pgErr)
+				if shouldNotify {
+					this.notifyDeviceOnwners(envelope.DeviceId, Notification{
+						Title:   "DeviceType Timescale Configuration Error",
+						Message: "Error: " + err.Error() + "\n\nDeviceId: " + envelope.DeviceId + "\nService: " + service.Name + " (" + service.LocalId + ")",
+					})
+				}
 				return
 			}
 			this.statistics.TimescaleWrite(time.Since(timescaleStart))
