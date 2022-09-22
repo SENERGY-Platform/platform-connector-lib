@@ -50,11 +50,7 @@ func (this *Cache) Get(key string) (item Item, err error) {
 	l1Value, ok := this.l1.Get(key)
 	if ok {
 		item.Value, ok = l1Value.([]byte)
-	}
-	if ok {
 		return
-	} else {
-		log.Println("ERROR: in Cache::l1.Get()", err)
 	}
 	if this.l2 == nil {
 		err = ErrNotFound
