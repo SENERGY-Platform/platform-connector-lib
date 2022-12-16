@@ -153,7 +153,8 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 		return
 	}
 
-	envelope := model.Envelope{DeviceId: cmd.Metadata.Device.Id, ServiceId: cmd.Metadata.Service.Id}
+	deviceId := TrimIdModifier(cmd.Metadata.Device.Id)
+	envelope := model.Envelope{DeviceId: deviceId, ServiceId: cmd.Metadata.Service.Id}
 	envelope.Value = eventValue
 
 	err = this.sendEventEnvelope(envelope, qos, cmd.Metadata.Service)
