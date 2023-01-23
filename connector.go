@@ -174,7 +174,7 @@ func (this *Connector) SetKafkaLogger(logger *log.Logger) {
 	this.kafkalogger = logger
 }
 
-//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
+// asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 func (this *Connector) SetDeviceCommandHandler(handler DeviceCommandHandler) *Connector {
 	if this.asyncCommandHandler != nil {
 		panic("try setting command handler while async command handler exists")
@@ -183,7 +183,7 @@ func (this *Connector) SetDeviceCommandHandler(handler DeviceCommandHandler) *Co
 	return this
 }
 
-//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
+// asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 func (this *Connector) SetAsyncCommandHandler(handler AsyncCommandHandler) *Connector {
 	if this.deviceCommandHandler != nil {
 		panic("try setting async command handler while device command handler exists")
