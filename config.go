@@ -89,8 +89,6 @@ type Config struct {
 	IotCacheTimeout      string
 	IotCacheMaxIdleConns int
 
-	StatisticsInterval string
-
 	NotificationUrl string
 
 	DeviceTypeTopic string
@@ -100,7 +98,7 @@ type Config struct {
 	NotificationsIgnoreDuplicatesWithinS int
 }
 
-//loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)
+// loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)
 func LoadConfig(location string) (config Config, err error) {
 	file, error := os.Open(location)
 	if error != nil {

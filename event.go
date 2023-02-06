@@ -23,6 +23,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"github.com/SENERGY-Platform/platform-connector-lib/unitreference"
 	"log"
 	"runtime/debug"
@@ -136,7 +137,12 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 	}
 	envelope := model.Envelope{DeviceId: deviceId, ServiceId: serviceId}
 	envelope.Value = eventValue
-	return this.sendEventEnvelope(envelope, qos, service)
+	pl, err := token.GetPayload()
+	if err != nil {
+		return err
+	}
+
+	return this.sendEventEnvelope(envelope, qos, service, pl.UserId)
 }
 
 func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp CommandResponseMsg, qos Qos) {
@@ -157,7 +163,14 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	envelope := model.Envelope{DeviceId: deviceId, ServiceId: cmd.Metadata.Service.Id}
 	envelope.Value = eventValue
 
-	err = this.sendEventEnvelope(envelope, qos, cmd.Metadata.Service)
+	pl, err := token.GetPayload()
+	if err != nil {
+		log.Println("ERROR: trySendingResponseAsEvent()", err)
+		debug.PrintStack()
+		return
+	}
+
+	err = this.sendEventEnvelope(envelope, qos, cmd.Metadata.Service, pl.UserId)
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
 		debug.PrintStack()
@@ -165,7 +178,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	}
 }
 
-func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, service model.Service) error {
+func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, service model.Service, userId string) error {
 	jsonMsg, err := json.Marshal(envelope)
 	if err != nil {
 		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
@@ -215,7 +228,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 				}
 				return
 			}
-			this.statistics.TimescaleWrite(time.Since(timescaleStart))
+			statistics.TimescaleWrite(time.Since(timescaleStart), userId)
 			return
 		}()
 	}
@@ -228,7 +241,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 		}
 		log.Println("ERROR: produce event on service topic ", kafkaErr)
 	}
-	this.statistics.KafkaWrite(time.Since(kafkaStart))
+	statistics.KafkaWrite(time.Since(kafkaStart), userId)
 
 	pgWg.Wait()
 

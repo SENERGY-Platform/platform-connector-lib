@@ -12,9 +12,8 @@ import (
 var Debug = false
 
 type Cache struct {
-	l1         *cache.Cache
-	l2         *memcache.Client
-	statistics statistics.Interface
+	l1 *cache.Cache
+	l2 *memcache.Client
 }
 
 type Item struct {
@@ -31,20 +30,15 @@ func New(maxIdleConns int, timeout time.Duration, memcacheUrl ...string) *Cache 
 		m.MaxIdleConns = maxIdleConns
 		m.Timeout = timeout
 	}
-	return &Cache{l1: cache.New(10*time.Second, 30*time.Second), l2: m, statistics: statistics.Void{}}
-}
-
-func (this *Cache) SetStatisticsCollector(collector statistics.Interface) *Cache {
-	this.statistics = collector
-	return this
+	return &Cache{l1: cache.New(10*time.Second, 30*time.Second), l2: m}
 }
 
 func (this *Cache) Get(key string) (item Item, err error) {
 	start := time.Now()
-	defer this.statistics.CacheRead(time.Since(start))
+	defer statistics.CacheRead(time.Since(start))
 	defer func() {
 		if err != nil {
-			this.statistics.CacheMiss()
+			statistics.CacheMiss()
 		}
 	}()
 	l1Value, ok := this.l1.Get(key)

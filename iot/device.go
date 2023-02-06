@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"log"
 	"net/url"
 	"runtime/debug"
@@ -28,7 +29,7 @@ import (
 
 func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Device, err error) {
 	start := time.Now()
-	defer this.statistics.IotRead(time.Since(start))
+	defer statistics.IotRead(time.Since(start))
 	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
 		return device, err
@@ -41,7 +42,7 @@ func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Dev
 
 func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.DeviceType, err error) {
 	start := time.Now()
-	defer this.statistics.IotRead(time.Since(start))
+	defer statistics.IotRead(time.Since(start))
 	resp, err := token.Get(this.repo_url + "/device-types/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetDeviceType()", err)
@@ -120,7 +121,7 @@ func allTrue(arr []bool) bool {
 
 func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (device model.Device, err error) {
 	start := time.Now()
-	defer this.statistics.IotRead(time.Since(start))
+	defer statistics.IotRead(time.Since(start))
 	resp, err := token.Get(this.manager_url + "/local-devices/" + url.QueryEscape(localId))
 	if err != nil {
 		if err != security.ErrorNotFound {

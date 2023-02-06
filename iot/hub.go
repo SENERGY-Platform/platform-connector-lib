@@ -21,6 +21,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/iot/options"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"log"
 	"net/url"
 	"runtime/debug"
@@ -29,7 +30,7 @@ import (
 
 func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.Option) (hub model.Hub, err error) {
 	start := time.Now()
-	defer this.statistics.IotRead(time.Since(start))
+	defer statistics.IotRead(time.Since(start))
 	resp, err := cred.Get(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
 		if !options.Silent.IsInOptions(optionals...) {
@@ -48,7 +49,7 @@ func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.
 
 func (this *Iot) GetHubsByDeviceLocalId(localId string, token security.JwtToken) (hubs []model.Hub, err error) {
 	start := time.Now()
-	defer this.statistics.IotRead(time.Since(start))
+	defer statistics.IotRead(time.Since(start))
 	query := model.QueryMessage{
 		Resource: "hubs",
 		Find: &model.QueryFind{

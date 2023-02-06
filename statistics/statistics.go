@@ -17,168 +17,87 @@
 package statistics
 
 import (
-	"context"
-	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
-	"runtime"
-	"sort"
+	"net/http"
+	"os"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
-type Interface interface {
-	IotRead(duration time.Duration)
-	CacheRead(duration time.Duration)
-	CacheMiss()
-	TimescaleWrite(duration time.Duration)
-	KafkaWrite(duration time.Duration)
+var once sync.Once
+
+var iotReads *prometheus.HistogramVec
+var cacheReads *prometheus.HistogramVec
+var cacheMiss *prometheus.CounterVec
+var timescaleWrites *prometheus.HistogramVec
+var kafkaWrites *prometheus.HistogramVec
+var instanceId string
+
+func IotRead(duration time.Duration) {
+	once.Do(start)
+	iotReads.WithLabelValues(instanceId).Observe(float64(duration.Milliseconds()))
 }
 
-type Void struct{}
-
-func (this Void) IotRead(duration time.Duration)        {}
-func (this Void) CacheRead(duration time.Duration)      {}
-func (this Void) CacheMiss()                            {}
-func (this Void) TimescaleWrite(duration time.Duration) {}
-func (this Void) KafkaWrite(duration time.Duration)     {}
-
-func New(ctx context.Context, logAndResetInterval time.Duration) Interface {
-	result := &Implementation{}
-	result.Start(ctx, logAndResetInterval)
-	return result
+func CacheRead(duration time.Duration) {
+	once.Do(start)
+	cacheReads.WithLabelValues(instanceId).Observe(float64(duration.Milliseconds()))
 }
 
-type Implementation struct {
-	iotReads        []time.Duration
-	iotMux          sync.Mutex
-	cacheReads      []time.Duration
-	cacheMiss       uint64
-	cacheMux        sync.Mutex
-	timescaleWrites []time.Duration
-	timescaleMux    sync.Mutex
-	kafkaWrites     []time.Duration
-	kafkaMux        sync.Mutex
+func CacheMiss() {
+	cacheMiss.WithLabelValues(instanceId).Inc()
 }
 
-func (this *Implementation) IotRead(duration time.Duration) {
-	this.iotMux.Lock()
-	defer this.iotMux.Unlock()
-	this.iotReads = append(this.iotReads, duration)
+func TimescaleWrite(duration time.Duration, userId string) {
+	once.Do(start)
+	timescaleWrites.WithLabelValues(userId, instanceId).Observe(float64(duration.Milliseconds()))
 }
 
-func (this *Implementation) CacheRead(duration time.Duration) {
-	this.cacheMux.Lock()
-	defer this.cacheMux.Unlock()
-	this.cacheReads = append(this.cacheReads, duration)
+func KafkaWrite(duration time.Duration, userId string) {
+	once.Do(start)
+	kafkaWrites.WithLabelValues(userId, instanceId).Observe(float64(duration.Milliseconds()))
 }
 
-func (this *Implementation) CacheMiss() {
-	atomic.AddUint64(&this.cacheMiss, 1)
-}
-
-func (this *Implementation) TimescaleWrite(duration time.Duration) {
-	this.timescaleMux.Lock()
-	defer this.timescaleMux.Unlock()
-	this.timescaleWrites = append(this.timescaleWrites, duration)
-}
-
-func (this *Implementation) KafkaWrite(duration time.Duration) {
-	this.kafkaMux.Lock()
-	defer this.kafkaMux.Unlock()
-	this.kafkaWrites = append(this.kafkaWrites, duration)
-}
-
-func (this *Implementation) Start(ctx context.Context, interval time.Duration) {
+func start() {
 	log.Println("start statistics collector")
-	t := time.NewTicker(interval)
+	buckets := []float64{1, 5, 10, 50, 100, 200, 300, 500, 1000, 2000, 5000, 10000}
+
+	iotReads = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "connector_iot_read_latency_ms",
+		Help:    "Latency of IoT metadata reads",
+		Buckets: buckets,
+	}, []string{"instance_id"})
+	cacheReads = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "connector_cache_read_latency_ms",
+		Help:    "Latency of cache reads",
+		Buckets: buckets,
+	}, []string{"instance_id"})
+	cacheMiss = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "connector_cache_miss_total_ms",
+		Help: "Total number of cache misses",
+	}, []string{"instance_id"})
+	kafkaWrites = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "connector_kafka_write_latency_ms",
+		Help:    "Latency of kafka publishes",
+		Buckets: buckets,
+	}, []string{"user_id", "instance_id"})
+	timescaleWrites = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "connector_timescale_write_latency_ms",
+		Help:    "Latency of timescale writes",
+		Buckets: buckets,
+	}, []string{"user_id", "instance_id"})
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+		log.Println("ERROR: Could not get hostname, using '" + hostname + "'")
+	}
+	instanceId = hostname
+
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				this.log()
-			}
-		}
+		http.Handle("/metrics", promhttp.Handler())
+		log.Println("INFO: Starting prometheus metrics on :2112/metrics")
+		log.Println("WARNING: Metrics server exited: " + http.ListenAndServe(":2112", nil).Error())
 	}()
-
-}
-
-func (this *Implementation) log() {
-	this.iotMux.Lock()
-	defer this.iotMux.Unlock()
-	this.cacheMux.Lock()
-	defer this.cacheMux.Unlock()
-	this.timescaleMux.Lock()
-	defer this.timescaleMux.Unlock()
-	this.kafkaMux.Lock()
-	defer this.kafkaMux.Unlock()
-
-	numGoroutines := runtime.NumGoroutine()
-	cacheMiss := atomic.LoadUint64(&this.cacheMiss)
-	iotLog := statistics(this.iotReads).SetLabel("Iot-Reads")
-	cacheLog := statistics(this.cacheReads).SetLabel("Cache-Reads")
-	timescaleLog := statistics(this.timescaleWrites).SetLabel("Timescale-Writes")
-	kafkaLog := statistics(this.kafkaWrites).SetLabel("kafka-Writes")
-
-	go log.Println("LOG:",
-		"\n\tnum-goroutines:", numGoroutines,
-		"\n\tcache-misses:", cacheMiss,
-		"\n\t"+iotLog.String(),
-		"\n\t"+cacheLog.String(),
-		"\n\t"+timescaleLog.String(),
-		"\n\t"+kafkaLog.String())
-
-	this.iotReads = []time.Duration{}
-	this.cacheReads = []time.Duration{}
-	this.timescaleWrites = []time.Duration{}
-	this.kafkaWrites = []time.Duration{}
-	atomic.StoreUint64(&this.cacheMiss, 0)
-}
-
-type statisticsElement struct {
-	Label  string
-	count  int
-	median time.Duration
-	avg    time.Duration
-	min    time.Duration
-	max    time.Duration
-}
-
-func (this statisticsElement) SetLabel(label string) statisticsElement {
-	this.Label = label
-	return this
-}
-
-func (this statisticsElement) String() string {
-	return fmt.Sprint(this.Label+":", "\n\t\tcount:", this.count, "\n\t\tmedian:", this.median.String(), "\n\t\tavg:", this.avg.String(), "\n\t\tmin:", this.min.String(), "\n\t\tmax:", this.max.String())
-}
-
-func statistics(list []time.Duration) (result statisticsElement) {
-	sort.Slice(list, func(i, j int) bool {
-		return list[i] < list[j]
-	})
-	result.count = len(list)
-	if len(list) > 0 {
-		result.min = list[0]
-		result.max = list[result.count-1]
-	}
-
-	if result.count > 2 {
-		if result.count%2 == 0 {
-			result.median = list[result.count/2]
-		} else {
-			result.median = (list[result.count/2] + list[(result.count/2)-1]) / 2
-		}
-	}
-
-	sum := time.Duration(0)
-	for _, element := range list {
-		sum += element
-	}
-	if len(list) > 0 {
-		result.avg = sum / time.Duration(len(list))
-	}
-	return
 }

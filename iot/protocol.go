@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"log"
 	"net/url"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 func (this *Iot) GetProtocol(id string, token security.JwtToken) (protocol model.Protocol, err error) {
 	start := time.Now()
-	defer this.statistics.IotRead(time.Since(start))
+	defer statistics.IotRead(time.Since(start))
 	resp, err := token.Get(this.repo_url + "/protocols/" + url.QueryEscape(id))
 	if err != nil {
 		log.Println("ERROR on GetProtocol()", err)
