@@ -1,6 +1,6 @@
 module github.com/SENERGY-Platform/platform-connector-lib
 
-go 1.17
+go 1.19
 
 require (
 	github.com/DataDog/zstd v1.4.0 // indirect

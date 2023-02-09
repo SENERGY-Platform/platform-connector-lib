@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -29,6 +30,7 @@ import (
 	"time"
 )
 
+var ErrorInternal = errors.New("internal error")
 var ErrorNotFound = errors.New("not found")
 var ErrorAccessDenied = errors.New("access denied")
 var ErrorUnexpectedStatus = errors.New("unexpected status")
@@ -36,7 +38,7 @@ var ErrorUnexpectedStatus = errors.New("unexpected status")
 func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	req.WithContext(ctx)
@@ -44,32 +46,32 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 	req.Header.Set("Content-Type", contentType)
 
 	resp, err = http.DefaultClient.Do(req)
-
-	if err == nil {
-		if resp.StatusCode == http.StatusNotFound {
-			//body muss be read til eof and closed to enable connection reuse
-			io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return resp, ErrorNotFound
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		//body muss be read til eof and closed to enable connection reuse
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return resp, ErrorNotFound
+	}
+	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+		//body muss be read til eof and closed to enable connection reuse
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return resp, ErrorAccessDenied
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Println("ERROR: ", err)
 		}
-		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
-			//body muss be read til eof and closed to enable connection reuse
-			io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return resp, ErrorAccessDenied
+		if err := resp.Body.Close(); err != nil {
+			log.Println("ERROR: ", err)
 		}
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				log.Println("ERROR: ", err)
-			}
-			if err := resp.Body.Close(); err != nil {
-				log.Println("ERROR: ", err)
-			}
-			log.Println("DEBUG: response:", resp.StatusCode, string(b))
-			debug.PrintStack()
-			return resp, ErrorUnexpectedStatus
-		}
+		log.Println("DEBUG: response:", resp.StatusCode, string(b))
+		debug.PrintStack()
+		return resp, ErrorUnexpectedStatus
 	}
 	return
 }
@@ -94,38 +96,38 @@ func (this JwtToken) PostJSON(url string, body interface{}, result interface{}) 
 func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 	resp, err = http.DefaultClient.Do(req)
-
-	if err == nil {
-		if resp.StatusCode == http.StatusNotFound {
-			//body muss be read til eof and closed to enable connection reuse
-			io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return resp, ErrorNotFound
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		//body muss be read til eof and closed to enable connection reuse
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return resp, ErrorNotFound
+	}
+	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+		//body muss be read til eof and closed to enable connection reuse
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return resp, ErrorAccessDenied
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Println("ERROR: ", err)
 		}
-		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
-			//body muss be read til eof and closed to enable connection reuse
-			io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return resp, ErrorAccessDenied
+		if err := resp.Body.Close(); err != nil {
+			log.Println("ERROR: ", err)
 		}
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			b, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Println("ERROR: ", err)
-			}
-			if err := resp.Body.Close(); err != nil {
-				log.Println("ERROR: ", err)
-			}
-			log.Println("DEBUG: response:", resp.StatusCode, string(b))
-			debug.PrintStack()
-			return resp, ErrorUnexpectedStatus
-		}
+		log.Println("DEBUG: response:", resp.StatusCode, string(b))
+		debug.PrintStack()
+		return resp, ErrorUnexpectedStatus
 	}
 	return
 }
@@ -142,39 +144,39 @@ func (this JwtToken) GetJSON(url string, result interface{}) (err error) {
 func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 
 	resp, err = http.DefaultClient.Do(req)
-
-	if err == nil {
-		if resp.StatusCode == http.StatusNotFound {
-			//body muss be read til eof and closed to enable connection reuse
-			io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return resp, ErrorNotFound
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		//body muss be read til eof and closed to enable connection reuse
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return resp, ErrorNotFound
+	}
+	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+		//body muss be read til eof and closed to enable connection reuse
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return resp, ErrorAccessDenied
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println("ERROR: ", err)
 		}
-		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
-			//body muss be read til eof and closed to enable connection reuse
-			io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return resp, ErrorAccessDenied
+		if err := resp.Body.Close(); err != nil {
+			log.Println("ERROR: ", err)
 		}
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			b, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Println("ERROR: ", err)
-			}
-			if err := resp.Body.Close(); err != nil {
-				log.Println("ERROR: ", err)
-			}
-			log.Println("DEBUG: response:", resp.StatusCode, string(b))
-			debug.PrintStack()
-			return resp, ErrorUnexpectedStatus
-		}
+		log.Println("DEBUG: response:", resp.StatusCode, string(b))
+		debug.PrintStack()
+		return resp, ErrorUnexpectedStatus
 	}
 	return
 }
@@ -182,7 +184,7 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
 	req, err := http.NewRequest("PUT", url, body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	req.WithContext(ctx)
@@ -190,32 +192,32 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 	req.Header.Set("Content-Type", contentType)
 
 	resp, err = http.DefaultClient.Do(req)
-
-	if err == nil {
-		if resp.StatusCode == http.StatusNotFound {
-			//body muss be read til eof and closed to enable connection reuse
-			io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return resp, ErrorNotFound
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		//body muss be read til eof and closed to enable connection reuse
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return resp, ErrorNotFound
+	}
+	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
+		//body muss be read til eof and closed to enable connection reuse
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return resp, ErrorAccessDenied
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println("ERROR: ", err)
 		}
-		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
-			//body muss be read til eof and closed to enable connection reuse
-			io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return resp, ErrorAccessDenied
+		if err := resp.Body.Close(); err != nil {
+			log.Println("ERROR: ", err)
 		}
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			b, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Println("ERROR: ", err)
-			}
-			if err := resp.Body.Close(); err != nil {
-				log.Println("ERROR: ", err)
-			}
-			log.Println("DEBUG: response:", resp.StatusCode, string(b))
-			debug.PrintStack()
-			return resp, ErrorUnexpectedStatus
-		}
+		log.Println("DEBUG: response:", resp.StatusCode, string(b))
+		debug.PrintStack()
+		return resp, ErrorUnexpectedStatus
 	}
 	return
 }
@@ -240,7 +242,7 @@ func (this JwtToken) PutJSON(url string, body interface{}, result interface{}) (
 func (this JwtToken) Head(url string) (statuscode int, err error) {
 	req, err := http.NewRequest("HEAD", url, nil)
 	if err != nil {
-		return statuscode, err
+		return statuscode, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	req.WithContext(ctx)
@@ -248,7 +250,7 @@ func (this JwtToken) Head(url string) (statuscode int, err error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return statuscode, err
+		return statuscode, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
 	defer resp.Body.Close()
 	defer io.ReadAll(resp.Body)

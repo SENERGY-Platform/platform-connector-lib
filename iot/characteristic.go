@@ -22,7 +22,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
-	"io/ioutil"
+	"io"
 	"log"
 	"time"
 )
@@ -59,14 +59,14 @@ func (this *Iot) GetCharacteristicById(id string, token security.JwtToken) (char
 	start := time.Now()
 	defer statistics.IotRead(time.Since(start))
 	if id == "" {
-		return characteristic, errors.New("characteristid can not be empty")
+		return characteristic, errors.New("characteristic id can not be empty")
 	}
 	resp, err := token.Get(this.repo_url + "/characteristics/" + id)
 	if err != nil {
 		return characteristic, err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return characteristic, err
 	}

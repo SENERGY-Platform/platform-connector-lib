@@ -47,6 +47,7 @@ func CacheRead(duration time.Duration) {
 }
 
 func CacheMiss() {
+	once.Do(start)
 	cacheMiss.WithLabelValues(instanceId).Inc()
 }
 
