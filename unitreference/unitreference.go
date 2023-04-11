@@ -62,11 +62,13 @@ func fillUnitsForContentVariables(parent *model.ContentVariable, parentIndex int
 		if err != nil {
 			return err
 		}
-		characteristic, err := semantic.GetCharacteristicById(characteristicId, token)
-		if err != nil {
-			return err
+		if characteristicId != "" {
+			characteristic, err := semantic.GetCharacteristicById(characteristicId, token)
+			if err != nil {
+				return err
+			}
+			parent.SubContentVariables[parentIndex].Value = characteristic.Name
 		}
-		parent.SubContentVariables[parentIndex].Value = characteristic.Name
 	}
 	return nil
 }
