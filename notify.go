@@ -91,6 +91,7 @@ func (this *Connector) SendNotification(message Notification) error {
 	}
 	req, err := http.NewRequest("POST", this.Config.NotificationUrl+"/notifications?ignore_duplicates_within_seconds="+ignoreDuplicatesWithinS, b)
 	if err != nil {
+		log.Printf("tried to send notification %#v\n", message)
 		return err
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
@@ -98,10 +99,12 @@ func (this *Connector) SendNotification(message Notification) error {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		log.Printf("tried to send notification %#v\n", message)
 		return err
 	}
 	if resp.StatusCode >= 300 {
 		respMsg, _ := io.ReadAll(resp.Body)
+		log.Printf("tried to send notification %#v\n", message)
 		log.Println("ERROR: unexpected response status from notifier", resp.StatusCode, string(respMsg))
 		return errors.New("unexpected response status from notifier " + resp.Status)
 	}
