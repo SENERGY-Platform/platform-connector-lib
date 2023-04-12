@@ -18,6 +18,7 @@ package iot
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot/options"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
@@ -86,6 +87,9 @@ func (this *Iot) ExistsHub(id string, cred security.JwtToken) (exists bool, err 
 	code, err = cred.Head(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?p=x")
 	if code < 300 {
 		exists = true
+	}
+	if err == nil && code >= 500 {
+		err = fmt.Errorf("HEAD %v/hubs/%v?p=x resulted in status code %v", this.repo_url, url.QueryEscape(id), code)
 	}
 	return
 }
