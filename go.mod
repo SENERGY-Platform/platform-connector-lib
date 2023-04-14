@@ -14,7 +14,6 @@ require (
 	github.com/lib/pq v1.10.7
 	github.com/ory/dockertest/v3 v3.8.1
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da // indirect
-	github.com/satori/go.uuid v1.2.0
 	github.com/segmentio/kafka-go v0.4.39
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
@@ -24,6 +23,7 @@ require (
 
 require (
 	github.com/SENERGY-Platform/converter v0.0.0-20230131090133-d4d9baf75374
+	github.com/google/uuid v1.3.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.14.0
 )
@@ -51,7 +51,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect

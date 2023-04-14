@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -37,7 +37,7 @@ func New(expiration int32, maxIdleConns int, timeout time.Duration, memcachedSer
 }
 
 func (this *CorrelationService) Save(msg model.ProtocolMsg) (correlationId string, err error) {
-	correlationId = uuid.NewV4().String()
+	correlationId = uuid.NewString()
 	value, err := json.Marshal(msg)
 	if err != nil {
 		return correlationId, err
