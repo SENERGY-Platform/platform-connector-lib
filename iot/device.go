@@ -18,6 +18,7 @@ package iot
 
 import (
 	"encoding/json"
+	"github.com/SENERGY-Platform/permission-search/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
@@ -62,11 +63,11 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 func (this *Iot) FindDeviceTypesWithAttributes(attributes []model.Attribute, token security.JwtToken) (dt []model.DeviceType, err error) {
 	selection := []model.Selection{}
 	for _, attr := range attributes {
-		selection = append(selection, model.Selection{Condition: &model.ConditionConfig{
+		selection = append(selection, model.Selection{Condition: model.ConditionConfig{
 			Feature:   "features.attributes.key",
 			Operation: model.QueryEqualOperation,
 			Value:     attr.Key}})
-		selection = append(selection, model.Selection{Condition: &model.ConditionConfig{
+		selection = append(selection, model.Selection{Condition: model.ConditionConfig{
 			Feature:   "features.attributes.value",
 			Operation: model.QueryEqualOperation,
 			Value:     attr.Value}})
@@ -79,8 +80,7 @@ func (this *Iot) FindDeviceTypesWithAttributes(attributes []model.Attribute, tok
 			},
 		},
 	}
-	permSearchDeviceTypes := []model.PermSearchDeviceType{}
-	err = token.PostJSON(this.permQueryUrl+"/v3/query", query, &permSearchDeviceTypes)
+	permSearchDeviceTypes, _, err := client.Query[[]model.PermSearchDeviceType](this.permissions, string(token), query)
 	if err != nil {
 		log.Println("ERROR on FindDeviceTypesWithAttributes()", err)
 		debug.PrintStack()
@@ -178,9 +178,8 @@ func (this *Iot) UpdateDeviceType(deviceType model.DeviceType, token security.Jw
 	return dt, err
 }
 
-func (this *Iot) GetDeviceUserRights(token security.JwtToken, deviceId string) (rights ResourceRights, err error) {
-	err = token.GetJSON(this.permQueryUrl+"/v3/administrate/rights/devices/"+url.QueryEscape(deviceId), &rights)
-	return
+func (this *Iot) GetDeviceUserRights(token security.JwtToken, deviceId string) (rights model.ResourceRights, err error) {
+	return this.permissions.GetRights(string(token), "devices", deviceId)
 }
 
 type ResourceRights struct {

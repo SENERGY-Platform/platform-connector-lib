@@ -21,17 +21,19 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/helper"
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/server"
 	"github.com/segmentio/kafka-go"
+	"sync"
 
 	"testing"
 	"time"
 )
 
 func Test(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer time.Sleep(10 * time.Second) //wait for docker cleanup
 	defer cancel()
 
-	config, err := server.New(ctx)
+	config, err := server.New(ctx, wg)
 	if err != nil {
 		t.Error(err)
 		return

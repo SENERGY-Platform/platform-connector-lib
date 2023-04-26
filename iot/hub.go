@@ -19,6 +19,7 @@ package iot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/SENERGY-Platform/permission-search/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot/options"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
@@ -55,7 +56,7 @@ func (this *Iot) GetHubsByDeviceLocalId(localId string, token security.JwtToken)
 		Resource: "hubs",
 		Find: &model.QueryFind{
 			Filter: &model.Selection{
-				Condition: &model.ConditionConfig{
+				Condition: model.ConditionConfig{
 					Feature:   "features.device_local_ids",
 					Operation: "==",
 					Value:     localId,
@@ -63,7 +64,7 @@ func (this *Iot) GetHubsByDeviceLocalId(localId string, token security.JwtToken)
 			},
 		},
 	}
-	err = token.PostJSON(this.permQueryUrl+"/v3/query", query, &hubs)
+	hubs, _, err = client.Query[[]model.Hub](this.permissions, string(token), query)
 	if err != nil {
 		log.Println("ERROR on GetHubsByDeviceLocalId()", err)
 		debug.PrintStack()

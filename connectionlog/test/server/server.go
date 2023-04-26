@@ -18,126 +18,82 @@ package server
 
 import (
 	"context"
+	"github.com/SENERGY-Platform/permission-search/lib/tests/docker"
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/config"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
 	"log"
 	"net"
-	"os"
 	"runtime/debug"
 	"strconv"
+	"sync"
 )
 
-func New(parentCtx context.Context) (config config.Config, err error) {
-	ctx, cancel := context.WithCancel(parentCtx)
-
+func New(ctx context.Context, wg *sync.WaitGroup) (config config.Config, err error) {
 	config.HubLogTopic = "gateway_log"
 	config.DeviceLogTopic = "device_log"
 
-	pool, err := dockertest.NewPool("")
+	_, zk, err := docker.Zookeeper(ctx, wg)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
-		cancel()
-		return config, err
-	}
-
-	_, zk, err := Zookeeper(pool, ctx)
-	if err != nil {
-		log.Println("ERROR:", err)
-		debug.PrintStack()
-		cancel()
 		return config, err
 	}
 	zkUrl := zk + ":2181"
 
-	config.KafkaUrl, err = Kafka(pool, ctx, zkUrl)
+	config.KafkaUrl, err = docker.Kafka(ctx, wg, zkUrl)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
-		cancel()
 		return config, err
 	}
 
-	_, elasticIp, err := Elasticsearch(pool, ctx)
+	_, elasticIp, err := docker.Elasticsearch(ctx, wg)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
-		cancel()
 		return config, err
 	}
 
-	_, influxip, err := Influxdb(pool, ctx)
+	_, influxip, err := Influxdb(ctx, wg)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
-		cancel()
 		return config, err
 	}
 	influxdbUrl := "http://" + influxip + ":8086"
 
-	_, mongoIp, err := MongoTestServer(pool, ctx)
+	_, mongoIp, err := MongoDB(ctx, wg)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
-		cancel()
 		return config, err
 	}
 	mongoUrl := "mongodb://" + mongoIp
 
-	_, _, err = ConnectionlogWorker(pool, ctx, mongoUrl, influxdbUrl, config.KafkaUrl)
+	err = ConnectionlogWorker(ctx, wg, mongoUrl, influxdbUrl, config.KafkaUrl)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
-		cancel()
 		return config, err
 	}
 
-	_, permIp, err := PermSearch(pool, ctx, config.KafkaUrl, elasticIp)
+	_, permIp, err := docker.PermissionSearch(ctx, wg, false, config.KafkaUrl, elasticIp)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
-		cancel()
 		return config, err
 	}
 	permissionUrl := "http://" + permIp + ":8080"
 
-	_, connectionlogip, err := Connectionlog(pool, ctx, mongoUrl, permissionUrl, influxdbUrl)
+	_, connectionlogip, err := Connectionlog(ctx, wg, mongoUrl, permissionUrl, influxdbUrl)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
-		cancel()
 		return config, err
 	}
 
 	config.ConnectionlogUrl = "http://" + connectionlogip + ":8080"
 
 	return config, nil
-}
-
-func Dockerlog(pool *dockertest.Pool, ctx context.Context, repo *dockertest.Resource, name string) {
-	out := &LogWriter{logger: log.New(os.Stdout, "["+name+"]", 0)}
-	err := pool.Client.Logs(docker.LogsOptions{
-		Stdout:       true,
-		Stderr:       true,
-		Context:      ctx,
-		Container:    repo.Container.ID,
-		Follow:       true,
-		OutputStream: out,
-		ErrorStream:  out,
-	})
-	if err != nil && err != context.Canceled {
-		log.Println("DEBUG-ERROR: unable to start docker log", name, err)
-	}
-}
-
-type LogWriter struct {
-	logger *log.Logger
-}
-
-func (this *LogWriter) Write(p []byte) (n int, err error) {
-	this.logger.Print(string(p))
-	return len(p), nil
 }
 
 func getFreePortStr() (string, error) {
