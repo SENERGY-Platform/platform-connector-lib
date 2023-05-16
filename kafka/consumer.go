@@ -20,8 +20,8 @@ import (
 	"context"
 	"github.com/segmentio/kafka-go"
 	"io"
-	"io/ioutil"
 	"log"
+	"os"
 	"time"
 )
 
@@ -37,26 +37,23 @@ type ConsumerConfig struct {
 
 func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error)) (err error) {
 	log.Println("DEBUG: consume topic: \"" + config.Topic + "\"")
-	broker, err := GetBroker(config.KafkaUrl)
-	if err != nil {
-		log.Println("ERROR: unable to get broker list", err)
-		return err
-	}
 	err = InitTopic(config.KafkaUrl, config.TopicConfigMap, config.Topic)
 	if err != nil {
 		log.Println("ERROR: unable to create topic", err)
 		return err
 	}
 	r := kafka.NewReader(kafka.ReaderConfig{
-		CommitInterval: 0, //synchronous commits
-		Brokers:        broker,
-		GroupID:        config.GroupId,
-		Topic:          config.Topic,
-		MinBytes:       config.MinBytes,
-		MaxBytes:       config.MaxBytes,
-		MaxWait:        config.MaxWait,
-		Logger:         log.New(ioutil.Discard, "", 0),
-		ErrorLogger:    log.New(ioutil.Discard, "", 0),
+		CommitInterval:         0, //synchronous commits
+		Brokers:                []string{config.KafkaUrl},
+		GroupID:                config.GroupId,
+		Topic:                  config.Topic,
+		MinBytes:               config.MinBytes,
+		MaxBytes:               config.MaxBytes,
+		MaxWait:                config.MaxWait,
+		Logger:                 log.New(io.Discard, "", 0),
+		ErrorLogger:            log.New(os.Stdout, "[KAFKA-ERR] ", log.LstdFlags),
+		WatchPartitionChanges:  true,
+		PartitionWatchInterval: time.Minute,
 	})
 	go func() {
 		for {

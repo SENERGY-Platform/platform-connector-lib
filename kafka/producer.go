@@ -141,7 +141,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 	return result, nil
 }
 
-//deprecated
+// deprecated
 func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, syncIdempotent bool, partitionNum int, replicationFactor int) (result ProducerInterface, err error) {
 	return PrepareProducerWithConfig(ctx, kafkaBootstrapUrl, Config{
 		AsyncFlushMessages:  0,
