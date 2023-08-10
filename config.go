@@ -19,7 +19,7 @@ package platform_connector_lib
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"os"

@@ -46,7 +46,7 @@ func New(ctx context.Context, wg *sync.WaitGroup) (config config.Config, err err
 		return config, err
 	}
 
-	_, elasticIp, err := docker.Elasticsearch(ctx, wg)
+	_, searchIp, err := docker.OpenSearch(ctx, wg)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
@@ -76,7 +76,7 @@ func New(ctx context.Context, wg *sync.WaitGroup) (config config.Config, err err
 		return config, err
 	}
 
-	_, permIp, err := docker.PermissionSearch(ctx, wg, false, config.KafkaUrl, elasticIp)
+	_, permIp, err := docker.PermissionSearch(ctx, wg, false, config.KafkaUrl, searchIp)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()

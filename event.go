@@ -44,22 +44,24 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 	result = map[string]interface{}{}
 	fallback, fallbackKnown := marshalling.Get(this.Config.SerializationFallback)
 	for _, output := range service.Outputs {
-		marshaller, ok := marshalling.Get(output.Serialization)
-		if !ok {
-			return result, errors.New("unknown format " + output.Serialization)
-		}
-		for _, segment := range protocol.ProtocolSegments {
-			if segment.Id == output.ProtocolSegmentId {
-				segmentMsg, ok := msg[segment.Name]
-				if ok {
-					out, err := marshaller.Unmarshal(segmentMsg, output.ContentVariable)
-					if err != nil && fallbackKnown {
-						out, err = fallback.Unmarshal(segmentMsg, output.ContentVariable)
+		if output.ContentVariable.Name != "" && (fallbackKnown || output.Serialization != "") {
+			marshaller, ok := marshalling.Get(output.Serialization)
+			if !ok {
+				return result, errors.New("unknown format " + output.Serialization)
+			}
+			for _, segment := range protocol.ProtocolSegments {
+				if segment.Id == output.ProtocolSegmentId {
+					segmentMsg, ok := msg[segment.Name]
+					if ok {
+						out, err := marshaller.Unmarshal(segmentMsg, output.ContentVariable)
+						if err != nil && fallbackKnown {
+							out, err = fallback.Unmarshal(segmentMsg, output.ContentVariable)
+						}
+						if err != nil {
+							return result, err
+						}
+						result[output.ContentVariable.Name] = out
 					}
-					if err != nil {
-						return result, err
-					}
-					result[output.ContentVariable.Name] = out
 				}
 			}
 		}

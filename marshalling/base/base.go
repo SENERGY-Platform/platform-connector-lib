@@ -1,6 +1,7 @@
 package base
 
 import (
+	"errors"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"sync"
 )
@@ -24,3 +25,6 @@ func Get(key string) (marshaller Marshaller, ok bool) {
 	marshaller, ok = Marshallers[key]
 	return
 }
+
+var ErrUnableToMarshal = errors.New("unable to marshal message")
+var ErrUnableToUnmarshal = errors.New("unable to unmarshal message")

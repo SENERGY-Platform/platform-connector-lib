@@ -19,7 +19,7 @@ package kafka
 import (
 	"context"
 	"errors"
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"time"
