@@ -58,6 +58,7 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 							out, err = fallback.Unmarshal(segmentMsg, output.ContentVariable)
 						}
 						if err != nil {
+							this.notifyMessageFormatError(device, service, err)
 							return result, err
 						}
 						result[output.ContentVariable.Name] = out
