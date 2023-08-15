@@ -16,60 +16,21 @@
 
 package model
 
-type DeviceClass struct {
-	Id    string `json:"id"`
-	Image string `json:"image"`
-	Name  string `json:"name"`
-}
+import "github.com/SENERGY-Platform/models/go/models"
 
-type Function struct {
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	DisplayName string `json:"display_name"`
-	Description string `json:"description"`
-	ConceptId   string `json:"concept_id"`
-	RdfType     string `json:"rdf_type"`
-}
+type DeviceClass = models.DeviceClass
 
-type Aspect struct {
-	Id         string   `json:"id"`
-	Name       string   `json:"name"`
-	SubAspects []Aspect `json:"sub_aspects"`
-}
+type Function = models.Function
 
-type Concept struct {
-	Id                   string   `json:"id"`
-	Name                 string   `json:"name"`
-	CharacteristicIds    []string `json:"characteristic_ids"`
-	BaseCharacteristicId string   `json:"base_characteristic_id"`
-}
+type Aspect = models.Aspect
 
-type Characteristic struct {
-	Id                 string           `json:"id"`
-	Name               string           `json:"name"`
-	DisplayUnit        string           `json:"display_unit"`
-	Type               Type             `json:"type"`
-	MinValue           interface{}      `json:"min_value,omitempty"`
-	MaxValue           interface{}      `json:"max_value,omitempty"`
-	Value              interface{}      `json:"value,omitempty"`
-	SubCharacteristics []Characteristic `json:"sub_characteristics"`
-}
+type Concept = models.Concept
 
-type ConceptWithCharacteristics struct {
-	Id                   string           `json:"id"`
-	Name                 string           `json:"name"`
-	BaseCharacteristicId string           `json:"base_characteristic_id"`
-	Characteristics      []Characteristic `json:"characteristics"`
-}
+type Characteristic = models.Characteristic
 
-type Location struct {
-	Id             string   `json:"id"`
-	Name           string   `json:"name"`
-	Description    string   `json:"description"`
-	Image          string   `json:"image"`
-	DeviceIds      []string `json:"device_ids"`
-	DeviceGroupIds []string `json:"device_group_ids"`
-}
+type ConceptWithCharacteristics = models.ConceptWithCharacteristics
+
+type Location = models.Location
 
 type FilterCriteria struct {
 	FunctionId    string `json:"function_id"`

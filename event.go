@@ -45,9 +45,9 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 	fallback, fallbackKnown := marshalling.Get(this.Config.SerializationFallback)
 	for _, output := range service.Outputs {
 		if output.ContentVariable.Name != "" && (fallbackKnown || output.Serialization != "") {
-			marshaller, ok := marshalling.Get(output.Serialization)
+			marshaller, ok := marshalling.Get(string(output.Serialization))
 			if !ok {
-				return result, errors.New("unknown format " + output.Serialization)
+				return result, errors.New("unknown format " + string(output.Serialization))
 			}
 			for _, segment := range protocol.ProtocolSegments {
 				if segment.Id == output.ProtocolSegmentId {

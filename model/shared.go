@@ -16,58 +16,24 @@
 
 package model
 
-type Device struct {
-	Id           string      `json:"id"`
-	LocalId      string      `json:"local_id"`
-	Name         string      `json:"name"`
-	Attributes   []Attribute `json:"attributes"`
-	DeviceTypeId string      `json:"device_type_id"`
-}
+import "github.com/SENERGY-Platform/models/go/models"
 
-type DeviceType struct {
-	Id            string      `json:"id"`
-	Name          string      `json:"name"`
-	Description   string      `json:"description"`
-	Services      []Service   `json:"services"`
-	DeviceClassId string      `json:"device_class_id"`
-	Attributes    []Attribute `json:"attributes"`
-	RdfType       string      `json:"rdf_type"`
-}
+type Device = models.Device
 
-type Attribute struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
+type DeviceType = models.DeviceType
 
-type Service struct {
-	Id              string      `json:"id"`
-	LocalId         string      `json:"local_id"`
-	Name            string      `json:"name"`
-	Description     string      `json:"description"`
-	Interaction     Interaction `json:"interaction"`
-	ProtocolId      string      `json:"protocol_id"`
-	Inputs          []Content   `json:"inputs"`
-	Outputs         []Content   `json:"outputs"`
-	Attributes      []Attribute `json:"attributes"`
-	ServiceGroupKey string      `json:"service_group_key"`
-}
+type Attribute = models.Attribute
 
-type Interaction string
+type Service = models.Service
+
+type Interaction = models.Interaction
 
 const (
-	EVENT             Interaction = "event"
-	REQUEST           Interaction = "request"
-	EVENT_AND_REQUEST Interaction = "event+request"
+	EVENT             = models.EVENT
+	REQUEST           = models.REQUEST
+	EVENT_AND_REQUEST = models.EVENT_AND_REQUEST
 )
 
-type Protocol struct {
-	Id               string            `json:"id"`
-	Name             string            `json:"name"`
-	Handler          string            `json:"handler"`
-	ProtocolSegments []ProtocolSegment `json:"protocol_segments"`
-}
+type Protocol = models.Protocol
 
-type ProtocolSegment struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-}
+type ProtocolSegment = models.ProtocolSegment

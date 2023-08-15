@@ -16,15 +16,9 @@
 
 package model
 
-type AspectNode struct {
-	Id            string   `json:"id"`
-	Name          string   `json:"name"`
-	RootId        string   `json:"root_id"`
-	ParentId      string   `json:"parent_id"`
-	ChildIds      []string `json:"child_ids"`
-	AncestorIds   []string `json:"ancestor_ids"`
-	DescendentIds []string `json:"descendent_ids"`
-}
+import "github.com/SENERGY-Platform/models/go/models"
+
+type AspectNode = models.AspectNode
 
 type DeviceTypeCriteria struct {
 	DeviceTypeId          string      `json:"device_type_id"`

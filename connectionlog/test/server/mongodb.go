@@ -18,7 +18,6 @@ package server
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/permission-search/lib/tests/docker"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"log"
@@ -49,11 +48,6 @@ func MongoDB(ctx context.Context, wg *sync.WaitGroup) (hostport string, containe
 		<-ctx.Done()
 		log.Println("DEBUG: remove container mongo", c.Terminate(context.Background()))
 	}()
-
-	err = docker.Dockerlog(ctx, c, "MONGODB")
-	if err != nil {
-		return "", "", err
-	}
 
 	containerip, err = c.ContainerIP(ctx)
 	if err != nil {
