@@ -96,6 +96,7 @@ type Config struct {
 	KafkaTopicConfigs map[string][]kafka.ConfigEntry
 
 	NotificationsIgnoreDuplicatesWithinS int
+	NotificationUserOverwrite            string
 }
 
 // loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

@@ -43,6 +43,14 @@ func (this *Connector) notifyDeviceOnwners(deviceId string, message Notification
 		log.Println("WARNING: no NotificationUrl configured")
 		return
 	}
+	if this.Config.NotificationUserOverwrite != "" && this.Config.NotificationUserOverwrite != "-" {
+		err := this.SendNotification(message)
+		if err != nil {
+			log.Println(err)
+			debug.PrintStack()
+			return
+		}
+	}
 	token, err := this.Security().Access()
 	if err != nil {
 		log.Println(err)
@@ -79,6 +87,9 @@ func (this *Connector) SendNotification(message Notification) error {
 	if this.Config.NotificationUrl == "" {
 		log.Println("WARNING: no NotificationUrl configured")
 		return nil
+	}
+	if this.Config.NotificationUserOverwrite != "" && this.Config.NotificationUserOverwrite != "-" {
+		message.UserId = this.Config.NotificationUserOverwrite
 	}
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(message)
