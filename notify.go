@@ -91,6 +91,9 @@ func (this *Connector) SendNotification(message Notification) error {
 	if this.Config.NotificationUserOverwrite != "" && this.Config.NotificationUserOverwrite != "-" {
 		message.UserId = this.Config.NotificationUserOverwrite
 	}
+	if this.slackClient != nil {
+		go this.slackClient.Send(message)
+	}
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(message)
 	if err != nil {

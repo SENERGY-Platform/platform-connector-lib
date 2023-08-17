@@ -67,6 +67,8 @@ type Connector struct {
 	kafkalogger *log.Logger
 
 	asyncPgBackpressure chan bool //used to limit go routines for async postgres publishing
+
+	slackClient *SlackNotificationClient
 }
 
 func New(config Config) (connector *Connector) {
@@ -111,6 +113,10 @@ func New(config Config) (connector *Connector) {
 		iotCacheTimeout = timeout
 	}
 	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheMaxIdleConns, iotCacheTimeout, config.IotCacheUrl...)
+
+	if config.NotificationSlackWebhookUrl != "" && config.NotificationSlackWebhookUrl != "-" {
+		connector.slackClient = NewSlackNotificationClient(config)
+	}
 	return
 }
 
