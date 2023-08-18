@@ -27,15 +27,29 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 )
+
+const MutedDeviceErrorsAttribute = "platform/mute-format-error"
 
 func (this *Connector) notifyMessageFormatError(device model.Device, service model.Service, errMsg error) {
 	if this.Config.NotificationUrl == "" {
 		log.Println("WARNING: no NotificationUrl configured")
 		return
 	}
-	this.notifyDeviceOnwners(device.Id, createMessageFormatErrorNotification(device, service, errMsg))
+	if !mutedDeviceErrors(device) {
+		this.notifyDeviceOnwners(device.Id, createMessageFormatErrorNotification(device, service, errMsg))
+	}
+}
+
+func mutedDeviceErrors(device model.Device) bool {
+	for _, attr := range device.Attributes {
+		if attr.Key == MutedDeviceErrorsAttribute && strings.ToLower(strings.TrimSpace(attr.Value)) == "true" {
+			return true
+		}
+	}
+	return false
 }
 
 func (this *Connector) notifyDeviceOnwners(deviceId string, message Notification) {
