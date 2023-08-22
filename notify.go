@@ -93,7 +93,7 @@ func (this *Connector) notifyDeviceOnwners(deviceId string, message Notification
 func createMessageFormatErrorNotification(device model.Device, service model.Service, err error) Notification {
 	return Notification{
 		Title:   "Device-Message Format-Error",
-		Message: "Error: " + err.Error() + "\n\nDevice: " + device.Name + " (" + device.Id + ")" + "\nService: " + service.Name + " (" + service.LocalId + ")",
+		Message: "Error: " + err.Error() + "\n\nDevice: " + device.Name + " (" + device.Id + ")" + "\nService: " + service.Name + " (" + service.LocalId + ")\n\nadd \"platform/mute-format-error=true\" as device attribute, to mute this notification",
 	}
 }
 
