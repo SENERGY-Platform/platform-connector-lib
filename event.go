@@ -104,7 +104,7 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 		if service.LocalId == serviceUri && len(service.Outputs) > 0 {
 			err = this.handleDeviceEvent(token, device.Id, service.Id, msg, qos)
 			if err != nil {
-				log.Println("ERROR: handleDeviceRefEvent::handleDeviceEvent", err)
+				log.Printf("ERROR: handleDeviceRefEvent::handleDeviceEvent %v\n%#v", err, msg)
 				return err
 			}
 			found = true
