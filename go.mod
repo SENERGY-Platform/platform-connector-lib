@@ -18,11 +18,12 @@ require (
 require (
 	github.com/IBM/sarama v1.40.1
 	github.com/SENERGY-Platform/converter v0.0.0-20230413113429-b490a96aabba
-	github.com/SENERGY-Platform/models/go v0.0.0-20230724134144-c26fd506045f
+	github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38
 	github.com/SENERGY-Platform/permission-search v0.0.0-20230814064430-b5ed112b136a
 	github.com/google/uuid v1.3.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.16.0
+	github.com/slack-go/slack v0.12.2
 	github.com/testcontainers/testcontainers-go v0.21.0
 )
 
@@ -83,7 +84,6 @@ require (
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/slack-go/slack v0.12.2 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b // indirect
 	golang.org/x/mod v0.12.0 // indirect

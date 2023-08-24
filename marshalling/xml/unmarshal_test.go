@@ -1,6 +1,7 @@
 package xml
 
 import (
+	"github.com/SENERGY-Platform/models/go/models"
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling/base"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"reflect"
@@ -92,6 +93,32 @@ func TestUnmarshalSimpleList(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(out, map[string]interface{}{"element": []interface{}{float64(1), float64(2), float64(3)}}) {
+		t.Fatal(out)
+	}
+}
+
+func TestUnmarshalSerializationOptionXmlAttribute(t *testing.T) {
+	value := `<example attr="attrVal"><body>bodyVal</body></example>`
+
+	marshaller, ok := base.Get(Format)
+	if !ok {
+		return
+	}
+
+	out, err := marshaller.Unmarshal(value, model.ContentVariable{
+		Name: "example",
+		Type: model.Structure,
+		SubContentVariables: []model.ContentVariable{
+			{Name: "attr", SerializationOptions: []string{models.SerializationOptionXmlAttribute}},
+			{Name: "body"},
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(out, map[string]interface{}{"attr": "attrVal", "body": "bodyVal"}) {
 		t.Fatal(out)
 	}
 }

@@ -16,8 +16,8 @@ github.com/RyanCarrier/dijkstra v1.3.0 h1:lqrLMwKy8PtyDpWqZpcbzr9KkqnLJrDdQ9u3iN
 github.com/RyanCarrier/dijkstra v1.3.0/go.mod h1:9egjhC7eVsfREX6NrYS+1wHzk9C/9v2Cz26/bqpjjTc=
 github.com/SENERGY-Platform/converter v0.0.0-20230413113429-b490a96aabba h1:7//DKY77RZdJoRBjkUohTkjegy5Lv9JFKgjlC2r2me0=
 github.com/SENERGY-Platform/converter v0.0.0-20230413113429-b490a96aabba/go.mod h1:MftDXexxLegRn0BKpbfBlBLo6OU9xSYiVtIi21DujUk=
-github.com/SENERGY-Platform/models/go v0.0.0-20230724134144-c26fd506045f h1:oBq0lbW2zWB5do7DTsLjO+E5Z2AKkYPeRe2CRgb43v0=
-github.com/SENERGY-Platform/models/go v0.0.0-20230724134144-c26fd506045f/go.mod h1:bCREPNRN4P8oxLgpC3/ZKK4jXSy4MSPXoiomhohE+aw=
+github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38 h1:PDvFwIJBnFyKt1KeepkABNIS57+WhVj4vBw7X5JGZJw=
+github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38/go.mod h1:bCREPNRN4P8oxLgpC3/ZKK4jXSy4MSPXoiomhohE+aw=
 github.com/SENERGY-Platform/permission-search v0.0.0-20230814064430-b5ed112b136a h1:UOWNCCwsTWPuwvHSsQ3jwcL7soEyivmGHc7wkt/jyXo=
 github.com/SENERGY-Platform/permission-search v0.0.0-20230814064430-b5ed112b136a/go.mod h1:BrTuD4BECfM7u8u5B5TmaNTemckqRTaY/MWPv4hMTGY=
 github.com/Shopify/toxiproxy/v2 v2.5.0 h1:i4LPT+qrSlKNtQf5QliVjdP08GyAH8+BUIc9gT0eahc=
@@ -68,6 +68,7 @@ github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHqu
 github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
 github.com/go-logfmt/logfmt v0.5.0/go.mod h1:wCYkCAKZfumFQihp8CzCvQ3paCTfi41vtzG1KdI/P7A=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
+github.com/go-test/deep v1.0.4 h1:u2CU3YKy9I2pmu9pX0eq50wCgjfGIt539SqR7FbHiho=
 github.com/go-test/deep v1.0.4/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
 github.com/gofrs/uuid v4.0.0+incompatible h1:1SD/1F5pU8p29ybwgQSwpQk+mwdRrXCYuPhW6m+TnJw=
 github.com/gofrs/uuid v4.0.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
