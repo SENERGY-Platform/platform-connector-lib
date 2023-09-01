@@ -16,18 +16,19 @@ require (
 )
 
 require (
-	github.com/IBM/sarama v1.40.1
-	github.com/SENERGY-Platform/converter v0.0.0-20230413113429-b490a96aabba
+	github.com/IBM/sarama v1.41.1
+	github.com/SENERGY-Platform/converter v0.0.0-20230829101037-a44339c413f0
 	github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38
-	github.com/SENERGY-Platform/permission-search v0.0.0-20230814064430-b5ed112b136a
-	github.com/google/uuid v1.3.0
+	github.com/SENERGY-Platform/permission-search v0.0.0-20230829121111-76c8c176bddb
+	github.com/google/uuid v1.3.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.16.0
-	github.com/slack-go/slack v0.12.2
-	github.com/testcontainers/testcontainers-go v0.21.0
+	github.com/slack-go/slack v0.12.3
+	github.com/testcontainers/testcontainers-go v0.23.0
 )
 
 require (
+	dario.cat/mergo v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
@@ -48,11 +49,10 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
-	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
