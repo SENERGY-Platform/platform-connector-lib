@@ -19,9 +19,11 @@ package platform_connector_lib
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"github.com/slack-go/slack"
 	"log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -53,6 +55,8 @@ func (this *SlackNotificationClient) Send(message Notification) error {
 		Text: msg,
 	})
 	if err != nil {
+		//hide secret webhook url
+		err = errors.New(strings.ReplaceAll(err.Error(), this.config.NotificationSlackWebhookUrl, "NotificationSlackWebhookUrl"))
 		log.Println("ERROR: unable to send slack message:", err)
 		return err
 	}
