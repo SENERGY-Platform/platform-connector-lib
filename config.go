@@ -98,7 +98,8 @@ type Config struct {
 	NotificationsIgnoreDuplicatesWithinS int
 	NotificationUserOverwrite            string
 
-	NotificationSlackWebhookUrl string
+	DeveloperNotificationUrl string //optional
+
 }
 
 // loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

@@ -21,6 +21,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	developerNotifications "github.com/SENERGY-Platform/developer-notifications/pkg/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"io"
 	"log"
@@ -105,8 +107,18 @@ func (this *Connector) SendNotification(message Notification) error {
 	if this.Config.NotificationUserOverwrite != "" && this.Config.NotificationUserOverwrite != "-" {
 		message.UserId = this.Config.NotificationUserOverwrite
 	}
-	if this.slackClient != nil {
-		go this.slackClient.Send(message)
+	if this.devNotifications != nil {
+		go func() {
+			err := this.devNotifications.SendMessage(developerNotifications.Message{
+				Sender: "github.com/SENERGY-Platform/platform-connector-lib",
+				Title:  "Connector-User-Notification",
+				Tags:   []string{"connector", "user-notification", message.UserId},
+				Body:   fmt.Sprintf("Notification For %v\nTitle: %v\nMessage: %v\n", message.UserId, message.Title, message.Message),
+			})
+			if err != nil {
+				log.Println("ERROR: unable to send developer-notification", err)
+			}
+		}()
 	}
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(message)

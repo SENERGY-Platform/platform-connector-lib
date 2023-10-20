@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	developerNotifications "github.com/SENERGY-Platform/developer-notifications/pkg/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/httpcommand"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
@@ -68,7 +69,7 @@ type Connector struct {
 
 	asyncPgBackpressure chan bool //used to limit go routines for async postgres publishing
 
-	slackClient *SlackNotificationClient
+	devNotifications developerNotifications.Client
 }
 
 func New(config Config) (connector *Connector) {
@@ -114,8 +115,8 @@ func New(config Config) (connector *Connector) {
 	}
 	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheMaxIdleConns, iotCacheTimeout, config.IotCacheUrl...)
 
-	if config.NotificationSlackWebhookUrl != "" && config.NotificationSlackWebhookUrl != "-" {
-		connector.slackClient = NewSlackNotificationClient(config)
+	if config.DeveloperNotificationUrl != "" && config.DeveloperNotificationUrl != "-" {
+		connector.devNotifications = developerNotifications.New(config.DeveloperNotificationUrl)
 	}
 	return
 }
