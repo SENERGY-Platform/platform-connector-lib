@@ -72,14 +72,13 @@ type Connector struct {
 	devNotifications developerNotifications.Client
 }
 
-func New(config Config) (connector *Connector) {
+func New(config Config) (connector *Connector, err error) {
 	config = setConfigDefaults(config)
 	var publisher *psql.Publisher
-	var err error
 	if config.PublishToPostgres {
 		publisher, err = psql.New(config.PostgresHost, config.PostgresPort, config.PostgresUser, config.PostgresPw, config.PostgresDb, config.Debug, &sync.WaitGroup{}, context.Background())
 		if err != nil {
-			log.Fatal(err.Error())
+			return nil, err
 		}
 	}
 
@@ -88,22 +87,27 @@ func New(config Config) (connector *Connector) {
 		asyncPgThreadMax = 1000
 	}
 
+	sec, err := security.New(
+		config.AuthEndpoint,
+		config.AuthClientId,
+		config.AuthClientSecret,
+		config.JwtIssuer,
+		config.JwtPrivateKey,
+		config.JwtExpiration,
+		config.AuthExpirationTimeBuffer,
+		config.TokenCacheExpiration,
+		config.TokenCacheUrl,
+		5,
+		500*time.Millisecond,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	connector = &Connector{
-		Config: config,
-		iot:    iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.PermQueryUrl),
-		security: security.New(
-			config.AuthEndpoint,
-			config.AuthClientId,
-			config.AuthClientSecret,
-			config.JwtIssuer,
-			config.JwtPrivateKey,
-			config.JwtExpiration,
-			config.AuthExpirationTimeBuffer,
-			config.TokenCacheExpiration,
-			config.TokenCacheUrl,
-			5,
-			500*time.Millisecond,
-		),
+		Config:              config,
+		iot:                 iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.PermQueryUrl),
+		security:            sec,
 		postgresPublisher:   publisher,
 		asyncPgBackpressure: make(chan bool, asyncPgThreadMax),
 	}
@@ -113,12 +117,15 @@ func New(config Config) (connector *Connector) {
 	} else {
 		iotCacheTimeout = timeout
 	}
-	connector.IotCache = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheMaxIdleConns, iotCacheTimeout, config.IotCacheUrl...)
+	connector.IotCache, err = iot.NewCache(connector.iot, config.DeviceExpiration, config.DeviceTypeExpiration, config.CharacteristicExpiration, config.IotCacheMaxIdleConns, iotCacheTimeout, config.IotCacheUrl...)
+	if err != nil {
+		return nil, err
+	}
 
 	if config.DeveloperNotificationUrl != "" && config.DeveloperNotificationUrl != "-" {
 		connector.devNotifications = developerNotifications.New(config.DeveloperNotificationUrl)
 	}
-	return
+	return connector, nil
 }
 
 func setConfigDefaults(config Config) Config {

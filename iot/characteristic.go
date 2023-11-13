@@ -22,37 +22,17 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
+	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"io"
-	"log"
 	"time"
 )
 
 const characteristicCachePrefix = "characteristic."
 
 func (this *PreparedCache) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
-	get, err := this.cache.Get(characteristicCachePrefix + id)
-	if err == nil {
-		err = json.Unmarshal(get.Value, &characteristic)
-		if err == nil {
-			return characteristic, err
-		} else {
-			log.Print("Got cached characteristic, but could not unmarshal. Reloading characteristic from semantic repository.\n")
-		}
-	}
-
-	characteristic, err = this.iot.GetCharacteristicById(id, token)
-	if err != nil {
-		return characteristic, err
-	}
-
-	temp, err := json.Marshal(characteristic)
-	if err != nil {
-		log.Println("WARNING: unable to save characteristic into cache", err)
-		return
-	}
-
-	this.cache.Set(characteristicCachePrefix+id, temp, this.characteristicExpiration)
-	return characteristic, err
+	return cache.Use(this.cache, characteristicCachePrefix+id, func() (model.Characteristic, error) {
+		return this.iot.GetCharacteristicById(id, token)
+	}, time.Duration(this.characteristicExpiration)*time.Second)
 }
 
 func (this *Iot) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {

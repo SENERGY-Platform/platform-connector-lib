@@ -18,14 +18,16 @@ package security
 
 import (
 	"encoding/json"
-	"github.com/SENERGY-Platform/platform-connector-lib/cache"
+	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
+	"github.com/SENERGY-Platform/service-commons/pkg/cache"
+	"github.com/SENERGY-Platform/service-commons/pkg/cache/memcached"
 	"log"
 	"sync"
 	"time"
 )
 
-func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64, tokenCacheExpiration int32, cacheUrls []string, cacheMaxIdleConns int, cacheTimeout time.Duration) *Security {
-	result := &Security{
+func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64, tokenCacheExpiration int32, cacheUrls []string, cacheMaxIdleConns int, cacheTimeout time.Duration) (security *Security, err error) {
+	security = &Security{
 		authEndpoint:             authEndpoint,
 		authClientSecret:         authClientSecret,
 		authClientId:             authClientId,
@@ -36,9 +38,20 @@ func New(authEndpoint string, authClientId string, authClientSecret string, jwtI
 		tokenCacheExpiration:     tokenCacheExpiration,
 	}
 	if tokenCacheExpiration != 0 && len(cacheUrls) > 0 {
-		result.cache = cache.New(cacheMaxIdleConns, cacheTimeout, cacheUrls...)
+		security.cache, err = cache.New(cache.Config{
+			L2Provider: memcached.NewProvider(cacheMaxIdleConns, cacheTimeout, cacheUrls...),
+			ReadCacheHook: func(duration time.Duration) {
+				statistics.CacheRead(duration)
+			},
+			CacheMissHook: func() {
+				statistics.CacheMiss()
+			},
+		})
+		if err != nil {
+			return security, err
+		}
 	}
-	return result
+	return security, nil
 }
 
 type Security struct {

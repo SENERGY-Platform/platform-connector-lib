@@ -33,8 +33,11 @@ func TestCache_GetProtocol(t *testing.T) {
 		return
 	}
 	iot := New(iotMockUrl, iotMockUrl, "")
-	cache := NewCache(iot, 60, 60, 60, 2, 200*time.Millisecond)
-
+	cache, err := NewCache(iot, 60, 60, 60, 2, 200*time.Millisecond)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	protocol, err, _ := mock.PublishProtocolCreate(model.Protocol{
 		Name:             "test",
 		Handler:          "test",
