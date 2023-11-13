@@ -34,6 +34,7 @@ var cacheReads *prometheus.HistogramVec
 var cacheMiss *prometheus.CounterVec
 var timescaleWrites *prometheus.HistogramVec
 var kafkaWrites *prometheus.HistogramVec
+var sourceWrites *prometheus.HistogramVec
 var instanceId string
 
 func IotRead(duration time.Duration) {
@@ -61,6 +62,11 @@ func KafkaWrite(duration time.Duration, userId string) {
 	kafkaWrites.WithLabelValues(userId, instanceId).Observe(float64(duration.Milliseconds()))
 }
 
+func SourceReceive(size float64, userId string) {
+	once.Do(start)
+	sourceWrites.WithLabelValues(userId, instanceId).Observe(size)
+}
+
 func start() {
 	log.Println("start statistics collector")
 	buckets := []float64{1, 5, 10, 50, 100, 200, 300, 500, 1000, 2000, 5000, 10000}
@@ -82,6 +88,11 @@ func start() {
 	kafkaWrites = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "connector_kafka_write_latency_ms",
 		Help:    "Latency of kafka publishes",
+		Buckets: buckets,
+	}, []string{"user_id", "instance_id"})
+	sourceWrites = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "connector_source_received_msg_size",
+		Help:    "Received message size from source",
 		Buckets: buckets,
 	}, []string{"user_id", "instance_id"})
 	timescaleWrites = promauto.NewHistogramVec(prometheus.HistogramOpts{
