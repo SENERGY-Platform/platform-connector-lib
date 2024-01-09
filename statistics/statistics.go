@@ -35,6 +35,9 @@ var cacheMiss *prometheus.CounterVec
 var timescaleWrites *prometheus.HistogramVec
 var kafkaWrites *prometheus.HistogramVec
 var sourceWrites *prometheus.HistogramVec
+var sourceHandled *prometheus.HistogramVec
+var deviceMessages *prometheus.HistogramVec
+var deviceMessagesHandled *prometheus.HistogramVec
 var instanceId string
 
 func IotRead(duration time.Duration) {
@@ -67,9 +70,25 @@ func SourceReceive(size float64, userId string) {
 	sourceWrites.WithLabelValues(userId, instanceId).Observe(size)
 }
 
+func SourceReceiveHandled(size float64, userId string) {
+	once.Do(start)
+	sourceHandled.WithLabelValues(userId, instanceId).Observe(size)
+}
+
+func DeviceMsgReceive(size float64, userId string, deviceId string, serviceIds string, deviceTypeId string) {
+	once.Do(start)
+	deviceMessages.WithLabelValues(userId, instanceId, deviceId, serviceIds, deviceTypeId).Observe(size)
+}
+
+func DeviceMsgHandled(size float64, userId string, deviceId string, serviceIds string, deviceTypeId string) {
+	once.Do(start)
+	deviceMessagesHandled.WithLabelValues(userId, instanceId, deviceId, serviceIds, deviceTypeId).Observe(size)
+}
+
 func start() {
 	log.Println("start statistics collector")
 	buckets := []float64{1, 5, 10, 50, 100, 200, 300, 500, 1000, 2000, 5000, 10000}
+	sourceBuckets := []float64{32, 64, 128, 256, 512, 1024, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 9216, 10240}
 
 	iotReads = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "connector_iot_read_latency_ms",
@@ -90,10 +109,25 @@ func start() {
 		Help:    "Latency of kafka publishes",
 		Buckets: buckets,
 	}, []string{"user_id", "instance_id"})
+	deviceMessages = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "connector_source_received_device_msg_size",
+		Help:    "Received device message size from source",
+		Buckets: sourceBuckets,
+	}, []string{"user_id", "instance_id", "device_id", "service_ids", "device_type_id"})
+	deviceMessagesHandled = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "connector_source_handled_device_msg_size",
+		Help:    "Handled device message size from source",
+		Buckets: sourceBuckets,
+	}, []string{"user_id", "instance_id", "device_id", "service_ids", "device_type_id"})
 	sourceWrites = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "connector_source_received_msg_size",
 		Help:    "Received message size from source",
-		Buckets: buckets,
+		Buckets: sourceBuckets,
+	}, []string{"user_id", "instance_id"})
+	sourceHandled = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "connector_source_handled_msg_size",
+		Help:    "Handled message size from source",
+		Buckets: sourceBuckets,
 	}, []string{"user_id", "instance_id"})
 	timescaleWrites = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "connector_timescale_write_latency_ms",

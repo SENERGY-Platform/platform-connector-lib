@@ -88,32 +88,41 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 	return result, err
 }
 
-func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg, qos Qos) error {
+type HandledDeviceInfo struct {
+	DeviceId     string
+	DeviceTypeId string
+	ServiceIds   []string
+}
+
+func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg, qos Qos) (info HandledDeviceInfo, err error) {
 	device, err := this.IotCache.WithToken(token).GetDeviceByLocalId(deviceUri)
 	if err != nil {
 		log.Println("ERROR: handleDeviceRefEvent::DeviceUrlToIotDevice", err)
-		return err
+		return info, err
 	}
+	info.DeviceId = device.Id
 	dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceTypeId)
 	if err != nil {
 		log.Println("ERROR: handleDeviceRefEvent::GetDeviceType", err)
-		return err
+		return info, err
 	}
+	info.DeviceTypeId = dt.Id
 	found := false
 	for _, service := range dt.Services {
 		if service.LocalId == serviceUri && len(service.Outputs) > 0 {
 			err = this.handleDeviceEvent(token, device.Id, service.Id, msg, qos)
 			if err != nil {
 				log.Printf("ERROR: handleDeviceRefEvent::handleDeviceEvent %v\n%#v", err, msg)
-				return err
+				return info, err
 			}
 			found = true
+			info.ServiceIds = append(info.ServiceIds, service.Id)
 		}
 	}
 	if !found {
-		return ErrorUnknownLocalServiceId
+		return info, ErrorUnknownLocalServiceId
 	}
-	return nil
+	return info, nil
 }
 
 func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId string, serviceId string, msg EventMsg, qos Qos) (err error) {

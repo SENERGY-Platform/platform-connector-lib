@@ -372,57 +372,59 @@ func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, d
 	return this.handleDeviceEvent(token, deviceId, serviceId, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos) (err error) {
+func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos) (info HandledDeviceInfo, err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
 		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
-		return err
+		return info, err
 	}
 	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos) (err error) {
+func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos) (info HandledDeviceInfo, err error) {
 	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos) (err error) {
+func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos) (info HandledDeviceInfo, err error) {
 	token, err := this.security.GetUserToken(username, password)
 	if err != nil {
 		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
-		return err
+		return info, err
 	}
 	return this.HandleDeviceIdentEventWithAuthToken(token, deviceId, localDeviceId, serviceId, localServiceId, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtToken, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos) (err error) {
+func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtToken, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos) (info HandledDeviceInfo, err error) {
 	var device model.Device
 	if deviceId == "" {
 		if localDeviceId == "" {
-			return errors.New("missing deviceId or localDeviceId")
+			return info, errors.New("missing deviceId or localDeviceId")
 		} else {
 			device, err = this.IotCache.WithToken(token).GetDeviceByLocalId(localDeviceId)
 			if err != nil {
 				log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::DeviceUrlToIotDevice", err)
-				return err
+				return info, err
 			}
 			deviceId = device.Id
 		}
 	}
+	info.DeviceId = deviceId
+	dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceTypeId)
+	if err != nil {
+		log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDeviceType", err)
+		return info, err
+	}
+	info.DeviceTypeId = dt.Id
 	if serviceId == "" {
 		if localServiceId == "" {
-			return errors.New("missing serviceId or localServiceId")
+			return info, errors.New("missing serviceId or localServiceId")
 		} else {
 			if device.Id == "" {
 				device, err = this.IotCache.WithToken(token).GetDevice(deviceId)
 				if err != nil {
 					log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDevice", err)
-					return err
+					return info, err
 				}
-			}
-			dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceTypeId)
-			if err != nil {
-				log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDeviceType", err)
-				return err
 			}
 			for _, service := range dt.Services {
 				if service.LocalId == localServiceId && len(service.Outputs) > 0 {
@@ -430,16 +432,17 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 				}
 			}
 			if serviceId == "" {
-				return ErrorUnknownLocalServiceId
+				return info, ErrorUnknownLocalServiceId
 			}
 		}
 	}
+	info.ServiceIds = []string{serviceId}
 	err = this.handleDeviceEvent(token, deviceId, serviceId, eventMsg, qos)
 	if err != nil {
 		log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::handleDeviceEvent", err)
-		return err
+		return info, err
 	}
-	return nil
+	return info, nil
 }
 
 func (this *Connector) Security() *security.Security {
