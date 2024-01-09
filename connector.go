@@ -407,8 +407,14 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 			}
 			deviceId = device.Id
 		}
+	} else {
+		device, err = this.IotCache.WithToken(token).GetDevice(deviceId)
+		if err != nil {
+			log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDevice", err)
+			return info, err
+		}
 	}
-	info.DeviceId = deviceId
+	info.DeviceId = device.Id
 	dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceTypeId)
 	if err != nil {
 		log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDeviceType", err)
@@ -419,13 +425,6 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 		if localServiceId == "" {
 			return info, errors.New("missing serviceId or localServiceId")
 		} else {
-			if device.Id == "" {
-				device, err = this.IotCache.WithToken(token).GetDevice(deviceId)
-				if err != nil {
-					log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDevice", err)
-					return info, err
-				}
-			}
 			for _, service := range dt.Services {
 				if service.LocalId == localServiceId && len(service.Outputs) > 0 {
 					serviceId = service.Id
