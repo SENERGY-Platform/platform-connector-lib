@@ -23,6 +23,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -75,14 +77,16 @@ func SourceReceiveHandled(size float64, userId string) {
 	sourceHandled.WithLabelValues(userId, instanceId).Observe(size)
 }
 
-func DeviceMsgReceive(size float64, userId string, deviceId string, serviceIds string, deviceTypeId string) {
+func DeviceMsgReceive(size float64, userId string, deviceId string, deviceTypeId string, serviceIds []string) {
 	once.Do(start)
-	deviceMessages.WithLabelValues(userId, instanceId, deviceId, serviceIds, deviceTypeId).Observe(size)
+	sort.Strings(serviceIds)
+	deviceMessages.WithLabelValues(userId, instanceId, deviceId, strings.Join(serviceIds, ","), deviceTypeId).Observe(size)
 }
 
-func DeviceMsgHandled(size float64, userId string, deviceId string, serviceIds string, deviceTypeId string) {
+func DeviceMsgHandled(size float64, userId string, deviceId string, deviceTypeId string, serviceIds []string) {
 	once.Do(start)
-	deviceMessagesHandled.WithLabelValues(userId, instanceId, deviceId, serviceIds, deviceTypeId).Observe(size)
+	sort.Strings(serviceIds)
+	deviceMessagesHandled.WithLabelValues(userId, instanceId, deviceId, strings.Join(serviceIds, ","), deviceTypeId).Observe(size)
 }
 
 func start() {
