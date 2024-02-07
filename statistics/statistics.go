@@ -42,6 +42,10 @@ var deviceMessages *prometheus.HistogramVec
 var deviceMessagesHandled *prometheus.HistogramVec
 var instanceId string
 
+func Init() {
+	once.Do(start)
+}
+
 func IotRead(duration time.Duration) {
 	once.Do(start)
 	iotReads.WithLabelValues(instanceId).Observe(float64(duration.Milliseconds()))
@@ -93,7 +97,6 @@ func start() {
 	log.Println("start statistics collector")
 	buckets := []float64{1, 5, 10, 50, 100, 200, 300, 500, 1000, 2000, 5000, 10000}
 	sourceBuckets := []float64{32, 64, 128, 256, 512, 1024, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 9216, 10240}
-
 	iotReads = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "connector_iot_read_latency_ms",
 		Help:    "Latency of IoT metadata reads",
