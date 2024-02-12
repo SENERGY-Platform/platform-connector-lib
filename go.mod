@@ -1,8 +1,6 @@
 module github.com/SENERGY-Platform/platform-connector-lib
 
-go 1.21
-
-toolchain go1.21.0
+go 1.22
 
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
@@ -16,12 +14,12 @@ require (
 )
 
 require (
-	github.com/IBM/sarama v1.42.1
-	github.com/SENERGY-Platform/converter v0.0.4
-	github.com/SENERGY-Platform/developer-notifications v0.0.1
+	github.com/IBM/sarama v1.42.2
+	github.com/SENERGY-Platform/converter v0.0.5
+	github.com/SENERGY-Platform/developer-notifications v0.0.2
 	github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38
-	github.com/SENERGY-Platform/permission-search v0.0.1
-	github.com/SENERGY-Platform/service-commons v0.0.0-20231115074650-7021aeae60e4
+	github.com/SENERGY-Platform/permission-search v0.0.2
+	github.com/SENERGY-Platform/service-commons v0.0.0-20240212071101-f06b2d8b0885
 	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/testcontainers/testcontainers-go v0.27.0
@@ -97,14 +95,14 @@ require (
 	github.com/tklauser/numcpus v0.7.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.48.0 // indirect
-	go.opentelemetry.io/otel v1.23.0 // indirect
-	go.opentelemetry.io/otel/metric v1.23.0 // indirect
-	go.opentelemetry.io/otel/trace v1.23.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
+	go.opentelemetry.io/otel v1.23.1 // indirect
+	go.opentelemetry.io/otel/metric v1.23.1 // indirect
+	go.opentelemetry.io/otel/trace v1.23.1 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3 // indirect
 	golang.org/x/mod v0.15.0 // indirect
-	golang.org/x/net v0.20.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240205150955-31a09d347014 // indirect
