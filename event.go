@@ -235,7 +235,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 			if pgErr != nil {
 				log.Println("ERROR: publish event to postgres ", pgErr)
 				if shouldNotify {
-					this.notifyDeviceOnwners(envelope.DeviceId, Notification{
+					this.notifyDeviceOwners(envelope.DeviceId, Notification{
 						Title:   "DeviceType Timescale Configuration Error",
 						Message: "Error: " + err.Error() + "\n\nDeviceId: " + envelope.DeviceId + "\nService: " + service.Name + " (" + service.LocalId + ")",
 					})

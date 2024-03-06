@@ -53,6 +53,18 @@ const (
 	SyncIdempotent
 )
 
+type Security interface {
+	Access() (token security.JwtToken, err error)
+	ResetAccess()
+	GenerateUserTokenById(userid string) (token security.JwtToken, err error)
+	GenerateUserToken(username string) (token security.JwtToken, err error)
+	ExchangeUserToken(userid string) (token security.JwtToken, err error)
+	GetUserToken(username string, password string) (token security.JwtToken, err error)
+	GetCachedUserToken(username string) (token security.JwtToken, err error)
+	GetUserId(username string) (userid string, err error)
+	GetUserRoles(userid string) (roles []string, err error)
+}
+
 type Connector struct {
 	Config Config
 	//asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
@@ -61,7 +73,7 @@ type Connector struct {
 	producer             map[Qos]kafka.ProducerInterface
 	postgresPublisher    *psql.Publisher
 	iot                  *iot.Iot
-	security             *security.Security
+	security             Security
 
 	IotCache *iot.PreparedCache
 
@@ -444,7 +456,7 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 	return info, nil
 }
 
-func (this *Connector) Security() *security.Security {
+func (this *Connector) Security() Security {
 	return this.security
 }
 

@@ -36,12 +36,15 @@ import (
 const MutedDeviceErrorsAttribute = "platform/mute-format-error"
 
 func (this *Connector) notifyMessageFormatError(device model.Device, service model.Service, errMsg error) {
+	log.Printf("DEBUG: notify device %v (%v) owners of message format error\n", device.Id, device.Name)
 	if this.Config.NotificationUrl == "" {
 		log.Println("WARNING: no NotificationUrl configured")
 		return
 	}
 	if !mutedDeviceErrors(device) {
-		this.notifyDeviceOnwners(device.Id, createMessageFormatErrorNotification(device, service, errMsg))
+		this.notifyDeviceOwners(device.Id, createMessageFormatErrorNotification(device, service, errMsg))
+	} else {
+		log.Printf("DEBUG: notifications for device %v (%v) are muted\n", device.Id, device.Name)
 	}
 }
 
@@ -54,7 +57,7 @@ func mutedDeviceErrors(device model.Device) bool {
 	return false
 }
 
-func (this *Connector) notifyDeviceOnwners(deviceId string, message Notification) {
+func (this *Connector) notifyDeviceOwners(deviceId string, message Notification) {
 	if this.Config.NotificationUrl == "" {
 		log.Println("WARNING: no NotificationUrl configured")
 		return
@@ -109,6 +112,7 @@ func (this *Connector) SendNotification(message Notification) error {
 	}
 	if this.devNotifications != nil {
 		go func() {
+			log.Println("DEBUG: send developer-notification")
 			err := this.devNotifications.SendMessage(developerNotifications.Message{
 				Sender: "github.com/SENERGY-Platform/platform-connector-lib",
 				Title:  "Connector-User-Notification",
@@ -129,7 +133,9 @@ func (this *Connector) SendNotification(message Notification) error {
 	if this.Config.NotificationsIgnoreDuplicatesWithinS > 0 {
 		ignoreDuplicatesWithinS = strconv.Itoa(this.Config.NotificationsIgnoreDuplicatesWithinS)
 	}
-	req, err := http.NewRequest("POST", this.Config.NotificationUrl+"/notifications?ignore_duplicates_within_seconds="+ignoreDuplicatesWithinS, b)
+	endpoint := this.Config.NotificationUrl + "/notifications?ignore_duplicates_within_seconds=" + ignoreDuplicatesWithinS
+	log.Printf("DEBUG: send notification to %v with %v\n", message.UserId, endpoint)
+	req, err := http.NewRequest("POST", endpoint, b)
 	if err != nil {
 		log.Printf("tried to send notification %#v\n", message)
 		return err
