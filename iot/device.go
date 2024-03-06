@@ -18,6 +18,8 @@ package iot
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/SENERGY-Platform/permission-search/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
@@ -36,12 +38,25 @@ func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Dev
 		return device, err
 	}
 	defer resp.Body.Close()
-
 	err = json.NewDecoder(resp.Body).Decode(&device)
+	if err != nil {
+		return device, err
+	}
+	if device.Id == "" || device.DeviceTypeId == "" {
+		debug.PrintStack()
+		err = fmt.Errorf("receive invalid device %#v", device)
+		log.Println("ERROR:", err)
+		return device, err
+	}
 	return device, err
 }
 
 func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.DeviceType, err error) {
+	if id == "" {
+		debug.PrintStack()
+		log.Println("ERROR: on GetDeviceType() missing id")
+		return dt, errors.New("missing id")
+	}
 	start := time.Now()
 	defer statistics.IotRead(time.Since(start))
 	resp, err := token.Get(this.repo_url + "/device-types/" + url.QueryEscape(id))

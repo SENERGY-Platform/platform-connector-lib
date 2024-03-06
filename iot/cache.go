@@ -1,12 +1,16 @@
 package iot
 
 import (
+	"errors"
+	"fmt"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache/memcached"
 	"github.com/SENERGY-Platform/service-commons/pkg/signal"
+	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -67,9 +71,19 @@ func (this *PreparedCache) GetDevice(token security.JwtToken, id string) (result
 	if err != nil {
 		return result, err
 	}
-	return cache.Use(this.cache, "device."+pl.UserId+"."+id, func() (model.Device, error) {
+	result, err = cache.Use(this.cache, "device."+pl.UserId+"."+id, func() (model.Device, error) {
 		return this.iot.GetDevice(id, token)
 	}, time.Duration(this.deviceExpiration)*time.Second)
+	if err != nil {
+		return result, err
+	}
+	if result.Id == "" || result.DeviceTypeId == "" {
+		debug.PrintStack()
+		err = fmt.Errorf("receive invalid device %#v", result)
+		log.Println("ERROR:", err)
+		return result, err
+	}
+	return result, err
 }
 
 func (this *PreparedCache) GetDeviceByLocalId(token security.JwtToken, deviceUrl string) (result model.Device, err error) {
@@ -143,6 +157,11 @@ func (this *PreparedCache) EnsureLocalDeviceExistence(token security.JwtToken, d
 }
 
 func (this *PreparedCache) GetDeviceType(token security.JwtToken, id string) (result model.DeviceType, err error) {
+	if id == "" {
+		debug.PrintStack()
+		log.Println("ERROR: on GetDeviceType() missing id")
+		return result, errors.New("missing id")
+	}
 	if this.deviceTypeExpiration == 0 {
 		return this.iot.GetDeviceType(id, token)
 	}
