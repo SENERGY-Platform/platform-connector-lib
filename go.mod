@@ -19,7 +19,7 @@ require (
 	github.com/SENERGY-Platform/developer-notifications v0.0.2
 	github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38
 	github.com/SENERGY-Platform/permission-search v0.0.4
-	github.com/SENERGY-Platform/service-commons v0.0.0-20240305143349-19fa57c20f9f
+	github.com/SENERGY-Platform/service-commons v0.0.0-20240306125932-a3fb4550e86c
 	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/testcontainers/testcontainers-go v0.28.0

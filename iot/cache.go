@@ -71,16 +71,18 @@ func (this *PreparedCache) GetDevice(token security.JwtToken, id string) (result
 	if err != nil {
 		return result, err
 	}
-	result, err = cache.Use(this.cache, "device."+pl.UserId+"."+id, func() (model.Device, error) {
+	result, err = cache.UseWithValidation(this.cache, "device."+pl.UserId+"."+id, func() (model.Device, error) {
 		return this.iot.GetDevice(id, token)
-	}, time.Duration(this.deviceExpiration)*time.Second)
+	}, time.Duration(this.deviceExpiration)*time.Second, func(device model.Device) error {
+		if result.Id == "" {
+			return fmt.Errorf("missing device.id")
+		}
+		if result.DeviceTypeId == "" {
+			return fmt.Errorf("missing device.device_type_id")
+		}
+		return nil
+	})
 	if err != nil {
-		return result, err
-	}
-	if result.Id == "" || result.DeviceTypeId == "" {
-		debug.PrintStack()
-		err = fmt.Errorf("receive invalid device %#v", result)
-		log.Println("ERROR:", err)
 		return result, err
 	}
 	return result, err
@@ -94,9 +96,17 @@ func (this *PreparedCache) GetDeviceByLocalId(token security.JwtToken, deviceUrl
 	if err != nil {
 		return result, err
 	}
-	return cache.Use(this.cache, "device_url."+pl.UserId+"."+deviceUrl, func() (model.Device, error) {
+	return cache.UseWithValidation(this.cache, "device_url."+pl.UserId+"."+deviceUrl, func() (model.Device, error) {
 		return this.iot.GetDeviceByLocalId(deviceUrl, token)
-	}, time.Duration(this.deviceExpiration)*time.Second)
+	}, time.Duration(this.deviceExpiration)*time.Second, func(device model.Device) error {
+		if result.Id == "" {
+			return fmt.Errorf("missing device.id")
+		}
+		if result.DeviceTypeId == "" {
+			return fmt.Errorf("missing device.device_type_id")
+		}
+		return nil
+	})
 }
 
 func (this *PreparedCache) CreateDevice(token security.JwtToken, device model.Device) (result model.Device, err error) {
