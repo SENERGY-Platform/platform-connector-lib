@@ -1,6 +1,7 @@
 package security
 
 import (
+	"errors"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"log"
 	"time"
@@ -15,7 +16,12 @@ func (this *Security) GetCachedUserToken(username string) (token JwtToken, err e
 		}
 		return token, nil
 	}
-	return cache.Use(this.cache, "token."+username, func() (JwtToken, error) {
+	return cache.UseWithValidation(this.cache, "token."+username, func() (JwtToken, error) {
 		return this.ExchangeUserToken(username)
-	}, time.Duration(this.tokenCacheExpiration)*time.Second)
+	}, time.Duration(this.tokenCacheExpiration)*time.Second, func(token JwtToken) error {
+		if token == "" || token == "Bearer " {
+			return errors.New("missing token")
+		}
+		return nil
+	})
 }

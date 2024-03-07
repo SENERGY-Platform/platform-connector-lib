@@ -178,9 +178,14 @@ func (this *PreparedCache) GetDeviceType(token security.JwtToken, id string) (re
 	if this.deviceTypeExpiration == 0 {
 		return this.iot.GetDeviceType(id, token)
 	}
-	return cache.Use(this.cache, "dt."+id, func() (model.DeviceType, error) {
+	return cache.UseWithValidation(this.cache, "dt."+id, func() (model.DeviceType, error) {
 		return this.iot.GetDeviceType(id, token)
-	}, time.Duration(this.deviceTypeExpiration)*time.Second)
+	}, time.Duration(this.deviceTypeExpiration)*time.Second, func(deviceType model.DeviceType) error {
+		if deviceType.Id == "" {
+			return errors.New("missing device_type.id")
+		}
+		return nil
+	})
 }
 
 func (this *PreparedCache) GetProtocol(token security.JwtToken, id string) (result model.Protocol, err error) {

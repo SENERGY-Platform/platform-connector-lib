@@ -30,9 +30,14 @@ import (
 const characteristicCachePrefix = "characteristic."
 
 func (this *PreparedCache) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
-	return cache.Use(this.cache, characteristicCachePrefix+id, func() (model.Characteristic, error) {
+	return cache.UseWithValidation(this.cache, characteristicCachePrefix+id, func() (model.Characteristic, error) {
 		return this.iot.GetCharacteristicById(id, token)
-	}, time.Duration(this.characteristicExpiration)*time.Second)
+	}, time.Duration(this.characteristicExpiration)*time.Second, func(c model.Characteristic) error {
+		if c.Id == "" {
+			return errors.New("missing characteristic.id")
+		}
+		return nil
+	})
 }
 
 func (this *Iot) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
