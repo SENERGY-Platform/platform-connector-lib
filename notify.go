@@ -36,7 +36,9 @@ import (
 const MutedDeviceErrorsAttribute = "platform/mute-format-error"
 
 func (this *Connector) notifyMessageFormatError(device model.Device, service model.Service, errMsg error) {
-	log.Printf("DEBUG: notify device %v (%v) owners of message format error\n", device.Id, device.Name)
+	if this.Config.Debug {
+		log.Printf("DEBUG: notify device %v (%v) owners of message format error\n", device.Id, device.Name)
+	}
 	if this.Config.NotificationUrl == "" {
 		log.Println("WARNING: no NotificationUrl configured")
 		return
@@ -44,7 +46,9 @@ func (this *Connector) notifyMessageFormatError(device model.Device, service mod
 	if !mutedDeviceErrors(device) {
 		this.notifyDeviceOwners(device.Id, createMessageFormatErrorNotification(device, service, errMsg))
 	} else {
-		log.Printf("DEBUG: notifications for device %v (%v) are muted\n", device.Id, device.Name)
+		if this.Config.Debug {
+			log.Printf("DEBUG: notifications for device %v (%v) are muted\n", device.Id, device.Name)
+		}
 	}
 }
 
@@ -112,7 +116,9 @@ func (this *Connector) SendNotification(message Notification) error {
 	}
 	if this.devNotifications != nil {
 		go func() {
-			log.Println("DEBUG: send developer-notification")
+			if this.Config.Debug {
+				log.Println("DEBUG: send developer-notification")
+			}
 			err := this.devNotifications.SendMessage(developerNotifications.Message{
 				Sender: "github.com/SENERGY-Platform/platform-connector-lib",
 				Title:  "Connector-User-Notification",
@@ -134,7 +140,9 @@ func (this *Connector) SendNotification(message Notification) error {
 		ignoreDuplicatesWithinS = strconv.Itoa(this.Config.NotificationsIgnoreDuplicatesWithinS)
 	}
 	endpoint := this.Config.NotificationUrl + "/notifications?ignore_duplicates_within_seconds=" + ignoreDuplicatesWithinS
-	log.Printf("DEBUG: send notification to %v with %v\n", message.UserId, endpoint)
+	if this.Config.Debug {
+		log.Printf("DEBUG: send notification to %v with %v\n", message.UserId, endpoint)
+	}
 	req, err := http.NewRequest("POST", endpoint, b)
 	if err != nil {
 		log.Printf("tried to send notification %#v\n", message)

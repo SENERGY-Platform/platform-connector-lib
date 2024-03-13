@@ -72,7 +72,9 @@ func (this *PreparedCache) GetDevice(token security.JwtToken, id string) (result
 		return result, err
 	}
 	result, err = cache.UseWithValidation(this.cache, "device."+pl.UserId+"."+id, func() (model.Device, error) {
-		log.Printf("DEBUG: load device %v from repository\n", id)
+		if this.Debug {
+			log.Printf("DEBUG: load device %v from repository\n", id)
+		}
 		return this.iot.GetDevice(id, token)
 	}, time.Duration(this.deviceExpiration)*time.Second, func(device model.Device) error {
 		if device.Id == "" {
@@ -98,7 +100,9 @@ func (this *PreparedCache) GetDeviceByLocalId(token security.JwtToken, deviceUrl
 		return result, err
 	}
 	return cache.UseWithValidation(this.cache, "device_url."+pl.UserId+"."+deviceUrl, func() (model.Device, error) {
-		log.Printf("DEBUG: load device %v from repository\n", deviceUrl)
+		if this.Debug {
+			log.Printf("DEBUG: load device %v from repository\n", deviceUrl)
+		}
 		return this.iot.GetDeviceByLocalId(deviceUrl, token)
 	}, time.Duration(this.deviceExpiration)*time.Second, func(device model.Device) error {
 		if device.Id == "" {
@@ -125,7 +129,9 @@ func (this *PreparedCache) cacheDevice(token security.JwtToken, device model.Dev
 	if err != nil {
 		return err
 	}
-	log.Printf("DEBUG: cache device %#v", device)
+	if this.Debug {
+		log.Printf("DEBUG: cache device %#v", device)
+	}
 	err = this.cache.Set("device_url."+pl.UserId+"."+device.LocalId, device, time.Duration(this.deviceExpiration)*time.Second)
 	if err != nil {
 		return err
