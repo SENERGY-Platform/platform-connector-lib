@@ -16,12 +16,12 @@ func (this *Security) GetCachedUserToken(username string) (token JwtToken, err e
 		}
 		return token, nil
 	}
-	return cache.UseWithValidation(this.cache, "token."+username, func() (JwtToken, error) {
+	return cache.Use(this.cache, "token."+username, func() (JwtToken, error) {
 		return this.ExchangeUserToken(username)
-	}, time.Duration(this.tokenCacheExpiration)*time.Second, func(token JwtToken) error {
+	}, func(token JwtToken) error {
 		if token == "" || token == "Bearer " {
 			return errors.New("missing token")
 		}
 		return nil
-	})
+	}, time.Duration(this.tokenCacheExpiration)*time.Second)
 }

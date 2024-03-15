@@ -71,12 +71,12 @@ func (this *PreparedCache) GetDevice(token security.JwtToken, id string) (result
 	if err != nil {
 		return result, err
 	}
-	result, err = cache.UseWithValidation(this.cache, "device."+pl.UserId+"."+id, func() (model.Device, error) {
+	result, err = cache.Use(this.cache, "device."+pl.UserId+"."+id, func() (model.Device, error) {
 		if this.Debug {
 			log.Printf("DEBUG: load device %v from repository\n", id)
 		}
 		return this.iot.GetDevice(id, token)
-	}, time.Duration(this.deviceExpiration)*time.Second, func(device model.Device) error {
+	}, func(device model.Device) error {
 		if device.Id == "" {
 			return fmt.Errorf("missing device.id")
 		}
@@ -84,7 +84,7 @@ func (this *PreparedCache) GetDevice(token security.JwtToken, id string) (result
 			return fmt.Errorf("missing device.device_type_id")
 		}
 		return nil
-	})
+	}, time.Duration(this.deviceExpiration)*time.Second)
 	if err != nil {
 		return result, err
 	}
@@ -99,12 +99,12 @@ func (this *PreparedCache) GetDeviceByLocalId(token security.JwtToken, deviceUrl
 	if err != nil {
 		return result, err
 	}
-	return cache.UseWithValidation(this.cache, "device_url."+pl.UserId+"."+deviceUrl, func() (model.Device, error) {
+	return cache.Use(this.cache, "device_url."+pl.UserId+"."+deviceUrl, func() (model.Device, error) {
 		if this.Debug {
 			log.Printf("DEBUG: load device %v from repository\n", deviceUrl)
 		}
 		return this.iot.GetDeviceByLocalId(deviceUrl, token)
-	}, time.Duration(this.deviceExpiration)*time.Second, func(device model.Device) error {
+	}, func(device model.Device) error {
 		if device.Id == "" {
 			return fmt.Errorf("missing device.id")
 		}
@@ -112,7 +112,7 @@ func (this *PreparedCache) GetDeviceByLocalId(token security.JwtToken, deviceUrl
 			return fmt.Errorf("missing device.device_type_id")
 		}
 		return nil
-	})
+	}, time.Duration(this.deviceExpiration)*time.Second)
 }
 
 func (this *PreparedCache) CreateDevice(token security.JwtToken, device model.Device) (result model.Device, err error) {
@@ -184,14 +184,14 @@ func (this *PreparedCache) GetDeviceType(token security.JwtToken, id string) (re
 	if this.deviceTypeExpiration == 0 {
 		return this.iot.GetDeviceType(id, token)
 	}
-	return cache.UseWithValidation(this.cache, "dt."+id, func() (model.DeviceType, error) {
+	return cache.Use(this.cache, "dt."+id, func() (model.DeviceType, error) {
 		return this.iot.GetDeviceType(id, token)
-	}, time.Duration(this.deviceTypeExpiration)*time.Second, func(deviceType model.DeviceType) error {
+	}, func(deviceType model.DeviceType) error {
 		if deviceType.Id == "" {
 			return errors.New("missing device_type.id")
 		}
 		return nil
-	})
+	}, time.Duration(this.deviceTypeExpiration)*time.Second)
 }
 
 func (this *PreparedCache) GetProtocol(token security.JwtToken, id string) (result model.Protocol, err error) {
