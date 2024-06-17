@@ -19,6 +19,7 @@ package security
 import (
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"io"
 	"net/http"
 	"strings"
@@ -42,7 +43,7 @@ func (this *OpenidToken) JwtToken() JwtToken {
 	return JwtToken("Bearer " + this.AccessToken)
 }
 
-func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret string, remoteAddr string) (openid OpenidToken, err error) {
+func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret string, remoteInfo model.RemoteInfo) (openid OpenidToken, err error) {
 	requesttime := time.Now()
 	client := http.Client{
 		Timeout: 5 * time.Second,
@@ -56,8 +57,14 @@ func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret s
 		return openid, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if remoteAddr != "" {
-		req.Header.Set("X-Forwarded-For", remoteAddr)
+	if remoteInfo.Ip != "" {
+		req.Header.Set("X-Forwarded-For", remoteInfo.Ip)
+	}
+	if remoteInfo.Port != "" {
+		req.Header.Set("X-Forwarded-Port", remoteInfo.Port)
+	}
+	if remoteInfo.Port != "" {
+		req.Header.Set("X-Forwarded-Proto", remoteInfo.Protocol)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -73,7 +80,7 @@ func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret s
 	return
 }
 
-func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecret string, oldOpenid OpenidToken, remoteAddr string) (openid OpenidToken, err error) {
+func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecret string, oldOpenid OpenidToken, remoteInfo model.RemoteInfo) (openid OpenidToken, err error) {
 	requesttime := time.Now()
 	client := http.Client{
 		Timeout: 5 * time.Second,
@@ -88,8 +95,14 @@ func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecr
 		return openid, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if remoteAddr != "" {
-		req.Header.Set("X-Forwarded-For", remoteAddr)
+	if remoteInfo.Ip != "" {
+		req.Header.Set("X-Forwarded-For", remoteInfo.Ip)
+	}
+	if remoteInfo.Port != "" {
+		req.Header.Set("X-Forwarded-Port", remoteInfo.Port)
+	}
+	if remoteInfo.Port != "" {
+		req.Header.Set("X-Forwarded-Proto", remoteInfo.Protocol)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -105,7 +118,7 @@ func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecr
 	return
 }
 
-func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClientSecret string, username, password string, remoteAddr string) (token OpenidToken, err error) {
+func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClientSecret string, username, password string, remoteInfo model.RemoteInfo) (token OpenidToken, err error) {
 	requesttime := time.Now()
 	client := http.Client{
 		Timeout: 5 * time.Second,
@@ -121,8 +134,14 @@ func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClient
 		return token, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if remoteAddr != "" {
-		req.Header.Set("X-Forwarded-For", remoteAddr)
+	if remoteInfo.Ip != "" {
+		req.Header.Set("X-Forwarded-For", remoteInfo.Ip)
+	}
+	if remoteInfo.Port != "" {
+		req.Header.Set("X-Forwarded-Port", remoteInfo.Port)
+	}
+	if remoteInfo.Port != "" {
+		req.Header.Set("X-Forwarded-Proto", remoteInfo.Protocol)
 	}
 	resp, err := client.Do(req)
 	if err != nil {

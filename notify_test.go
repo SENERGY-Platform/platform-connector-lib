@@ -25,6 +25,7 @@ import (
 	"github.com/SENERGY-Platform/permission-search/lib/tests/docker"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"io"
 	"net/http"
@@ -171,15 +172,15 @@ func (this *SecurityMock) GenerateUserToken(username string) (token security.Jwt
 	return this.GenerateUserTokenById(username)
 }
 
-func (this *SecurityMock) ExchangeUserToken(userid string, remoteAddr string) (token security.JwtToken, err error) {
+func (this *SecurityMock) ExchangeUserToken(userid string, remoteInfo model.RemoteInfo) (token security.JwtToken, err error) {
 	return this.GenerateUserTokenById(userid)
 }
 
-func (this *SecurityMock) GetUserToken(username string, password string, remoteAddr string) (token security.JwtToken, err error) {
+func (this *SecurityMock) GetUserToken(username string, password string, remoteInfo model.RemoteInfo) (token security.JwtToken, err error) {
 	return this.GenerateUserTokenById(username)
 }
 
-func (this *SecurityMock) GetCachedUserToken(username string, remoteAddr string) (token security.JwtToken, err error) {
+func (this *SecurityMock) GetCachedUserToken(username string, remoteInfo model.RemoteInfo) (token security.JwtToken, err error) {
 	return this.GenerateUserTokenById(username)
 }
 

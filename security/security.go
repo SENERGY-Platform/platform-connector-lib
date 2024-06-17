@@ -18,6 +18,7 @@ package security
 
 import (
 	"encoding/json"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache/memcached"
@@ -92,7 +93,7 @@ func (this *Security) Access() (token JwtToken, err error) {
 
 	if this.openid.RefreshToken != "" && this.openid.RefreshExpiresIn > duration+this.authExpirationTimeBuffer {
 		log.Println("refresh token", this.openid.RefreshExpiresIn, duration)
-		openid, err := RefreshOpenidToken(this.authEndpoint, this.authClientId, this.authClientSecret, *this.openid, "")
+		openid, err := RefreshOpenidToken(this.authEndpoint, this.authClientId, this.authClientSecret, *this.openid, model.RemoteInfo{})
 		if err != nil {
 			log.Println("WARNING: unable to use refreshtoken", err)
 		} else {
@@ -103,7 +104,7 @@ func (this *Security) Access() (token JwtToken, err error) {
 	}
 
 	log.Println("get new access token")
-	openid, err := GetOpenidToken(this.authEndpoint, this.authClientId, this.authClientSecret, "")
+	openid, err := GetOpenidToken(this.authEndpoint, this.authClientId, this.authClientSecret, model.RemoteInfo{})
 	this.openid = &openid
 	if err != nil {
 		log.Println("ERROR: unable to get new access token", err)

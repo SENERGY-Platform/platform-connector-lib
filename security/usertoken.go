@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/golang-jwt/jwt"
 	"io"
 	"log"
@@ -30,12 +31,12 @@ import (
 	"time"
 )
 
-func (this *Security) GetUserToken(username string, password string, remoteAddr string) (token JwtToken, err error) {
-	openid, err := GetOpenidPasswordToken(this.authEndpoint, this.authClientId, this.authClientSecret, username, password, remoteAddr)
+func (this *Security) GetUserToken(username string, password string, remoteInfo model.RemoteInfo) (token JwtToken, err error) {
+	openid, err := GetOpenidPasswordToken(this.authEndpoint, this.authClientId, this.authClientSecret, username, password, remoteInfo)
 	return openid.JwtToken(), err
 }
 
-func (this *Security) ExchangeUserToken(userid string, remoteAddr string) (token JwtToken, err error) {
+func (this *Security) ExchangeUserToken(userid string, remoteInfo model.RemoteInfo) (token JwtToken, err error) {
 	client := http.Client{
 		Timeout: 5 * time.Second,
 	}
@@ -49,8 +50,14 @@ func (this *Security) ExchangeUserToken(userid string, remoteAddr string) (token
 		return token, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if remoteAddr != "" {
-		req.Header.Set("X-Forwarded-For", remoteAddr)
+	if remoteInfo.Ip != "" {
+		req.Header.Set("X-Forwarded-For", remoteInfo.Ip)
+	}
+	if remoteInfo.Port != "" {
+		req.Header.Set("X-Forwarded-Port", remoteInfo.Port)
+	}
+	if remoteInfo.Port != "" {
+		req.Header.Set("X-Forwarded-Proto", remoteInfo.Protocol)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
