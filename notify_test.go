@@ -171,15 +171,15 @@ func (this *SecurityMock) GenerateUserToken(username string) (token security.Jwt
 	return this.GenerateUserTokenById(username)
 }
 
-func (this *SecurityMock) ExchangeUserToken(userid string) (token security.JwtToken, err error) {
+func (this *SecurityMock) ExchangeUserToken(userid string, remoteAddr string) (token security.JwtToken, err error) {
 	return this.GenerateUserTokenById(userid)
 }
 
-func (this *SecurityMock) GetUserToken(username string, password string) (token security.JwtToken, err error) {
+func (this *SecurityMock) GetUserToken(username string, password string, remoteAddr string) (token security.JwtToken, err error) {
 	return this.GenerateUserTokenById(username)
 }
 
-func (this *SecurityMock) GetCachedUserToken(username string) (token security.JwtToken, err error) {
+func (this *SecurityMock) GetCachedUserToken(username string, remoteAddr string) (token security.JwtToken, err error) {
 	return this.GenerateUserTokenById(username)
 }
 

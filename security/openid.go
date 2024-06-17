@@ -19,8 +19,9 @@ package security
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"net/url"
@@ -41,21 +42,29 @@ func (this *OpenidToken) JwtToken() JwtToken {
 	return JwtToken("Bearer " + this.AccessToken)
 }
 
-func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret string) (openid OpenidToken, err error) {
+func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret string, remoteAddr string) (openid OpenidToken, err error) {
 	requesttime := time.Now()
 	client := http.Client{
 		Timeout: 5 * time.Second,
 	}
-	resp, err := client.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
+	req, err := http.NewRequest("POST", authEndpoint+"/auth/realms/master/protocol/openid-connect/token", strings.NewReader(url.Values{
 		"client_id":     {authClientId},
 		"client_secret": {authClientSecret},
 		"grant_type":    {"client_credentials"},
-	})
+	}.Encode()))
+	if err != nil {
+		return openid, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if remoteAddr != "" {
+		req.Header.Set("X-Forwarded-For", remoteAddr)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return openid, err
 	}
 	if resp.StatusCode >= 300 {
-		b, _ := ioutil.ReadAll(resp.Body)
+		b, _ := io.ReadAll(resp.Body)
 		err = errors.New(resp.Status + ": " + string(b))
 		return
 	}
@@ -64,23 +73,30 @@ func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret s
 	return
 }
 
-func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecret string, oldOpenid OpenidToken) (openid OpenidToken, err error) {
+func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecret string, oldOpenid OpenidToken, remoteAddr string) (openid OpenidToken, err error) {
 	requesttime := time.Now()
 	client := http.Client{
 		Timeout: 5 * time.Second,
 	}
-	resp, err := client.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
+	req, err := http.NewRequest("POST", authEndpoint+"/auth/realms/master/protocol/openid-connect/token", strings.NewReader(url.Values{
 		"client_id":     {authClientId},
 		"client_secret": {authClientSecret},
 		"refresh_token": {oldOpenid.RefreshToken},
 		"grant_type":    {"refresh_token"},
-	})
-
+	}.Encode()))
+	if err != nil {
+		return openid, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if remoteAddr != "" {
+		req.Header.Set("X-Forwarded-For", remoteAddr)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return openid, err
 	}
 	if resp.StatusCode >= 300 {
-		b, _ := ioutil.ReadAll(resp.Body)
+		b, _ := io.ReadAll(resp.Body)
 		err = errors.New(resp.Status + ": " + string(b))
 		return
 	}
@@ -89,24 +105,31 @@ func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecr
 	return
 }
 
-func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClientSecret string, username, password string) (token OpenidToken, err error) {
+func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClientSecret string, username, password string, remoteAddr string) (token OpenidToken, err error) {
 	requesttime := time.Now()
 	client := http.Client{
 		Timeout: 5 * time.Second,
 	}
-	resp, err := client.PostForm(authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
+	req, err := http.NewRequest("POST", authEndpoint+"/auth/realms/master/protocol/openid-connect/token", strings.NewReader(url.Values{
 		"client_id":     {authClientId},
 		"client_secret": {authClientSecret},
 		"username":      {username},
 		"password":      {password},
 		"grant_type":    {"password"},
-	})
-
+	}.Encode()))
+	if err != nil {
+		return token, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if remoteAddr != "" {
+		req.Header.Set("X-Forwarded-For", remoteAddr)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return token, err
 	}
 	if resp.StatusCode >= 300 {
-		b, _ := ioutil.ReadAll(resp.Body)
+		b, _ := io.ReadAll(resp.Body)
 		err = errors.New(resp.Status + ": " + string(b))
 		return
 	}

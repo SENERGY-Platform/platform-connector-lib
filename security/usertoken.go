@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/golang-jwt/jwt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -30,23 +30,34 @@ import (
 	"time"
 )
 
-func (this *Security) GetUserToken(username string, password string) (token JwtToken, err error) {
-	openid, err := GetOpenidPasswordToken(this.authEndpoint, this.authClientId, this.authClientSecret, username, password)
+func (this *Security) GetUserToken(username string, password string, remoteAddr string) (token JwtToken, err error) {
+	openid, err := GetOpenidPasswordToken(this.authEndpoint, this.authClientId, this.authClientSecret, username, password, remoteAddr)
 	return openid.JwtToken(), err
 }
 
-func (this *Security) ExchangeUserToken(userid string) (token JwtToken, err error) {
-	resp, err := http.PostForm(this.authEndpoint+"/auth/realms/master/protocol/openid-connect/token", url.Values{
+func (this *Security) ExchangeUserToken(userid string, remoteAddr string) (token JwtToken, err error) {
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	req, err := http.NewRequest("POST", this.authEndpoint+"/auth/realms/master/protocol/openid-connect/token", strings.NewReader(url.Values{
 		"client_id":         {this.authClientId},
 		"client_secret":     {this.authClientSecret},
 		"grant_type":        {"urn:ietf:params:oauth:grant-type:token-exchange"},
 		"requested_subject": {userid},
-	})
+	}.Encode()))
+	if err != nil {
+		return token, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if remoteAddr != "" {
+		req.Header.Set("X-Forwarded-For", remoteAddr)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		log.Println("ERROR: GetUserToken()", resp.StatusCode, string(body))
 		err = errors.New("access denied")
 		resp.Body.Close()

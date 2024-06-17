@@ -58,9 +58,9 @@ type Security interface {
 	ResetAccess()
 	GenerateUserTokenById(userid string) (token security.JwtToken, err error)
 	GenerateUserToken(username string) (token security.JwtToken, err error)
-	ExchangeUserToken(userid string) (token security.JwtToken, err error)
-	GetUserToken(username string, password string) (token security.JwtToken, err error)
-	GetCachedUserToken(username string) (token security.JwtToken, err error)
+	ExchangeUserToken(userid string, remoteAddr string) (token security.JwtToken, err error)
+	GetUserToken(username string, password string, remoteAddr string) (token security.JwtToken, err error)
+	GetCachedUserToken(username string, remoteAddr string) (token security.JwtToken, err error)
 	GetUserId(username string) (userid string, err error)
 	GetUserRoles(userid string) (roles []string, err error)
 }
@@ -371,8 +371,8 @@ func (this *Connector) initProducer(ctx context.Context, qos Qos) (err error) {
 	return
 }
 
-func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string, qos Qos) (err error) {
-	token, err := this.security.GetUserToken(username, password)
+func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string, qos Qos, remoteAddr string) (err error) {
+	token, err := this.security.GetUserToken(username, password, remoteAddr)
 	if err != nil {
 		log.Println("ERROR HandleDeviceEvent::GetUserToken()", err)
 		return err
@@ -384,8 +384,8 @@ func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, d
 	return this.handleDeviceEvent(token, deviceId, serviceId, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos) (info HandledDeviceInfo, err error) {
-	token, err := this.security.GetUserToken(username, password)
+func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos, remoteAddr string) (info HandledDeviceInfo, err error) {
+	token, err := this.security.GetUserToken(username, password, remoteAddr)
 	if err != nil {
 		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
 		return info, err
@@ -397,8 +397,8 @@ func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken
 	return this.handleDeviceRefEvent(token, deviceUri, serviceUri, eventMsg, qos)
 }
 
-func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos) (info HandledDeviceInfo, err error) {
-	token, err := this.security.GetUserToken(username, password)
+func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos, remoteAddr string) (info HandledDeviceInfo, err error) {
+	token, err := this.security.GetUserToken(username, password, remoteAddr)
 	if err != nil {
 		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
 		return info, err
