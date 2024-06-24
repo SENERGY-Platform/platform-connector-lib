@@ -56,10 +56,12 @@ func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic
 		PartitionWatchInterval: time.Minute,
 	})
 	go func() {
+		defer func() {
+			log.Println("close kafka reader ", config.Topic, r.Close())
+		}()
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("close kafka reader ", config.Topic)
 				return
 			default:
 				m, err := r.FetchMessage(ctx)
