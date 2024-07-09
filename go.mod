@@ -15,11 +15,11 @@ require (
 
 require (
 	github.com/IBM/sarama v1.43.2
-	github.com/SENERGY-Platform/converter v0.0.7
+	github.com/SENERGY-Platform/converter v0.0.8
 	github.com/SENERGY-Platform/developer-notifications v0.0.4
 	github.com/SENERGY-Platform/models/go v0.0.0-20240627082833-157bd627a94f
-	github.com/SENERGY-Platform/permission-search v0.0.14
-	github.com/SENERGY-Platform/service-commons v0.0.0-20240423132428-8eccbc027e71
+	github.com/SENERGY-Platform/permission-search v0.0.16
+	github.com/SENERGY-Platform/service-commons v0.0.0-20240708085423-94423a495d7f
 	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/testcontainers/testcontainers-go v0.31.0
