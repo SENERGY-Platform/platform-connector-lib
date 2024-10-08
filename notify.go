@@ -50,7 +50,7 @@ func (this *Connector) notifyMessageFormatError(device model.Device, service mod
 					Sender: "github.com/SENERGY-Platform/platform-connector-lib",
 					Title:  "Connector-Error-Notification",
 					Tags:   []string{"connector", "internal-error"},
-					Body:   fmt.Sprintf("Notification For Device=%v %v Service=%v\nError: %v\n", device.Name, device.Id, service.Name, errMsg.Error()),
+					Body:   fmt.Sprintf("Notification For Device=%v %v Service=%v\nError: %v\n", device.Name, device.Id, service.Name, this.removeSecretsFromString(errMsg.Error())),
 				})
 				if err != nil {
 					log.Println("ERROR: unable to send developer-notification", err)
@@ -137,6 +137,7 @@ func (this *Connector) SendNotification(message Notification) error {
 	if this.Config.NotificationUserOverwrite != "" && this.Config.NotificationUserOverwrite != "-" {
 		message.UserId = this.Config.NotificationUserOverwrite
 	}
+	message.Message = this.removeSecretsFromString(message.Message)
 	if this.devNotifications != nil {
 		go func() {
 			if this.Config.Debug {
@@ -192,4 +193,25 @@ type Notification struct {
 	UserId  string `json:"userId" bson:"userId"`
 	Title   string `json:"title" bson:"title"`
 	Message string `json:"message" bson:"message"`
+}
+
+func (this *Connector) removeSecretsFromString(input string) string {
+	output := input
+	secrets := map[string]string{
+		this.Config.DeviceRepoUrl:            "device-repository",
+		this.Config.DeviceManagerUrl:         "device-manager",
+		this.Config.PermQueryUrl:             "permission-search",
+		this.Config.KafkaUrl:                 "kafka",
+		this.Config.AuthClientSecret:         "***",
+		this.Config.AuthEndpoint:             "auth",
+		this.Config.DeveloperNotificationUrl: "dev-notify",
+		this.Config.JwtPrivateKey:            "***",
+		this.Config.PostgresPw:               "***",
+	}
+	for secret, replace := range secrets {
+		if secret != "" && secret != "-" {
+			output = strings.ReplaceAll(output, secret, replace)
+		}
+	}
+	return output
 }
