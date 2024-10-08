@@ -139,7 +139,7 @@ func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (de
 	defer statistics.IotRead(time.Since(start))
 	resp, err := token.Get(this.manager_url + "/local-devices/" + url.QueryEscape(localId))
 	if err != nil {
-		if err != security.ErrorNotFound {
+		if !errors.Is(err, security.ErrorNotFound) {
 			log.Println("ERROR on GetDevice()", err)
 			debug.PrintStack()
 		}

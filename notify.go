@@ -24,6 +24,7 @@ import (
 	"fmt"
 	developerNotifications "github.com/SENERGY-Platform/developer-notifications/pkg/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"io"
 	"log"
 	"net/http"
@@ -36,6 +37,28 @@ import (
 const MutedDeviceErrorsAttribute = "platform/mute-format-error"
 
 func (this *Connector) notifyMessageFormatError(device model.Device, service model.Service, errMsg error) {
+	if errors.Is(errMsg, security.ErrorInternal) || errors.Is(errMsg, security.ErrorUnexpectedStatus) {
+		if this.Config.Debug {
+			log.Printf("DEBUG: internal error notification: %v %v %v\n", device.Id, device.Name, errMsg.Error())
+		}
+		if this.devNotifications != nil {
+			go func() {
+				if this.Config.Debug {
+					log.Println("DEBUG: send developer-notification")
+				}
+				err := this.devNotifications.SendMessage(developerNotifications.Message{
+					Sender: "github.com/SENERGY-Platform/platform-connector-lib",
+					Title:  "Connector-Error-Notification",
+					Tags:   []string{"connector", "internal-error"},
+					Body:   fmt.Sprintf("Notification For Device=%v %v Service=%v\nError: %v\n", device.Name, device.Id, service.Name, errMsg.Error()),
+				})
+				if err != nil {
+					log.Println("ERROR: unable to send developer-notification", err)
+				}
+			}()
+		}
+		return
+	}
 	if this.Config.Debug {
 		log.Printf("DEBUG: notify device %v (%v) owners of message format error\n", device.Id, device.Name)
 	}

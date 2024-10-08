@@ -19,6 +19,7 @@ package platform_connector_lib
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
@@ -58,7 +59,7 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 							out, err = fallback.Unmarshal(segmentMsg, output.ContentVariable)
 						}
 						if err != nil {
-							this.notifyMessageFormatError(device, service, err)
+							this.notifyMessageFormatError(device, service, fmt.Errorf("unable to serialize to %v: %w", string(output.Serialization), err))
 							return result, err
 						}
 						result[output.ContentVariable.Name] = out
@@ -70,19 +71,17 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 
 	err = unitreference.FillUnitsForService(&service, token, this.IotCache)
 	if err != nil {
-		if !errors.Is(err, security.ErrorInternal) {
-			this.notifyMessageFormatError(device, service, err)
-		}
+		this.notifyMessageFormatError(device, service, fmt.Errorf("unable to fill units fot serice: %w", err))
 		return result, err
 	}
 	result, err = this.CleanMsg(result, service)
 	if err != nil {
-		this.notifyMessageFormatError(device, service, err)
+		this.notifyMessageFormatError(device, service, fmt.Errorf("unable clean message: %w", err))
 		return result, err
 	}
 	err = this.ValidateMsg(result, service)
 	if err != nil {
-		this.notifyMessageFormatError(device, service, err)
+		this.notifyMessageFormatError(device, service, fmt.Errorf("invalid message: %w", err))
 		return result, err
 	}
 	return result, err

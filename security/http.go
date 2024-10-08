@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -53,13 +52,13 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 		//body muss be read til eof and closed to enable connection reuse
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return resp, ErrorNotFound
+		return resp, fmt.Errorf("%w: %v %v", ErrorNotFound, url, resp.StatusCode)
 	}
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
 		//body muss be read til eof and closed to enable connection reuse
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return resp, ErrorAccessDenied
+		return resp, fmt.Errorf("%w: %v %v", ErrorAccessDenied, url, resp.StatusCode)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, err := io.ReadAll(resp.Body)
@@ -71,7 +70,7 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 		}
 		log.Println("DEBUG: response:", resp.StatusCode, string(b))
 		debug.PrintStack()
-		return resp, ErrorUnexpectedStatus
+		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
 }
@@ -109,13 +108,13 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 		//body muss be read til eof and closed to enable connection reuse
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return resp, ErrorNotFound
+		return resp, fmt.Errorf("%w: %v %v", ErrorNotFound, url, resp.StatusCode)
 	}
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
 		//body muss be read til eof and closed to enable connection reuse
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return resp, ErrorAccessDenied
+		return resp, fmt.Errorf("%w: %v %v", ErrorAccessDenied, url, resp.StatusCode)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, err := io.ReadAll(resp.Body)
@@ -127,7 +126,7 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 		}
 		log.Println("DEBUG: response:", resp.StatusCode, string(b))
 		debug.PrintStack()
-		return resp, ErrorUnexpectedStatus
+		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
 }
@@ -158,16 +157,16 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 		//body muss be read til eof and closed to enable connection reuse
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return resp, ErrorNotFound
+		return resp, fmt.Errorf("%w: %v %v", ErrorNotFound, url, resp.StatusCode)
 	}
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
 		//body muss be read til eof and closed to enable connection reuse
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return resp, ErrorAccessDenied
+		return resp, fmt.Errorf("%w: %v %v", ErrorAccessDenied, url, resp.StatusCode)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		b, err := ioutil.ReadAll(resp.Body)
+		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			log.Println("ERROR: ", err)
 		}
@@ -176,7 +175,7 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 		}
 		log.Println("DEBUG: response:", resp.StatusCode, string(b))
 		debug.PrintStack()
-		return resp, ErrorUnexpectedStatus
+		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
 }
@@ -199,16 +198,16 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 		//body muss be read til eof and closed to enable connection reuse
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return resp, ErrorNotFound
+		return resp, fmt.Errorf("%w: %v %v", ErrorNotFound, url, resp.StatusCode)
 	}
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
 		//body muss be read til eof and closed to enable connection reuse
 		io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return resp, ErrorAccessDenied
+		return resp, fmt.Errorf("%w: %v %v", ErrorAccessDenied, url, resp.StatusCode)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		b, err := ioutil.ReadAll(resp.Body)
+		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			log.Println("ERROR: ", err)
 		}
@@ -217,7 +216,7 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 		}
 		log.Println("DEBUG: response:", resp.StatusCode, string(b))
 		debug.PrintStack()
-		return resp, ErrorUnexpectedStatus
+		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
 }

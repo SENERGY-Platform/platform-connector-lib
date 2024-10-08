@@ -169,7 +169,7 @@ func (this *PreparedCache) UpdateDeviceType(token security.JwtToken, deviceType 
 
 func (this *PreparedCache) EnsureLocalDeviceExistence(token security.JwtToken, device model.Device) (result model.Device, err error) {
 	result, err = this.GetDeviceByLocalId(token, device.LocalId)
-	if err == security.ErrorNotFound {
+	if errors.Is(err, security.ErrorNotFound) {
 		result, err = this.CreateDevice(token, device)
 	}
 	return
