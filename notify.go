@@ -154,6 +154,9 @@ func (this *Connector) SendNotification(message Notification) error {
 			}
 		}()
 	}
+	if this.muteUserNotification(message) {
+		return nil
+	}
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(message)
 	if err != nil {
@@ -214,4 +217,13 @@ func (this *Connector) removeSecretsFromString(input string) string {
 		}
 	}
 	return output
+}
+
+func (this *Connector) muteUserNotification(message Notification) bool {
+	for _, excluded := range this.Config.MutedUserNotificationTitles {
+		if strings.Contains(message.Title, excluded) {
+			return true
+		}
+	}
+	return false
 }
