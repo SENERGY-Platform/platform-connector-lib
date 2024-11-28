@@ -118,7 +118,7 @@ func New(config Config) (connector *Connector, err error) {
 
 	connector = &Connector{
 		Config:              config,
-		iot:                 iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.PermQueryUrl),
+		iot:                 iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.PermissionsV2Url),
 		security:            sec,
 		postgresPublisher:   publisher,
 		asyncPgBackpressure: make(chan bool, asyncPgThreadMax),

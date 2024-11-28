@@ -19,14 +19,12 @@ package iot
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/SENERGY-Platform/permission-search/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot/options"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"log"
 	"net/url"
-	"runtime/debug"
 	"time"
 )
 
@@ -47,30 +45,6 @@ func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.
 		log.Println("ERROR on GetGateway() json decode", err)
 	}
 	return hub, err
-}
-
-func (this *Iot) GetHubsByDeviceLocalId(localId string, token security.JwtToken) (hubs []model.Hub, err error) {
-	start := time.Now()
-	defer statistics.IotRead(time.Since(start))
-	query := model.QueryMessage{
-		Resource: "hubs",
-		Find: &model.QueryFind{
-			Filter: &model.Selection{
-				Condition: model.ConditionConfig{
-					Feature:   "features.device_local_ids",
-					Operation: "==",
-					Value:     localId,
-				},
-			},
-		},
-	}
-	hubs, _, err = client.Query[[]model.Hub](this.permissions, string(token), query)
-	if err != nil {
-		log.Println("ERROR on GetHubsByDeviceLocalId()", err)
-		debug.PrintStack()
-		return hubs, err
-	}
-	return hubs, nil
 }
 
 func (this *Iot) CreateHub(hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {

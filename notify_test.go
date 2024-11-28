@@ -21,13 +21,16 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/IBM/sarama"
+	"github.com/SENERGY-Platform/device-repository/lib/tests/testutils/docker"
 	"github.com/SENERGY-Platform/models/go/models"
-	"github.com/SENERGY-Platform/permission-search/lib/tests/docker"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -53,17 +56,26 @@ func TestNotifyDeviceOwners(t *testing.T) {
 		return
 	}
 
-	_, openSearchIp, err := docker.OpenSearch(ctx, wg)
+	_, mongoIp, err := docker.MongoDB(ctx, wg)
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	mongoUrl := "mongodb://" + mongoIp + ":27017"
 
-	_, permIp, err := docker.PermissionSearch(ctx, wg, false, kafkaUrl, openSearchIp)
+	_, permV2Ip, err := docker.PermissionsV2(ctx, wg, mongoUrl, kafkaUrl)
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	permv2Url := "http://" + permV2Ip + ":8080"
+
+	_, repoIp, err := DeviceRepo(ctx, wg, kafkaUrl, mongoUrl, permv2Url)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	deviceRepoUrl := "http://" + repoIp + ":8080"
 
 	producer, err := kafka.PrepareProducerWithConfig(ctx, kafkaUrl, kafka.Config{
 		SyncCompression:   sarama.CompressionSnappy,
@@ -106,15 +118,16 @@ func TestNotifyDeviceOwners(t *testing.T) {
 	defer notifyMocServer.Close()
 
 	config := Config{
-		PermQueryUrl:    "http://" + permIp + ":8080",
-		NotificationUrl: notifyMocServer.URL,
+		PermissionsV2Url: permv2Url,
+		DeviceRepoUrl:    deviceRepoUrl,
+		NotificationUrl:  notifyMocServer.URL,
 	}
 
 	securityMock := &SecurityMock{}
 
 	ctl := Connector{
 		Config:           config,
-		iot:              iot.New("", "", config.PermQueryUrl),
+		iot:              iot.New("", deviceRepoUrl, config.PermissionsV2Url),
 		security:         securityMock,
 		IotCache:         nil,
 		devNotifications: nil,
@@ -200,4 +213,44 @@ type DeviceCommand struct {
 	Id      string        `json:"id"`
 	Owner   string        `json:"owner"`
 	Device  models.Device `json:"device"`
+}
+
+func DeviceRepo(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, mongoUrl string, permv2Url string) (hostPort string, ipAddress string, err error) {
+	log.Println("start device-repository")
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image: "ghcr.io/senergy-platform/device-repository:dev",
+			Env: map[string]string{
+				"KAFKA_URL":          kafkaUrl,
+				"PERMISSIONS_V2_URL": permv2Url,
+				"MONGO_URL":          mongoUrl,
+				"SKIP_DEVICE_GROUP_GENERATION_FROM_DEVICE": "true",
+			},
+			ExposedPorts:    []string{"8080/tcp"},
+			WaitingFor:      wait.ForListeningPort("8080/tcp"),
+			AlwaysPullImage: true,
+		},
+		Started: true,
+	})
+	if err != nil {
+		return "", "", err
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		log.Println("DEBUG: remove container device-repository", c.Terminate(context.Background()))
+	}()
+
+	ipAddress, err = c.ContainerIP(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	temp, err := c.MappedPort(ctx, "8080/tcp")
+	if err != nil {
+		return "", "", err
+	}
+	hostPort = temp.Port()
+
+	return hostPort, ipAddress, err
 }

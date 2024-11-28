@@ -18,7 +18,7 @@ package server
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/permission-search/lib/tests/docker"
+	"github.com/SENERGY-Platform/device-repository/lib/tests/testutils/docker"
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/config"
 	"log"
 	"net"
@@ -40,13 +40,6 @@ func New(ctx context.Context, wg *sync.WaitGroup) (config config.Config, err err
 	zkUrl := zk + ":2181"
 
 	config.KafkaUrl, err = docker.Kafka(ctx, wg, zkUrl)
-	if err != nil {
-		log.Println("ERROR:", err)
-		debug.PrintStack()
-		return config, err
-	}
-
-	_, searchIp, err := docker.OpenSearch(ctx, wg)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
@@ -76,15 +69,15 @@ func New(ctx context.Context, wg *sync.WaitGroup) (config config.Config, err err
 		return config, err
 	}
 
-	_, permIp, err := docker.PermissionSearch(ctx, wg, false, config.KafkaUrl, searchIp)
+	_, permV2Ip, err := docker.PermissionsV2(ctx, wg, mongoUrl, config.KafkaUrl)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()
 		return config, err
 	}
-	permissionUrl := "http://" + permIp + ":8080"
+	permv2Url := "http://" + permV2Ip + ":8080"
 
-	_, connectionlogip, err := Connectionlog(ctx, wg, mongoUrl, permissionUrl, influxdbUrl)
+	_, connectionlogip, err := Connectionlog(ctx, wg, mongoUrl, permv2Url, influxdbUrl)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()

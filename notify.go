@@ -109,7 +109,7 @@ func (this *Connector) notifyDeviceOwners(deviceId string, message Notification)
 		debug.PrintStack()
 		return
 	}
-	for user, userRights := range rights.UserRights {
+	for user, userRights := range rights.UserPermissions {
 		if userRights.Administrate {
 			message.UserId = user
 			err = this.SendNotification(message)
@@ -203,7 +203,7 @@ func (this *Connector) removeSecretsFromString(input string) string {
 	secrets := map[string]string{
 		this.Config.DeviceRepoUrl:            "device-repository",
 		this.Config.DeviceManagerUrl:         "device-manager",
-		this.Config.PermQueryUrl:             "permission-search",
+		this.Config.PermissionsV2Url:         "permissions-v2",
 		this.Config.KafkaUrl:                 "kafka",
 		this.Config.AuthClientSecret:         "***",
 		this.Config.AuthEndpoint:             "auth",

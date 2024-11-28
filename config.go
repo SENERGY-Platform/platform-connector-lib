@@ -39,6 +39,7 @@ type Config struct {
 
 	DeviceManagerUrl string
 	DeviceRepoUrl    string
+	PermissionsV2Url string
 
 	AuthClientId             string //keycloak-client
 	AuthClientSecret         string //keycloak-secret
@@ -73,8 +74,6 @@ type Config struct {
 	PostgresDb        string
 
 	HttpCommandConsumerPort string
-
-	PermQueryUrl string
 
 	AsyncPgThreadMax    int
 	AsyncFlushMessages  int

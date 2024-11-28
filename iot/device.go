@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/SENERGY-Platform/permission-search/lib/client"
+	devicerepo "github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
@@ -76,33 +76,22 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 }
 
 func (this *Iot) FindDeviceTypesWithAttributes(attributes []model.Attribute, token security.JwtToken) (dt []model.DeviceType, err error) {
-	selection := []model.Selection{}
+	options := devicerepo.DeviceTypeListOptions{
+		Limit:           9999,
+		Offset:          0,
+		SortBy:          "name.asc",
+		AttributeKeys:   nil,
+		AttributeValues: nil,
+	}
 	for _, attr := range attributes {
-		selection = append(selection, model.Selection{Condition: model.ConditionConfig{
-			Feature:   "features.attributes.key",
-			Operation: model.QueryEqualOperation,
-			Value:     attr.Key}})
-		selection = append(selection, model.Selection{Condition: model.ConditionConfig{
-			Feature:   "features.attributes.value",
-			Operation: model.QueryEqualOperation,
-			Value:     attr.Value}})
+		options.AttributeKeys = append(options.AttributeKeys, attr.Key)
+		options.AttributeValues = append(options.AttributeValues, attr.Value)
 	}
-	query := model.QueryMessage{
-		Resource: "device-types",
-		Find: &model.QueryFind{
-			Filter: &model.Selection{
-				And: selection,
-			},
-		},
-	}
-	permSearchDeviceTypes, _, err := client.Query[[]model.PermSearchDeviceType](this.permissions, string(token), query)
+	list, err, _ := this.devicerepo.ListDeviceTypesV3(string(token), options)
 	if err != nil {
-		log.Println("ERROR on FindDeviceTypesWithAttributes()", err)
-		debug.PrintStack()
 		return dt, err
 	}
-
-	for _, permDt := range permSearchDeviceTypes {
+	for _, permDt := range list {
 		ok := make([]bool, len(attributes))
 		for i, attr := range attributes {
 			for _, dtAttr := range permDt.Attributes {
@@ -113,13 +102,7 @@ func (this *Iot) FindDeviceTypesWithAttributes(attributes []model.Attribute, tok
 			}
 		}
 		if allTrue(ok) {
-			fullDt, err := this.GetDeviceType(permDt.Id, token)
-			if err != nil {
-				log.Println("ERROR on FindDeviceTypesWithAttributes()", err)
-				debug.PrintStack()
-				return dt, err
-			}
-			dt = append(dt, fullDt)
+			dt = append(dt, permDt)
 		}
 	}
 	return dt, err
@@ -194,7 +177,11 @@ func (this *Iot) UpdateDeviceType(deviceType model.DeviceType, token security.Jw
 }
 
 func (this *Iot) GetDeviceUserRights(token security.JwtToken, deviceId string) (rights model.ResourceRights, err error) {
-	return this.permissions.GetRights(string(token), "devices", deviceId)
+	resource, err, _ := this.perm.GetResource(string(token), "devices", deviceId)
+	if err != nil {
+		return rights, err
+	}
+	return resource.ResourcePermissions, nil
 }
 
 type ResourceRights struct {
