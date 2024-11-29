@@ -19,6 +19,7 @@ package iot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot/options"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
@@ -45,6 +46,13 @@ func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.
 		log.Println("ERROR on GetGateway() json decode", err)
 	}
 	return hub, err
+}
+
+func (this *Iot) GetHubsByDeviceLocalId(localId string, token security.JwtToken) (hubs []model.Hub, err error) {
+	hubs, err, _ = this.devicerepo.ListHubs(string(token), client.HubListOptions{
+		LocalDeviceId: localId,
+	})
+	return hubs, err
 }
 
 func (this *Iot) CreateHub(hub model.Hub, cred security.JwtToken) (result model.Hub, err error) {
