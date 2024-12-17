@@ -87,7 +87,7 @@ func (this *Iot) FindDeviceTypesWithAttributes(attributes []model.Attribute, tok
 		options.AttributeKeys = append(options.AttributeKeys, attr.Key)
 		options.AttributeValues = append(options.AttributeValues, attr.Value)
 	}
-	list, err, _ := this.devicerepo.ListDeviceTypesV3(string(token), options)
+	list, _, err, _ := this.devicerepo.ListDeviceTypesV3(string(token), options)
 	if err != nil {
 		return dt, err
 	}
