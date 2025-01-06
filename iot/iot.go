@@ -32,7 +32,7 @@ func New(deviceManagerUrl string, deviceRepoUrl string, permv2Url string) *Iot {
 	return &Iot{
 		manager_url: deviceManagerUrl,
 		repo_url:    deviceRepoUrl,
-		devicerepo:  devicerepo.NewClient(deviceRepoUrl),
+		devicerepo:  devicerepo.NewClient(deviceRepoUrl, nil),
 		perm:        permv2.New(permv2Url),
 	}
 }
