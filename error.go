@@ -36,6 +36,7 @@ func (this *Connector) HandleClientError(userId string, clientId string, errorMe
 		UserId:  userId,
 		Title:   "Client-Error",
 		Message: notificationMessage,
+		Topic:   "mgw",
 	})
 	if err != nil {
 		log.Println("WARNING: unable to send notification to", userId, err)
@@ -50,6 +51,7 @@ func (this *Connector) HandleDeviceError(userId string, device model.Device, err
 		UserId:  userId,
 		Title:   "Device-Error",
 		Message: notificationMessage,
+		Topic:   "mgw",
 	})
 	if err != nil {
 		log.Println("WARNING: unable to send notification to", userId, err)
@@ -65,6 +67,7 @@ func (this *Connector) HandleCommandError(userId string, commandRequest model.Pr
 		UserId:  userId,
 		Title:   "Device-Command-Error",
 		Message: notificationMessage,
+		Topic:   "mgw",
 	})
 	if err != nil {
 		log.Println("WARNING: unable to send notification to", userId, err)
