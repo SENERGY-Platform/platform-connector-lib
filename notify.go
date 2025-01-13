@@ -134,6 +134,9 @@ func (this *Connector) SendNotification(message Notification) error {
 		log.Println("WARNING: no NotificationUrl configured")
 		return nil
 	}
+	if message.Topic == "" {
+		message.Topic = "connector"
+	}
 	if this.Config.NotificationUserOverwrite != "" && this.Config.NotificationUserOverwrite != "-" {
 		message.UserId = this.Config.NotificationUserOverwrite
 	}
@@ -196,6 +199,7 @@ type Notification struct {
 	UserId  string `json:"userId" bson:"userId"`
 	Title   string `json:"title" bson:"title"`
 	Message string `json:"message" bson:"message"`
+	Topic   string `json:"topic" bson:"topic"`
 }
 
 func (this *Connector) removeSecretsFromString(input string) string {
