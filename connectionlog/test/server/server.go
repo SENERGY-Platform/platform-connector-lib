@@ -18,7 +18,7 @@ package server
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-repository/lib/tests/testutils/docker"
+	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/config"
 	"log"
 	"net"

@@ -2,7 +2,7 @@ package kafka
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-repository/lib/tests/testutils/docker"
+	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
 	"log"
 	"os"
 	"sync"

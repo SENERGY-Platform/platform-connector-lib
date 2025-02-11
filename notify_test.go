@@ -18,13 +18,11 @@ package platform_connector_lib
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"github.com/IBM/sarama"
-	"github.com/SENERGY-Platform/device-repository/lib/tests/testutils/docker"
+	"github.com/SENERGY-Platform/device-repository/lib/client"
+	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
 	"github.com/SENERGY-Platform/models/go/models"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
-	"github.com/SENERGY-Platform/platform-connector-lib/kafka"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/testcontainers/testcontainers-go"
@@ -77,17 +75,7 @@ func TestNotifyDeviceOwners(t *testing.T) {
 	}
 	deviceRepoUrl := "http://" + repoIp + ":8080"
 
-	producer, err := kafka.PrepareProducerWithConfig(ctx, kafkaUrl, kafka.Config{
-		SyncCompression:   sarama.CompressionSnappy,
-		Sync:              true,
-		SyncIdempotent:    true,
-		PartitionNum:      1,
-		ReplicationFactor: 1,
-	})
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	c := client.NewClient(deviceRepoUrl, nil)
 
 	device := models.Device{
 		Id:           "did",
@@ -95,13 +83,7 @@ func TestNotifyDeviceOwners(t *testing.T) {
 		Name:         "dname",
 		DeviceTypeId: "dtid",
 	}
-	deviceCmd := DeviceCommand{Command: "PUT", Id: device.Id, Device: device, Owner: testTokenUser}
-	deviceMsg, err := json.Marshal(deviceCmd)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = producer.ProduceWithKey("devices", string(deviceMsg), device.Id)
+	_, err, _ = c.SetDevice(testtoken, device, client.DeviceUpdateOptions{})
 	if err != nil {
 		t.Error(err)
 		return
@@ -225,6 +207,7 @@ func DeviceRepo(ctx context.Context, wg *sync.WaitGroup, kafkaUrl string, mongoU
 				"PERMISSIONS_V2_URL": permv2Url,
 				"MONGO_URL":          mongoUrl,
 				"SKIP_DEVICE_GROUP_GENERATION_FROM_DEVICE": "true",
+				"DISABLE_STRICT_VALIDATION_FOR_TESTING":    "true",
 			},
 			ExposedPorts:    []string{"8080/tcp"},
 			WaitingFor:      wait.ForListeningPort("8080/tcp"),
