@@ -59,7 +59,13 @@ func (this *Connector) unmarshalMsg(token security.JwtToken, device model.Device
 							out, err = fallback.Unmarshal(segmentMsg, output.ContentVariable)
 						}
 						if err != nil {
-							this.notifyMessageFormatError(device, service, fmt.Errorf("unable to serialize to %v: %w", string(output.Serialization), err))
+							var message interface{} = msg
+							if len(msg) == 1 {
+								for _, m := range msg {
+									message = m
+								}
+							}
+							this.notifyMessageFormatError(device, service, fmt.Errorf("unable to serialize to %v: err=\"%w\"; msg=%#v", string(output.Serialization), err, message))
 							return result, err
 						}
 						result[output.ContentVariable.Name] = out
