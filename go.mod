@@ -1,6 +1,8 @@
 module github.com/SENERGY-Platform/platform-connector-lib
 
-go 1.23.0
+go 1.24
+
+toolchain go1.24.1
 
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
@@ -17,7 +19,7 @@ require (
 	github.com/IBM/sarama v1.43.3
 	github.com/SENERGY-Platform/converter v0.0.10
 	github.com/SENERGY-Platform/developer-notifications v0.0.4
-	github.com/SENERGY-Platform/device-repository v0.2.5
+	github.com/SENERGY-Platform/device-repository v0.2.8
 	github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4
 	github.com/SENERGY-Platform/permissions-v2 v0.0.27
 	github.com/SENERGY-Platform/service-commons v0.0.0-20250123095636-6dfc659ee43e
@@ -103,7 +105,7 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
 	github.com/swaggo/http-swagger v1.3.4 // indirect
-	github.com/swaggo/swag v1.16.3 // indirect
+	github.com/swaggo/swag v1.16.4 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect

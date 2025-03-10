@@ -7,7 +7,7 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 )
 
-func ExampleMarshalPrimitiveInt() {
+func ExampleMarshaller_Marshal_primitiveInt() {
 	value := 24
 	marshaller, ok := base.Get(Format)
 	if !ok {
@@ -22,7 +22,7 @@ func ExampleMarshalPrimitiveInt() {
 	//<int>24</int> <nil>
 }
 
-func ExampleMarshalPrimitiveFloat() {
+func ExampleMarshaller_Marshal_primitiveFloat() {
 	value := 2.4
 	marshaller, ok := base.Get(Format)
 	if !ok {
@@ -37,7 +37,7 @@ func ExampleMarshalPrimitiveFloat() {
 	//<f>2.4</f> <nil>
 }
 
-func ExampleMarshalPrimitiveString() {
+func ExampleMarshaller_Marshal_primitiveString() {
 	value := "foo"
 	marshaller, ok := base.Get(Format)
 	if !ok {
@@ -52,7 +52,7 @@ func ExampleMarshalPrimitiveString() {
 	//<str>foo</str> <nil>
 }
 
-func ExampleMarshalPrimitiveBool() {
+func ExampleMarshaller_Marshal_primitiveBool() {
 	value := true
 	marshaller, ok := base.Get(Format)
 	if !ok {
@@ -67,7 +67,7 @@ func ExampleMarshalPrimitiveBool() {
 	//<b>true</b> <nil>
 }
 
-func ExampleMarshal() {
+func ExampleMarshaller_Marshal() {
 	value := map[string]interface{}{"-attr": "attrVal", "body": "bodyVal"}
 	marshaller, ok := base.Get(Format)
 	if !ok {
@@ -87,7 +87,7 @@ func ExampleMarshal() {
 	//<example attr="attrVal"><body>bodyVal</body></example> <nil>
 }
 
-func ExampleMarshalSerializationOptionXmlAttribute() {
+func ExampleMarshaller_Marshal_serializationOptionXmlAttribute() {
 	value := map[string]interface{}{"attr": "attrVal", "body": "bodyVal"}
 	marshaller, ok := base.Get(Format)
 	if !ok {
