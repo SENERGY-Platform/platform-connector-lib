@@ -20,7 +20,6 @@ import (
 	"github.com/segmentio/kafka-go"
 	"log"
 	"net"
-	"runtime/debug"
 	"strconv"
 	"strings"
 )
@@ -32,7 +31,6 @@ func EnsureTopic(topic string, kafkaUrl string, knownTopics *map[string]bool, co
 	err = InitTopicWithConfig(kafkaUrl, configMap, partitions, replicationFactor, topic)
 	if err != nil {
 		log.Println("ERROR:", err)
-		debug.PrintStack()
 		return err
 	}
 	(*knownTopics)[topic] = true

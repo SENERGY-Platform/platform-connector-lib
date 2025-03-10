@@ -168,13 +168,17 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	token, err := this.Security().Access()
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
-		debug.PrintStack()
+		if this.Config.Debug {
+			debug.PrintStack()
+		}
 		return
 	}
 	eventValue, err := this.unmarshalMsg(token, cmd.Metadata.Device, cmd.Metadata.Service, cmd.Metadata.Protocol, resp)
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
-		debug.PrintStack()
+		if this.Config.Debug {
+			debug.PrintStack()
+		}
 		return
 	}
 
@@ -185,14 +189,18 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	pl, err := token.GetPayload()
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
-		debug.PrintStack()
+		if this.Config.Debug {
+			debug.PrintStack()
+		}
 		return
 	}
 
 	err = this.sendEventEnvelope(envelope, qos, cmd.Metadata.Service, pl.UserId)
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
-		debug.PrintStack()
+		if this.Config.Debug {
+			debug.PrintStack()
+		}
 		return
 	}
 }
@@ -255,7 +263,9 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 	kafkaErr = producer.ProduceWithKey(serviceTopic, string(jsonMsg), envelope.DeviceId)
 	if err != nil {
 		if this.Config.FatalKafkaError {
-			debug.PrintStack()
+			if this.Config.Debug {
+				debug.PrintStack()
+			}
 			log.Fatal("FATAL: while producing for topic: '", serviceTopic, "' :", kafkaErr)
 		}
 		log.Println("ERROR: produce event on service topic ", kafkaErr)

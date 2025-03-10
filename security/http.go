@@ -25,7 +25,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"runtime/debug"
 	"time"
 )
 
@@ -69,7 +68,6 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 			log.Println("ERROR: ", err)
 		}
 		log.Println("DEBUG: response:", resp.StatusCode, string(b))
-		debug.PrintStack()
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -125,7 +123,6 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 			log.Println("ERROR: ", err)
 		}
 		log.Println("DEBUG: response:", resp.StatusCode, string(b))
-		debug.PrintStack()
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -174,7 +171,6 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 			log.Println("ERROR: ", err)
 		}
 		log.Println("DEBUG: response:", resp.StatusCode, string(b))
-		debug.PrintStack()
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -215,7 +211,6 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 			log.Println("ERROR: ", err)
 		}
 		log.Println("DEBUG: response:", resp.StatusCode, string(b))
-		debug.PrintStack()
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return

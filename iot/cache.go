@@ -177,7 +177,9 @@ func (this *PreparedCache) EnsureLocalDeviceExistence(token security.JwtToken, d
 
 func (this *PreparedCache) GetDeviceType(token security.JwtToken, id string) (result model.DeviceType, err error) {
 	if id == "" {
-		debug.PrintStack()
+		if this.Debug {
+			debug.PrintStack()
+		}
 		log.Println("ERROR: on GetDeviceType() missing id")
 		return result, errors.New("missing id")
 	}

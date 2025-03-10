@@ -111,7 +111,9 @@ func (this *Connector) HandleCommandError(userId string, commandRequest model.Pr
 		}
 		err = producer.ProduceWithKey(topic, string(responseMsg), commandRequest.Metadata.Device.Id)
 		if err != nil && this.Config.FatalKafkaError {
-			debug.PrintStack()
+			if this.Config.Debug {
+				debug.PrintStack()
+			}
 			log.Fatal("FATAL: ", err)
 		}
 	}

@@ -93,20 +93,26 @@ func (this *Connector) notifyDeviceOwners(deviceId string, message Notification)
 		err := this.SendNotification(message)
 		if err != nil {
 			log.Println(err)
-			debug.PrintStack()
+			if this.Config.Debug {
+				debug.PrintStack()
+			}
 			return
 		}
 	}
 	token, err := this.Security().Access()
 	if err != nil {
 		log.Println(err)
-		debug.PrintStack()
+		if this.Config.Debug {
+			debug.PrintStack()
+		}
 		return
 	}
 	rights, err := this.Iot().GetDeviceUserRights(token, deviceId)
 	if err != nil {
 		log.Println(err)
-		debug.PrintStack()
+		if this.Config.Debug {
+			debug.PrintStack()
+		}
 		return
 	}
 	for user, userRights := range rights.UserPermissions {
@@ -115,7 +121,9 @@ func (this *Connector) notifyDeviceOwners(deviceId string, message Notification)
 			err = this.SendNotification(message)
 			if err != nil {
 				log.Println(err)
-				debug.PrintStack()
+				if this.Config.Debug {
+					debug.PrintStack()
+				}
 				return
 			}
 		}
