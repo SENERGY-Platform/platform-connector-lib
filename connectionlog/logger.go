@@ -23,6 +23,10 @@ import (
 	"time"
 )
 
+type connectionCheckClient interface {
+	RefreshDeviceState(deviceID string, lmResult, subResult int) error
+}
+
 func NewWithKafkaConfig(ctx context.Context, kafkaBootstrapUrl string, deviceLogTopic string, hubLogTopic string, config kafka.Config) (logger Logger, err error) {
 	producer, err := kafka.PrepareProducerWithConfig(ctx, kafkaBootstrapUrl, config)
 	if err != nil {
@@ -31,7 +35,7 @@ func NewWithKafkaConfig(ctx context.Context, kafkaBootstrapUrl string, deviceLog
 	return &LoggerImpl{producer: producer, deviceLogTopic: deviceLogTopic, hubLogTopic: hubLogTopic}, nil
 }
 
-//deprecated
+// deprecated
 func New(ctx context.Context, kafkaBootstrapUrl string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string, partitionNum int, replicationFactor int) (logger Logger, err error) {
 	producer, err := kafka.PrepareProducer(ctx, kafkaBootstrapUrl, sync, idempotent, partitionNum, replicationFactor)
 	if err != nil {
@@ -44,10 +48,20 @@ func NewWithProducer(producer kafka.ProducerInterface, deviceLogTopic string, hu
 	return &LoggerImpl{producer: producer, deviceLogTopic: deviceLogTopic, hubLogTopic: hubLogTopic}, nil
 }
 
+func NewWithProducerAndConnCheck(producer kafka.ProducerInterface, connCheckClient connectionCheckClient, deviceLogTopic string, hubLogTopic string) (logger Logger, err error) {
+	return &LoggerImpl{
+		producer:        producer,
+		connCheckClient: connCheckClient,
+		deviceLogTopic:  deviceLogTopic,
+		hubLogTopic:     hubLogTopic,
+	}, nil
+}
+
 type LoggerImpl struct {
-	producer       kafka.ProducerInterface
-	deviceLogTopic string
-	hubLogTopic    string
+	producer        kafka.ProducerInterface
+	deviceLogTopic  string
+	hubLogTopic     string
+	connCheckClient connectionCheckClient
 }
 
 func (this *LoggerImpl) LogDeviceDisconnect(id string) error {
@@ -63,6 +77,9 @@ func (this *LoggerImpl) LogDeviceDisconnect(id string) error {
 }
 
 func (this *LoggerImpl) LogDeviceConnect(id string) error {
+	if this.connCheckClient != nil {
+		return this.connCheckClient.RefreshDeviceState(id, 0, 1)
+	}
 	b, err := json.Marshal(DeviceLog{
 		Connected: true,
 		Id:        id,
