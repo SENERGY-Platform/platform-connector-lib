@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"strconv"
+	"strings"
 )
 
 func DefaultMissingFields(msg map[string]interface{}, service model.Service) (result map[string]interface{}, err error) {
 	for _, output := range service.Outputs {
 		if value, ok := msg[output.ContentVariable.Name]; ok {
-			msg[output.ContentVariable.Name], err = defaultMissingField(value, output.ContentVariable)
+			msg[output.ContentVariable.Name], err = defaultMissingField(value, output.ContentVariable, []string{})
 		} else {
 			msg[output.ContentVariable.Name] = output.ContentVariable.Value
 		}
@@ -33,40 +34,42 @@ func DefaultMissingFields(msg map[string]interface{}, service model.Service) (re
 	return msg, nil
 }
 
-func defaultMissingField(value interface{}, variable model.ContentVariable) (_ interface{}, err error) {
+func defaultMissingField(value interface{}, variable model.ContentVariable, path []string) (_ interface{}, err error) {
+	path = append(path, variable.Name)
+	pathStr := strings.Join(path, ".")
 	switch v := value.(type) {
 	case string:
 		if variable.Type != model.String {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.String, variable.Type)
+			return nil, fmt.Errorf("path='%v' err='%w' (is: %v, expected: %v)", pathStr, ErrUnexpectedType, model.String, variable.Type)
 		}
 		return value, nil
 	case int:
 		if variable.Type != model.Integer && variable.Type != model.Float {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.Integer, variable.Type)
+			return nil, fmt.Errorf("path='%v' err='%w' (is: %v, expected: %v)", pathStr, ErrUnexpectedType, model.Integer, variable.Type)
 		}
 		return value, nil
 	case int64:
 		if variable.Type != model.Integer && variable.Type != model.Float {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.Integer, variable.Type)
+			return nil, fmt.Errorf("path='%v' err='%w' (is: %v, expected: %v)", pathStr, ErrUnexpectedType, model.Integer, variable.Type)
 		}
 		return value, nil
 	case float64:
 		if variable.Type != model.Integer && variable.Type != model.Float {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.Float, variable.Type)
+			return nil, fmt.Errorf("path='%v' err='%w' (is: %v, expected: %v)", pathStr, ErrUnexpectedType, model.Float, variable.Type)
 		}
 		return value, nil
 	case bool:
 		if variable.Type != model.Boolean {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.Boolean, variable.Type)
+			return nil, fmt.Errorf("path='%v' err='%w' (is: %v, expected: %v)", pathStr, ErrUnexpectedType, model.Boolean, variable.Type)
 		}
 		return value, nil
 	case map[string]interface{}:
 		if variable.Type != model.Structure {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.Structure, variable.Type)
+			return nil, fmt.Errorf("path='%v' err='%w' (is: %v, expected: %v)", pathStr, ErrUnexpectedType, model.Structure, variable.Type)
 		}
 		if variable.SubContentVariables[0].Name == "*" {
 			for key, subValue := range v {
-				v[key], err = defaultMissingField(subValue, variable.SubContentVariables[0])
+				v[key], err = defaultMissingField(subValue, variable.SubContentVariables[0], path)
 				if err != nil {
 					return v, err
 				}
@@ -74,7 +77,7 @@ func defaultMissingField(value interface{}, variable model.ContentVariable) (_ i
 		} else {
 			for _, subVariable := range variable.SubContentVariables {
 				if subValue, ok := v[subVariable.Name]; ok {
-					v[subVariable.Name], err = defaultMissingField(subValue, subVariable)
+					v[subVariable.Name], err = defaultMissingField(subValue, subVariable, path)
 				} else {
 					v[subVariable.Name] = subVariable.Value
 				}
@@ -83,11 +86,11 @@ func defaultMissingField(value interface{}, variable model.ContentVariable) (_ i
 		return v, nil
 	case []interface{}:
 		if variable.Type != model.List {
-			return nil, fmt.Errorf("%v: %w (is: %v, expected: %v)", variable.Name, ErrUnexpectedType, model.List, variable.Type)
+			return nil, fmt.Errorf("path='%v' err='%w' (is: %v, expected: %v)", pathStr, ErrUnexpectedType, model.List, variable.Type)
 		}
 		if variable.SubContentVariables[0].Name == "*" {
 			for key, subValue := range v {
-				v[key], err = defaultMissingField(subValue, variable.SubContentVariables[0])
+				v[key], err = defaultMissingField(subValue, variable.SubContentVariables[0], path)
 				if err != nil {
 					return v, err
 				}
@@ -96,10 +99,10 @@ func defaultMissingField(value interface{}, variable model.ContentVariable) (_ i
 			for _, subVariable := range variable.SubContentVariables {
 				index, err := strconv.Atoi(subVariable.Name)
 				if err != nil {
-					return nil, fmt.Errorf("list variable name expected to be * or a number. got %v in %v", subVariable.Name, variable.Name)
+					return nil, fmt.Errorf("list variable name expected to be * or a number. got %v in %v", subVariable.Name, pathStr)
 				}
 				if index < len(v) {
-					v[index], err = defaultMissingField(v[index], subVariable)
+					v[index], err = defaultMissingField(v[index], subVariable, path)
 				} else {
 					v = append(v, subVariable.Value)
 				}

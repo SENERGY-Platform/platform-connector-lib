@@ -102,11 +102,7 @@ var SlowProducerTimeout time.Duration = 2 * time.Second
 
 func (publisher *Publisher) Publish(envelope model.Envelope, service model.Service) (err error, notifyUsers bool) {
 	start := time.Now()
-	jsonMsg, ok := envelope.Value.(map[string]interface{})
-	if !ok {
-		return errors.New("envelope.Value is no map[string]interface{}"), false
-	}
-	m := flatten(jsonMsg)
+	m := flatten(envelope.Value)
 
 	shortDeviceId, err := ShortenId(envelope.DeviceId)
 	if err != nil {

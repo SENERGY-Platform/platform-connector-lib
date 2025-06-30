@@ -68,9 +68,9 @@ type Trace struct {
 const Optimistic = "optimistic"
 
 type Envelope struct {
-	DeviceId  string      `json:"device_id,omitempty"`
-	ServiceId string      `json:"service_id,omitempty"`
-	Value     interface{} `json:"value"`
+	DeviceId  string                 `json:"device_id,omitempty"`
+	ServiceId string                 `json:"service_id,omitempty"`
+	Value     map[string]interface{} `json:"value"`
 }
 
 func ServiceIdToTopic(id string) string {
