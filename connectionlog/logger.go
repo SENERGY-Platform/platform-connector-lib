@@ -36,8 +36,8 @@ func NewWithKafkaConfig(ctx context.Context, kafkaBootstrapUrl string, deviceLog
 }
 
 // deprecated
-func New(ctx context.Context, kafkaBootstrapUrl string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string, partitionNum int, replicationFactor int) (logger Logger, err error) {
-	producer, err := kafka.PrepareProducer(ctx, kafkaBootstrapUrl, sync, idempotent, partitionNum, replicationFactor)
+func New(ctx context.Context, kafkaBootstrapUrl string, sync bool, idempotent bool, deviceLogTopic string, hubLogTopic string, partitionNum int, replicationFactor int, initTopic bool) (logger Logger, err error) {
+	producer, err := kafka.PrepareProducer(ctx, kafkaBootstrapUrl, sync, idempotent, partitionNum, replicationFactor, initTopic)
 	if err != nil {
 		return logger, err
 	}

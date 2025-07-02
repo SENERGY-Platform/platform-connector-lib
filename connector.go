@@ -251,6 +251,7 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 			MaxBytes:       this.Config.KafkaConsumerMaxBytes,
 			MaxWait:        maxWait,
 			TopicConfigMap: this.Config.KafkaTopicConfigs,
+			InitTopic:      this.Config.InitTopics,
 		}, func(topic string, msg []byte, t time.Time) error {
 			if string(msg) == "topic_init" {
 				return nil
@@ -289,6 +290,7 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 			MaxBytes:       this.Config.KafkaConsumerMaxBytes,
 			MaxWait:        maxWait,
 			TopicConfigMap: this.Config.KafkaTopicConfigs,
+			InitTopic:      this.Config.InitTopics,
 		}, func(topic string, msg []byte, t time.Time) error {
 			if string(msg) == "topic_init" {
 				return nil

@@ -100,6 +100,8 @@ type Config struct {
 	DeveloperNotificationUrl string //optional
 
 	MutedUserNotificationTitles []string
+
+	InitTopics bool
 }
 
 // loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)

@@ -39,7 +39,7 @@ func Test(t *testing.T) {
 		return
 	}
 
-	logger, err := New(ctx, config.KafkaUrl, true, false, config.DeviceLogTopic, config.HubLogTopic, 2, 1)
+	logger, err := New(ctx, config.KafkaUrl, true, false, config.DeviceLogTopic, config.HubLogTopic, 2, 1, true)
 	if err != nil {
 		t.Error(err)
 		return
