@@ -362,6 +362,7 @@ func (this *Connector) initProducer(ctx context.Context, qos Qos) (err error) {
 		PartitionNum:        partitionsNum,
 		ReplicationFactor:   replFactor,
 		TopicConfigMap:      this.Config.KafkaTopicConfigs,
+		InitTopics:          this.Config.InitTopics,
 	})
 	if err != nil {
 		log.Println("ERROR: ", err)
