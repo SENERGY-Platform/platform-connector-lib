@@ -19,8 +19,6 @@ package platform_connector_lib
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/IBM/sarama"
-	"github.com/segmentio/kafka-go"
 	"log"
 	"os"
 	"reflect"
@@ -28,9 +26,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/IBM/sarama"
+	"github.com/segmentio/kafka-go"
 )
 
 type Config struct {
+	EventTimeProvider func(msg EventMsg) time.Time
+
 	KafkaUrl           string
 	KafkaResponseTopic string
 	KafkaGroupName     string

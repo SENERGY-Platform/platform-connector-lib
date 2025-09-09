@@ -19,10 +19,11 @@ package kafka
 import (
 	"context"
 	"errors"
-	"github.com/IBM/sarama"
-	"github.com/segmentio/kafka-go"
 	"log"
 	"time"
+
+	"github.com/IBM/sarama"
+	"github.com/segmentio/kafka-go"
 )
 
 var Fatal = false
@@ -31,6 +32,7 @@ var SlowProducerTimeout time.Duration = 2 * time.Second
 type ProducerInterface interface {
 	Produce(topic string, message string) (err error)
 	ProduceWithKey(topic string, message string, key string) (err error)
+	ProduceWithTimestamp(topic string, message string, key string, timestamp time.Time) (err error)
 	Log(logger *log.Logger)
 }
 
@@ -183,7 +185,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 		defer cancel()
 		go func() {
 			<-ctx.Done()
-			if ctx.Err() != nil && ctx.Err() != context.Canceled {
+			if ctx.Err() != nil && !errors.Is(ctx.Err(), context.Canceled) {
 				log.Println("WARNING: slow produce call", topic, message)
 			}
 		}()
@@ -211,6 +213,10 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 }
 
 func (this *SyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
+	return this.ProduceWithTimestamp(topic, message, key, time.Now())
+}
+
+func (this *SyncProducer) ProduceWithTimestamp(topic string, message string, key string, timestamp time.Time) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce sync", topic, message)
 	}
@@ -232,7 +238,7 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 			}
 		}()
 	}
-	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: time.Now()})
+	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: timestamp})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
 		log.Println("WARNING: finished slow produce call", time.Since(start), topic, key, message)
 	}
@@ -240,6 +246,10 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 }
 
 func (this *AsyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
+	return this.ProduceWithTimestamp(topic, message, key, time.Now())
+}
+
+func (this *AsyncProducer) ProduceWithTimestamp(topic string, message string, key string, timestamp time.Time) (err error) {
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce async", topic, message)
 	}
@@ -250,7 +260,7 @@ func (this *AsyncProducer) ProduceWithKey(topic string, message string, key stri
 			err = nil
 		}
 	}
-	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: time.Now()}
+	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: timestamp}
 	return
 }
 

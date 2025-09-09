@@ -20,16 +20,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"runtime/debug"
+	"sync"
+	"time"
+
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/marshalling"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"github.com/SENERGY-Platform/platform-connector-lib/unitreference"
-	"log"
-	"runtime/debug"
-	"sync"
-	"time"
 )
 
 func (this *Connector) unmarshalMsgFromRef(token security.JwtToken, device model.Device, service model.Service, msg map[string]string, iot *iot.Cache) (result map[string]interface{}, err error) {
@@ -154,6 +155,7 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 	if err != nil {
 		return err
 	}
+
 	envelope := model.Envelope{DeviceId: deviceId, ServiceId: serviceId}
 	envelope.Value = eventValue
 	pl, err := token.GetPayload()
@@ -161,7 +163,12 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 		return err
 	}
 
-	return this.sendEventEnvelope(envelope, qos, service, pl.UserId)
+	timestamp := time.Now()
+	if this.Config.EventTimeProvider != nil {
+		timestamp = this.Config.EventTimeProvider(msg)
+	}
+
+	return this.sendEventEnvelope(envelope, qos, service, pl.UserId, timestamp)
 }
 
 func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp CommandResponseMsg, qos Qos) {
@@ -195,7 +202,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 		return
 	}
 
-	err = this.sendEventEnvelope(envelope, qos, cmd.Metadata.Service, pl.UserId)
+	err = this.sendEventEnvelope(envelope, qos, cmd.Metadata.Service, pl.UserId, time.Now())
 	if err != nil {
 		log.Println("ERROR: trySendingResponseAsEvent()", err)
 		if this.Config.Debug {
@@ -205,7 +212,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	}
 }
 
-func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, service model.Service, userId string) error {
+func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, service model.Service, userId string, timestamp time.Time) error {
 	jsonMsg, err := json.Marshal(envelope)
 	if err != nil {
 		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
@@ -260,7 +267,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 		}()
 	}
 	kafkaStart := time.Now()
-	kafkaErr = producer.ProduceWithKey(serviceTopic, string(jsonMsg), envelope.DeviceId)
+	kafkaErr = producer.ProduceWithTimestamp(serviceTopic, string(jsonMsg), envelope.DeviceId, timestamp)
 	if err != nil {
 		if this.Config.FatalKafkaError {
 			if this.Config.Debug {
