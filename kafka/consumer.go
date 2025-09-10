@@ -18,22 +18,25 @@ package kafka
 
 import (
 	"context"
-	"github.com/segmentio/kafka-go"
+	"errors"
 	"io"
 	"log"
 	"os"
 	"time"
+
+	"github.com/segmentio/kafka-go"
 )
 
 type ConsumerConfig struct {
-	KafkaUrl       string
-	GroupId        string
-	Topic          string
-	MinBytes       int
-	MaxBytes       int
-	MaxWait        time.Duration
-	InitTopic      bool
-	TopicConfigMap map[string][]kafka.ConfigEntry
+	KafkaUrl         string
+	GroupId          string
+	Topic            string
+	MinBytes         int
+	MaxBytes         int
+	MaxWait          time.Duration
+	InitTopic        bool
+	TopicConfigMap   map[string][]kafka.ConfigEntry
+	AllowOldMessages bool
 }
 
 func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error)) (err error) {
@@ -68,7 +71,7 @@ func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic
 				return
 			default:
 				m, err := r.FetchMessage(ctx)
-				if err == io.EOF || err == context.Canceled {
+				if err == io.EOF || errors.Is(err, context.Canceled) {
 					log.Println("close consumer for topic ", config.Topic)
 					return
 				}
@@ -77,7 +80,7 @@ func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic
 					errorhandler(err)
 					return
 				}
-				if time.Now().Sub(m.Time) > 1*time.Hour { //floodgate to prevent old messages to DOS the consumer
+				if !config.AllowOldMessages && time.Now().Sub(m.Time) > 1*time.Hour { //floodgate to prevent old messages to DOS the consumer
 					log.Println("WARNING: kafka message older than 1h: ", config.Topic, time.Now().Sub(m.Time))
 					err = r.CommitMessages(ctx, m)
 					if err != nil {
