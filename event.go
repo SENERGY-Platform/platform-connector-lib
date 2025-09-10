@@ -151,6 +151,12 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 	if len(service.Id) == 0 {
 		return errors.New("unknown service id")
 	}
+
+	timestamp := time.Now()
+	if this.Config.EventTimeProvider != nil {
+		msg, timestamp = this.Config.EventTimeProvider(msg)
+	}
+
 	eventValue, err := this.unmarshalMsgFromRef(token, device, service, msg, cache)
 	if err != nil {
 		return err
@@ -161,11 +167,6 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 	pl, err := token.GetPayload()
 	if err != nil {
 		return err
-	}
-
-	timestamp := time.Now()
-	if this.Config.EventTimeProvider != nil {
-		timestamp = this.Config.EventTimeProvider(msg)
 	}
 
 	return this.sendEventEnvelope(envelope, qos, service, pl.UserId, timestamp)

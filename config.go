@@ -32,7 +32,7 @@ import (
 )
 
 type Config struct {
-	EventTimeProvider func(msg EventMsg) time.Time
+	EventTimeProvider func(msg EventMsg) (EventMsg, time.Time)
 
 	KafkaUrl           string
 	KafkaResponseTopic string
