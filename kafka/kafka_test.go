@@ -2,12 +2,13 @@ package kafka
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
 	"log"
 	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
 )
 
 func TestProducer_Produce(t *testing.T) {
@@ -16,14 +17,7 @@ func TestProducer_Produce(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, zkIp, err := docker.Zookeeper(ctx, wg)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	zookeeperUrl := zkIp + ":2181"
-
-	kafkaUrl, err := docker.Kafka(ctx, wg, zookeeperUrl)
+	kafkaUrl, err := docker.Kafka(ctx, wg)
 	if err != nil {
 		t.Error(err)
 		return

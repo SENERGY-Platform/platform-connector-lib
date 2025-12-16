@@ -18,28 +18,21 @@ package server
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
-	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/config"
 	"log"
 	"net"
 	"runtime/debug"
 	"strconv"
 	"sync"
+
+	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
+	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/config"
 )
 
 func New(ctx context.Context, wg *sync.WaitGroup) (config config.Config, err error) {
 	config.HubLogTopic = "gateway_log"
 	config.DeviceLogTopic = "device_log"
 
-	_, zk, err := docker.Zookeeper(ctx, wg)
-	if err != nil {
-		log.Println("ERROR:", err)
-		debug.PrintStack()
-		return config, err
-	}
-	zkUrl := zk + ":2181"
-
-	config.KafkaUrl, err = docker.Kafka(ctx, wg, zkUrl)
+	config.KafkaUrl, err = docker.Kafka(ctx, wg)
 	if err != nil {
 		log.Println("ERROR:", err)
 		debug.PrintStack()

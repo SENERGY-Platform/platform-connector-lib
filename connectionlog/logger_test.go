@@ -18,10 +18,11 @@ package connectionlog
 
 import (
 	"context"
+	"sync"
+
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/helper"
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/server"
 	"github.com/segmentio/kafka-go"
-	"sync"
 
 	"testing"
 	"time"
@@ -149,7 +150,7 @@ func createDevice(t *testing.T, kafkaUrl string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	broker, err := helper.GetBroker(kafkaUrl)
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +183,7 @@ func createHub(t *testing.T, kafkaUrl string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	broker, err := helper.GetBroker(kafkaUrl)
 	if err != nil {
 		t.Fatal(err)

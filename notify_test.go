@@ -19,6 +19,14 @@ package platform_connector_lib
 import (
 	"context"
 	"errors"
+	"io"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/device-repository/lib/tests/docker"
 	"github.com/SENERGY-Platform/models/go/models"
@@ -27,13 +35,6 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"io"
-	"log"
-	"net/http"
-	"net/http/httptest"
-	"sync"
-	"testing"
-	"time"
 )
 
 func TestNotifyDeviceOwners(t *testing.T) {
@@ -42,13 +43,7 @@ func TestNotifyDeviceOwners(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, zkIp, err := docker.Zookeeper(ctx, wg)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	kafkaUrl, err := docker.Kafka(ctx, wg, zkIp+":2181")
+	kafkaUrl, err := docker.Kafka(ctx, wg)
 	if err != nil {
 		t.Error(err)
 		return

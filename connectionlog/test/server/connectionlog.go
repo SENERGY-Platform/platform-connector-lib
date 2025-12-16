@@ -18,10 +18,14 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"log"
+	"strings"
+	"sync"
+
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"log"
-	"sync"
 )
 
 func Connectionlog(ctx context.Context, wg *sync.WaitGroup, mongourl string, permurl string, influxurl string) (hostport string, containerip string, err error) {
@@ -51,8 +55,20 @@ func Connectionlog(ctx context.Context, wg *sync.WaitGroup, mongourl string, per
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer func() {
+			log.Println("DEBUG: remove container connectionlog", c.Terminate(context.Background()))
+		}()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container connectionlog", c.Terminate(context.Background()))
+		reader, err := c.Logs(context.Background())
+		if err != nil {
+			log.Println("ERROR: unable to get container log")
+			return
+		}
+		buf := new(strings.Builder)
+		io.Copy(buf, reader)
+		fmt.Println("CONNECTION-LOG: ------------------------------------------")
+		fmt.Println(buf.String())
+		fmt.Println("\n---------------------------------------------------------------")
 	}()
 
 	containerip, err = c.ContainerIP(ctx)
@@ -92,9 +108,23 @@ func ConnectionlogWorker(ctx context.Context, wg *sync.WaitGroup, mongourl strin
 
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		<-ctx.Done()
-		log.Println("DEBUG: remove container connectionlog worker", c.Terminate(context.Background()))
+		go func() {
+			defer wg.Done()
+			defer func() {
+				log.Println("DEBUG: remove container connectionlog worker", c.Terminate(context.Background()))
+			}()
+			<-ctx.Done()
+			reader, err := c.Logs(context.Background())
+			if err != nil {
+				log.Println("ERROR: unable to get container log")
+				return
+			}
+			buf := new(strings.Builder)
+			io.Copy(buf, reader)
+			fmt.Println("CONNECTION-LOG WORKER: ------------------------------------------")
+			fmt.Println(buf.String())
+			fmt.Println("\n---------------------------------------------------------------")
+		}()
 	}()
 
 	return nil
