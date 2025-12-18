@@ -47,6 +47,7 @@ type SyncProducer struct {
 	replicationFactor int
 	topicConfigMap    map[string][]kafka.ConfigEntry
 	initTopic         bool
+	isClosed          bool
 }
 
 type AsyncProducer struct {
@@ -59,6 +60,7 @@ type AsyncProducer struct {
 	replicationFactor int
 	topicConfigMap    map[string][]kafka.ConfigEntry
 	initTopic         bool
+	isClosed          bool
 }
 
 type Config struct {
@@ -110,6 +112,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 		result = temp
 		go func() {
 			<-ctx.Done()
+			temp.isClosed = true
 			temp.producer.Close()
 		}()
 	} else {
@@ -142,6 +145,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 		result = temp
 		go func() {
 			<-ctx.Done()
+			temp.isClosed = true
 			temp.producer.Close()
 		}()
 	}
@@ -168,6 +172,9 @@ func (this *SyncProducer) Log(logger *log.Logger) {
 }
 
 func (this *SyncProducer) Produce(topic string, message string) (err error) {
+	if this.isClosed {
+		return errors.New("producer closed")
+	}
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce sync", topic, message)
 	}
@@ -198,6 +205,9 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 }
 
 func (this *AsyncProducer) Produce(topic string, message string) (err error) {
+	if this.isClosed {
+		return errors.New("producer closed")
+	}
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce async", topic, message)
 	}
@@ -217,6 +227,9 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 }
 
 func (this *SyncProducer) ProduceWithTimestamp(topic string, message string, key string, timestamp time.Time) (err error) {
+	if this.isClosed {
+		return errors.New("producer closed")
+	}
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce sync", topic, message)
 	}
@@ -250,6 +263,9 @@ func (this *AsyncProducer) ProduceWithKey(topic string, message string, key stri
 }
 
 func (this *AsyncProducer) ProduceWithTimestamp(topic string, message string, key string, timestamp time.Time) (err error) {
+	if this.isClosed {
+		return errors.New("producer closed")
+	}
 	if this.logger != nil {
 		this.logger.Println("DEBUG: produce async", topic, message)
 	}
