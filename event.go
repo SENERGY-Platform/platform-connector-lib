@@ -103,13 +103,13 @@ type HandledDeviceInfo struct {
 func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri string, serviceUri string, msg EventMsg, qos Qos) (info HandledDeviceInfo, err error) {
 	device, err := this.IotCache.WithToken(token).GetDeviceByLocalId(deviceUri)
 	if err != nil {
-		log.Println("ERROR: handleDeviceRefEvent::DeviceUrlToIotDevice", err)
+		this.Config.GetLogger().Error("unable to get device by local id", "error", err, "deviceLocalId", deviceUri)
 		return info, err
 	}
 	info.DeviceId = device.Id
 	dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceTypeId)
 	if err != nil {
-		log.Println("ERROR: handleDeviceRefEvent::GetDeviceType", err)
+		this.Config.GetLogger().Error("unable to get device type", "error", err, "deviceTypeId", device.DeviceTypeId)
 		return info, err
 	}
 	info.DeviceTypeId = dt.Id
@@ -118,7 +118,7 @@ func (this *Connector) handleDeviceRefEvent(token security.JwtToken, deviceUri s
 		if service.LocalId == serviceUri && len(service.Outputs) > 0 {
 			err = this.handleDeviceEvent(token, device.Id, service.Id, msg, qos)
 			if err != nil {
-				log.Printf("ERROR: handleDeviceRefEvent::handleDeviceEvent %v\n%#v", err, msg)
+				this.Config.GetLogger().Error("unable to handle device event", "error", err, "deviceId", device.Id, "serviceId", service.Id, "msg", fmt.Sprintf("%#v", msg))
 				return info, err
 			}
 			found = true
@@ -175,7 +175,7 @@ func (this *Connector) handleDeviceEvent(token security.JwtToken, deviceId strin
 func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp CommandResponseMsg, qos Qos) {
 	token, err := this.Security().Access()
 	if err != nil {
-		log.Println("ERROR: trySendingResponseAsEvent()", err)
+		this.Config.GetLogger().Error("unable to get access token", "error", err)
 		if this.Config.Debug {
 			debug.PrintStack()
 		}
@@ -183,7 +183,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 	}
 	eventValue, err := this.unmarshalMsg(token, cmd.Metadata.Device, cmd.Metadata.Service, cmd.Metadata.Protocol, resp)
 	if err != nil {
-		log.Println("ERROR: trySendingResponseAsEvent()", err)
+		this.Config.GetLogger().Error("unable to unmarshal response msg", "error", err)
 		if this.Config.Debug {
 			debug.PrintStack()
 		}
@@ -196,7 +196,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 
 	pl, err := token.GetPayload()
 	if err != nil {
-		log.Println("ERROR: trySendingResponseAsEvent()", err)
+		this.Config.GetLogger().Error("unable to get payload", "error", err)
 		if this.Config.Debug {
 			debug.PrintStack()
 		}
@@ -205,7 +205,7 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 
 	err = this.sendEventEnvelope(envelope, qos, cmd.Metadata.Service, pl.UserId, time.Now())
 	if err != nil {
-		log.Println("ERROR: trySendingResponseAsEvent()", err)
+		this.Config.GetLogger().Error("unable to send event envelope", "error", err)
 		if this.Config.Debug {
 			debug.PrintStack()
 		}
@@ -216,19 +216,19 @@ func (this *Connector) trySendingResponseAsEvent(cmd model.ProtocolMsg, resp Com
 func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, service model.Service, userId string, timestamp time.Time) error {
 	jsonMsg, err := json.Marshal(envelope)
 	if err != nil {
-		log.Println("ERROR: handleDeviceEvent::marshaling ", err)
+		this.Config.GetLogger().Error("unable to marshal event envelope", "error", err)
 		return err
 	}
 	if this.Config.Debug {
 		now := time.Now()
 		defer func(start time.Time) {
-			log.Println("DEBUG: kafka produce in", time.Now().Sub(start))
+			this.Config.GetLogger().Debug("sendEventEnvelope", "duration", time.Now().Sub(start))
 		}(now)
 	}
 	serviceTopic := model.ServiceIdToTopic(envelope.ServiceId)
 	producer, err := this.GetProducer(qos)
 	if err != nil {
-		log.Println("ERROR in sendEventEnvelope(): ", err)
+		this.Config.GetLogger().Error("unable to get kafka producer", "error", err)
 		return err
 	}
 
@@ -254,7 +254,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 			timescaleStart := time.Now()
 			pgErr, shouldNotify := this.postgresPublisher.Publish(envelope, service)
 			if pgErr != nil {
-				log.Println("ERROR: publish event to postgres ", pgErr)
+				this.Config.GetLogger().Error("unable to publish event to postgres", "error", pgErr)
 				if shouldNotify {
 					this.notifyDeviceOwners(envelope.DeviceId, Notification{
 						Title:   "DeviceType Timescale Configuration Error",
@@ -274,9 +274,10 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 			if this.Config.Debug {
 				debug.PrintStack()
 			}
+			this.Config.GetLogger().Error("FATAL: unable to produce event to kafka", "error", kafkaErr)
 			log.Fatal("FATAL: while producing for topic: '", serviceTopic, "' :", kafkaErr)
 		}
-		log.Println("ERROR: produce event on service topic ", kafkaErr)
+		this.Config.GetLogger().Error("unable to produce event to service topic", "error", kafkaErr, "topic", serviceTopic)
 	}
 	statistics.KafkaWrite(time.Since(kafkaStart), userId)
 

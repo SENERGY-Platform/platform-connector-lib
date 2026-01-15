@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -33,12 +34,11 @@ type ProducerInterface interface {
 	Produce(topic string, message string) (err error)
 	ProduceWithKey(topic string, message string, key string) (err error)
 	ProduceWithTimestamp(topic string, message string, key string, timestamp time.Time) (err error)
-	Log(logger *log.Logger)
 }
 
 type SyncProducer struct {
 	broker            []string
-	logger            *log.Logger
+	logger            *slog.Logger
 	producer          sarama.SyncProducer
 	kafkaBootstrapUrl string
 	syncIdempotent    bool
@@ -52,7 +52,7 @@ type SyncProducer struct {
 
 type AsyncProducer struct {
 	broker            []string
-	logger            *log.Logger
+	logger            *slog.Logger
 	producer          sarama.AsyncProducer
 	kafkaBootstrapUrl string
 	usedTopics        map[string]bool
@@ -74,6 +74,14 @@ type Config struct {
 	AsyncFlushMessages  int
 	TopicConfigMap      map[string][]kafka.ConfigEntry
 	InitTopics          bool
+	Logger              *slog.Logger
+}
+
+func (this *Config) GetLogger() *slog.Logger {
+	if this.Logger == nil {
+		return slog.Default()
+	}
+	return this.Logger
 }
 
 func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, config Config) (result ProducerInterface, err error) {
@@ -94,6 +102,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			replicationFactor: config.ReplicationFactor,
 			topicConfigMap:    config.TopicConfigMap,
 			initTopic:         config.InitTopics,
+			logger:            config.GetLogger(),
 		}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
@@ -124,6 +133,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			replicationFactor: config.ReplicationFactor,
 			topicConfigMap:    config.TopicConfigMap,
 			initTopic:         config.InitTopics,
+			logger:            config.GetLogger(),
 		}
 		sarama_conf := sarama.NewConfig()
 		sarama_conf.Version = sarama.V2_2_0_0
@@ -167,21 +177,15 @@ func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, s
 	})
 }
 
-func (this *SyncProducer) Log(logger *log.Logger) {
-	this.logger = logger
-}
-
 func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	if this.isClosed {
 		return errors.New("producer closed")
 	}
-	if this.logger != nil {
-		this.logger.Println("DEBUG: produce sync", topic, message)
-	}
+	this.logger.Debug("kafka produce sync", "topic", topic, "message", message)
 	if this.initTopic {
 		err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
 		if err != nil {
-			log.Println("WARNING: unable to ensure topic", err)
+			this.logger.Warn("unable to ensure topic", "error", err)
 			err = nil
 		}
 	}
@@ -193,13 +197,13 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 		go func() {
 			<-ctx.Done()
 			if ctx.Err() != nil && !errors.Is(ctx.Err(), context.Canceled) {
-				log.Println("WARNING: slow produce call", topic, message)
+				this.logger.Warn("slow produce call", "topic", topic, "message", message)
 			}
 		}()
 	}
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
-		log.Println("WARNING: finished slow produce call", time.Since(start), topic, message)
+		this.logger.Warn("finished slow produce call", "duration", time.Since(start), "topic", topic, "message", message)
 	}
 	return err
 }
@@ -208,13 +212,11 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 	if this.isClosed {
 		return errors.New("producer closed")
 	}
-	if this.logger != nil {
-		this.logger.Println("DEBUG: produce async", topic, message)
-	}
+	this.logger.Debug("kafka produce async", "topic", topic, "message", message)
 	if this.initTopic {
 		err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
 		if err != nil {
-			log.Println("WARNING: unable to ensure topic", err)
+			this.logger.Warn("unable to ensure topic", "error", err)
 			err = nil
 		}
 	}
@@ -230,13 +232,11 @@ func (this *SyncProducer) ProduceWithTimestamp(topic string, message string, key
 	if this.isClosed {
 		return errors.New("producer closed")
 	}
-	if this.logger != nil {
-		this.logger.Println("DEBUG: produce sync", topic, message)
-	}
+	this.logger.Debug("kafka produce sync", "topic", topic, "message", message)
 	if this.initTopic {
 		err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
 		if err != nil {
-			log.Println("WARNING: unable to ensure topic", err)
+			this.logger.Warn("unable to ensure topic", "error", err)
 			err = nil
 		}
 	}
@@ -246,14 +246,14 @@ func (this *SyncProducer) ProduceWithTimestamp(topic string, message string, key
 		defer cancel()
 		go func() {
 			<-ctx.Done()
-			if ctx.Err() != nil && ctx.Err() != context.Canceled {
-				log.Println("WARNING: slow produce call", topic, key, message)
+			if ctx.Err() != nil && !errors.Is(ctx.Err(), context.Canceled) {
+				this.logger.Warn("slow produce call", "topic", topic, "key", key, "message", message)
 			}
 		}()
 	}
 	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: timestamp})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
-		log.Println("WARNING: finished slow produce call", time.Since(start), topic, key, message)
+		this.logger.Warn("finished slow produce call", "duration", time.Since(start), "topic", topic, "key", key, "message", message)
 	}
 	return err
 }
@@ -266,20 +266,14 @@ func (this *AsyncProducer) ProduceWithTimestamp(topic string, message string, ke
 	if this.isClosed {
 		return errors.New("producer closed")
 	}
-	if this.logger != nil {
-		this.logger.Println("DEBUG: produce async", topic, message)
-	}
+	this.logger.Debug("kafka produce async", "topic", topic, "message", message)
 	if this.initTopic {
 		err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
 		if err != nil {
-			log.Println("WARNING: unable to ensure topic", err)
+			this.logger.Warn("unable to ensure topic", "error", err)
 			err = nil
 		}
 	}
 	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: timestamp}
 	return
-}
-
-func (this *AsyncProducer) Log(logger *log.Logger) {
-	this.logger = logger
 }

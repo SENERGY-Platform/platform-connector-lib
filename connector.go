@@ -20,6 +20,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
+	"strconv"
+	"sync"
+	"time"
+
 	developerNotifications "github.com/SENERGY-Platform/developer-notifications/pkg/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/httpcommand"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
@@ -29,10 +34,6 @@ import (
 	"github.com/SENERGY-Platform/platform-connector-lib/psql"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	kafka2 "github.com/segmentio/kafka-go"
-	"log"
-	"strconv"
-	"sync"
-	"time"
 )
 
 type ProtocolSegmentName = string
@@ -77,8 +78,6 @@ type Connector struct {
 
 	IotCache *iot.PreparedCache
 
-	kafkalogger *log.Logger
-
 	asyncPgBackpressure chan bool //used to limit go routines for async postgres publishing
 
 	devNotifications developerNotifications.Client
@@ -88,7 +87,7 @@ func New(config Config) (connector *Connector, err error) {
 	config = setConfigDefaults(config)
 	var publisher *psql.Publisher
 	if config.PublishToPostgres {
-		publisher, err = psql.New(config.PostgresHost, config.PostgresPort, config.PostgresUser, config.PostgresPw, config.PostgresDb, config.Debug, &sync.WaitGroup{}, context.Background())
+		publisher, err = psql.New(config.PostgresHost, config.PostgresPort, config.PostgresUser, config.PostgresPw, config.PostgresDb, config.GetLogger(), &sync.WaitGroup{}, context.Background())
 		if err != nil {
 			return nil, err
 		}
@@ -111,6 +110,7 @@ func New(config Config) (connector *Connector, err error) {
 		config.TokenCacheUrl,
 		5,
 		500*time.Millisecond,
+		config.GetLogger(),
 	)
 	if err != nil {
 		return nil, err
@@ -118,14 +118,14 @@ func New(config Config) (connector *Connector, err error) {
 
 	connector = &Connector{
 		Config:              config,
-		iot:                 iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.PermissionsV2Url),
+		iot:                 iot.New(config.DeviceManagerUrl, config.DeviceRepoUrl, config.PermissionsV2Url, config.GetLogger()),
 		security:            sec,
 		postgresPublisher:   publisher,
 		asyncPgBackpressure: make(chan bool, asyncPgThreadMax),
 	}
 	iotCacheTimeout := 200 * time.Millisecond
 	if timeout, err := time.ParseDuration(config.IotCacheTimeout); err != nil {
-		log.Println("WARNING: invalid IotCacheTimeout; use default 200ms")
+		config.GetLogger().Warn("invalid IotCacheTimeout; use default 200ms", "error", err)
 	} else {
 		iotCacheTimeout = timeout
 	}
@@ -192,10 +192,6 @@ func setConfigDefaults(config Config) Config {
 	return config
 }
 
-func (this *Connector) SetKafkaLogger(logger *log.Logger) {
-	this.kafkalogger = logger
-}
-
 // asyncCommandHandler, endpointCommandHandler and deviceCommandHandler are mutual exclusive
 func (this *Connector) SetDeviceCommandHandler(handler DeviceCommandHandler) *Connector {
 	if this.asyncCommandHandler != nil {
@@ -258,7 +254,7 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 			}
 			return this.handleCommand(msg, t)
 		}, func(err error) {
-			log.Println("FATAL ERROR: kafka", err)
+			this.Config.GetLogger().Error("FATAL ERROR: kafka consumer", "error", err)
 			log.Fatal(err)
 		})
 		if err != nil {
@@ -268,7 +264,7 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 
 	if this.Config.HttpCommandConsumerPort != "" && this.Config.HttpCommandConsumerPort != "-" {
 		used = true
-		err = httpcommand.StartConsumer(ctx, this.Config.HttpCommandConsumerPort, func(msg []byte) error {
+		err = httpcommand.StartConsumer(ctx, this.Config.GetLogger(), this.Config.HttpCommandConsumerPort, func(msg []byte) error {
 			return this.handleCommand(msg, time.Now())
 		})
 		if err != nil {
@@ -298,10 +294,10 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 			command := DeviceTypeCommand{}
 			err = json.Unmarshal(msg, &command)
 			if err != nil {
-				log.Println("ERROR: unable to unmarshal "+this.Config.DeviceTypeTopic+" message", err)
+				this.Config.GetLogger().Error("unable to unmarshal consumed  device-type command message", "error", err, "topic", this.Config.DeviceTypeTopic)
 				return nil
 			}
-			log.Println("invalidate cache for", command.Id)
+			this.Config.GetLogger().Info("invalidate cache for device-type", "id", command.Id)
 			this.IotCache.InvalidateDeviceTypeCache(command.Id)
 			return nil
 		}, func(err error) {
@@ -363,13 +359,11 @@ func (this *Connector) initProducer(ctx context.Context, qos Qos) (err error) {
 		ReplicationFactor:   replFactor,
 		TopicConfigMap:      this.Config.KafkaTopicConfigs,
 		InitTopics:          this.Config.InitTopics,
+		Logger:              this.Config.GetLogger(),
 	})
 	if err != nil {
-		log.Println("ERROR: ", err)
+		this.Config.GetLogger().Error("unable to prepare producer", "error", err)
 		return err
-	}
-	if this.kafkalogger != nil {
-		this.producer[qos].Log(this.kafkalogger)
 	}
 	return
 }
@@ -377,7 +371,7 @@ func (this *Connector) initProducer(ctx context.Context, qos Qos) (err error) {
 func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string, qos Qos, remoteInfo model.RemoteInfo) (err error) {
 	token, err := this.security.GetUserToken(username, password, remoteInfo)
 	if err != nil {
-		log.Println("ERROR HandleDeviceEvent::GetUserToken()", err)
+		this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
 		return err
 	}
 	return this.HandleDeviceEventWithAuthToken(token, deviceId, serviceId, protocolParts, qos)
@@ -390,7 +384,7 @@ func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, d
 func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos, remoteInfo model.RemoteInfo) (info HandledDeviceInfo, err error) {
 	token, err := this.security.GetUserToken(username, password, remoteInfo)
 	if err != nil {
-		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
+		this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
 		return info, err
 	}
 	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, eventMsg, qos)
@@ -403,7 +397,7 @@ func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken
 func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos, remoteInfo model.RemoteInfo) (info HandledDeviceInfo, err error) {
 	token, err := this.security.GetUserToken(username, password, remoteInfo)
 	if err != nil {
-		log.Println("ERROR HandleDeviceRefEvent::GetUserToken()", err)
+		this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
 		return info, err
 	}
 	return this.HandleDeviceIdentEventWithAuthToken(token, deviceId, localDeviceId, serviceId, localServiceId, eventMsg, qos)
@@ -417,7 +411,7 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 		} else {
 			device, err = this.IotCache.WithToken(token).GetDeviceByLocalId(localDeviceId)
 			if err != nil {
-				log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::DeviceUrlToIotDevice", err)
+				this.Config.GetLogger().Error("unable to get device by localId", "error", err, "localDeviceId", localDeviceId)
 				return info, err
 			}
 			deviceId = device.Id
@@ -425,14 +419,14 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 	} else {
 		device, err = this.IotCache.WithToken(token).GetDevice(deviceId)
 		if err != nil {
-			log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDevice", err)
+			this.Config.GetLogger().Error("unable to get device", "error", err, "deviceId", deviceId)
 			return info, err
 		}
 	}
 	info.DeviceId = device.Id
 	dt, err := this.IotCache.WithToken(token).GetDeviceType(device.DeviceTypeId)
 	if err != nil {
-		log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::GetDeviceType", err)
+		this.Config.GetLogger().Error("unable to get device type", "error", err, "deviceTypeId", device.DeviceTypeId)
 		return info, err
 	}
 	info.DeviceTypeId = dt.Id
@@ -453,7 +447,7 @@ func (this *Connector) HandleDeviceIdentEventWithAuthToken(token security.JwtTok
 	info.ServiceIds = []string{serviceId}
 	err = this.handleDeviceEvent(token, deviceId, serviceId, eventMsg, qos)
 	if err != nil {
-		log.Println("ERROR: HandleDeviceIdentEventWithAuthToken::handleDeviceEvent", err)
+		this.Config.GetLogger().Error("unable to handle device event", "error", err, "deviceId", deviceId, "serviceId", serviceId)
 		return info, err
 	}
 	return info, nil

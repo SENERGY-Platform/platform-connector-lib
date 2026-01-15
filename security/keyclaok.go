@@ -18,7 +18,6 @@ package security
 
 import (
 	"errors"
-	"log"
 	"net/url"
 
 	"github.com/golang-jwt/jwt"
@@ -45,13 +44,13 @@ type RealmAccess struct {
 func (this *Security) GetUserId(username string) (userid string, err error) {
 	clientToken, err := this.Access()
 	if err != nil {
-		log.Println("ERROR: GetUserId::EnsureAccess()", err)
+		this.logger.Error("unable to get access token", "error", err)
 		return userid, err
 	}
 	users := []UserRepresentation{}
 	err = clientToken.GetJSON(this.authEndpoint+"/auth/admin/realms/master/users?username="+url.QueryEscape(username), &users)
 	if err != nil {
-		log.Println("ERROR: Security.GetUserId::GetJSON()", err)
+		this.logger.Error("unable to get user id", "error", err, "username", username)
 		this.ResetAccess()
 		return
 	}
@@ -72,7 +71,7 @@ func (this *Security) GetUserRoles(userid string) (roles []string, err error) {
 	roleMappings := []RoleMapping{}
 	err = clientToken.GetJSON(this.authEndpoint+"/auth/admin/realms/master/users/"+userid+"/role-mappings/realm", &roleMappings)
 	if err != nil {
-		log.Println("ERROR: getUserRoles() ", err)
+		this.logger.Error("unable to get user roles", "error", err)
 		this.ResetAccess()
 		return roles, err
 	}

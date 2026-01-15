@@ -21,6 +21,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -104,7 +105,7 @@ func TestNotifyDeviceOwners(t *testing.T) {
 
 	ctl := Connector{
 		Config:           config,
-		iot:              iot.New("", deviceRepoUrl, config.PermissionsV2Url),
+		iot:              iot.New("", deviceRepoUrl, config.PermissionsV2Url, slog.Default()),
 		security:         securityMock,
 		IotCache:         nil,
 		devNotifications: nil,

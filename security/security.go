@@ -18,16 +18,17 @@ package security
 
 import (
 	"encoding/json"
+	"log/slog"
+	"sync"
+	"time"
+
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache/memcached"
-	"log"
-	"sync"
-	"time"
 )
 
-func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64, tokenCacheExpiration int32, cacheUrls []string, cacheMaxIdleConns int, cacheTimeout time.Duration) (security *Security, err error) {
+func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64, tokenCacheExpiration int32, cacheUrls []string, cacheMaxIdleConns int, cacheTimeout time.Duration, logger *slog.Logger) (security *Security, err error) {
 	security = &Security{
 		authEndpoint:             authEndpoint,
 		authClientSecret:         authClientSecret,
@@ -37,6 +38,7 @@ func New(authEndpoint string, authClientId string, authClientSecret string, jwtI
 		authExpirationTimeBuffer: authExpirationTimeBuffer,
 		jwtExpiration:            jwtExpiration,
 		tokenCacheExpiration:     tokenCacheExpiration,
+		logger:                   logger,
 	}
 	if tokenCacheExpiration != 0 && len(cacheUrls) > 0 {
 		security.cache, err = cache.New(cache.Config{
@@ -68,13 +70,14 @@ type Security struct {
 
 	cache                *cache.Cache
 	tokenCacheExpiration int32
+	logger               *slog.Logger
 }
 
 func (this *Security) ResetAccess() {
 	this.mux.Lock()
 	defer this.mux.Unlock()
 	b, _ := json.Marshal(this.openid)
-	log.Println("reset OpenidToken: ", string(b))
+	this.logger.Debug("reset openid token", "openid", string(b))
 	this.openid = nil
 }
 
@@ -92,10 +95,10 @@ func (this *Security) Access() (token JwtToken, err error) {
 	}
 
 	if this.openid.RefreshToken != "" && this.openid.RefreshExpiresIn > duration+this.authExpirationTimeBuffer {
-		log.Println("refresh token", this.openid.RefreshExpiresIn, duration)
+		this.logger.Debug("refresh token", "expires-in", this.openid.RefreshExpiresIn, "duration", duration)
 		openid, err := RefreshOpenidToken(this.authEndpoint, this.authClientId, this.authClientSecret, *this.openid, model.RemoteInfo{})
 		if err != nil {
-			log.Println("WARNING: unable to use refreshtoken", err)
+			this.logger.Warn("unable to refresh token", "error", err)
 		} else {
 			this.openid = &openid
 			token = JwtToken("Bearer " + this.openid.AccessToken)
@@ -103,11 +106,11 @@ func (this *Security) Access() (token JwtToken, err error) {
 		}
 	}
 
-	log.Println("get new access token")
+	this.logger.Debug("get new access token")
 	openid, err := GetOpenidToken(this.authEndpoint, this.authClientId, this.authClientSecret, model.RemoteInfo{})
 	this.openid = &openid
 	if err != nil {
-		log.Println("ERROR: unable to get new access token", err)
+		this.logger.Error("unable to get new access token", "error", err)
 		this.openid = &OpenidToken{}
 	}
 	token = JwtToken("Bearer " + this.openid.AccessToken)

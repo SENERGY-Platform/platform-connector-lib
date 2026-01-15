@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"io"
 	"log"
 	"net/http"
 	"runtime/debug"
 	"strings"
+
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 )
 
 func (this *Connector) HandleClientError(userId string, clientId string, errorMessage string) {
@@ -39,7 +40,7 @@ func (this *Connector) HandleClientError(userId string, clientId string, errorMe
 		Topic:   "mgw",
 	})
 	if err != nil {
-		log.Println("WARNING: unable to send notification to", userId, err)
+		this.Config.GetLogger().Warn("unable to send notification", "error", err, "userId", userId)
 	}
 }
 
@@ -54,7 +55,7 @@ func (this *Connector) HandleDeviceError(userId string, device model.Device, err
 		Topic:   "mgw",
 	})
 	if err != nil {
-		log.Println("WARNING: unable to send notification to", userId, err)
+		this.Config.GetLogger().Warn("unable to send notification", "error", err, "userId", userId)
 	}
 }
 
@@ -70,13 +71,13 @@ func (this *Connector) HandleCommandError(userId string, commandRequest model.Pr
 		Topic:   "mgw",
 	})
 	if err != nil {
-		log.Println("WARNING: unable to send notification to", userId, err)
+		this.Config.GetLogger().Warn("unable to send notification", "error", err, "userId", userId)
 		err = nil
 	}
 
 	topic := commandRequest.Metadata.ErrorTo
 	if topic == "" {
-		log.Println("WARNING: no Metadata.ErrorTo value set in command --> error will not be forwarded")
+		this.Config.GetLogger().Warn("no Metadata.ErrorTo value set in command --> error will not be forwarded")
 		return
 	}
 
@@ -86,27 +87,27 @@ func (this *Connector) HandleCommandError(userId string, commandRequest model.Pr
 	commandRequest.Response.Output["error"] = errorMessage
 	responseMsg, err := json.Marshal(commandRequest)
 	if err != nil {
-		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
+		this.Config.GetLogger().Error("json marshal error", "error", err)
 		return
 	}
 
 	if strings.HasPrefix(topic, "http://") || strings.HasPrefix(topic, "https://") {
 		resp, err := http.Post(topic, "application/json", bytes.NewReader(responseMsg))
 		if err != nil {
-			log.Println("ERROR: http producer", topic, err)
+			this.Config.GetLogger().Error("http producer error", "error", err, "topic", topic)
 			return
 		}
 		defer resp.Body.Close()
 		respMsg, _ := io.ReadAll(resp.Body)
 		if resp.StatusCode != http.StatusOK {
 			err = errors.New("http error producer: " + resp.Status + " " + string(respMsg))
-			log.Println("ERROR:", topic, err)
+			this.Config.GetLogger().Error("http producer error", "error", err, "topic", topic, "status-code", resp.StatusCode)
 			return
 		}
 	} else {
 		producer, err := this.GetProducer(2)
 		if err != nil {
-			log.Println("ERROR in handleCommand(): ", err)
+			this.Config.GetLogger().Error("unable to get kafka producer", "error", err)
 			return
 		}
 		err = producer.ProduceWithKey(topic, string(responseMsg), commandRequest.Metadata.Device.Id)
@@ -114,6 +115,7 @@ func (this *Connector) HandleCommandError(userId string, commandRequest model.Pr
 			if this.Config.Debug {
 				debug.PrintStack()
 			}
+			this.Config.GetLogger().Error("FATAL: unable to producer to kafka", "error", err)
 			log.Fatal("FATAL: ", err)
 		}
 	}

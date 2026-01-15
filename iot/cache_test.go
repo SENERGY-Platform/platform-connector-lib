@@ -18,10 +18,12 @@ package iot
 
 import (
 	"context"
-	iot2 "github.com/SENERGY-Platform/platform-connector-lib/iot/mock/iot"
-	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"log/slog"
 	"testing"
 	"time"
+
+	iot2 "github.com/SENERGY-Platform/platform-connector-lib/iot/mock/iot"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 )
 
 func TestCache_GetProtocol(t *testing.T) {
@@ -32,7 +34,7 @@ func TestCache_GetProtocol(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	iot := New(iotMockUrl, iotMockUrl, "")
+	iot := New(iotMockUrl, iotMockUrl, "", slog.Default())
 	cache, err := NewCache(iot, 60, 60, 60, 2, 200*time.Millisecond)
 	if err != nil {
 		t.Error(err)

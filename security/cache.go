@@ -2,17 +2,17 @@ package security
 
 import (
 	"errors"
+	"time"
+
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
-	"log"
-	"time"
 )
 
 func (this *Security) GetCachedUserToken(username string, remoteInfo model.RemoteInfo) (token JwtToken, err error) {
 	if this.cache == nil {
 		token, err = this.ExchangeUserToken(username, remoteInfo)
 		if err != nil {
-			log.Println("ERROR: GetCachedUserToken::GenerateUserToken()", err, username)
+			this.logger.Error("unable to exchange user token", "error", err, "username", username)
 			return
 		}
 		return token, nil

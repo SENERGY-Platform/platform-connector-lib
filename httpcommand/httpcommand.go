@@ -18,25 +18,27 @@ package httpcommand
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 )
 
-func StartConsumer(ctx context.Context, port string, listener func(msg []byte) error) error {
+func StartConsumer(ctx context.Context, slogger *slog.Logger, port string, listener func(msg []byte) error) error {
 	router := http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method == http.MethodPost && strings.TrimPrefix(request.URL.Path, "/") == "commands" {
 			msg, err := io.ReadAll(request.Body)
 			if err != nil {
-				log.Println("ERROR:", err)
+				slogger.Error("unable to read http command message", "error", err)
 				http.Error(writer, err.Error(), http.StatusBadRequest)
 				return
 			}
 			err = listener(msg)
 			if err != nil {
-				log.Println("ERROR:", err)
+				slogger.Error("unable to handle http command message", "error", err)
 				http.Error(writer, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -51,19 +53,19 @@ func StartConsumer(ctx context.Context, port string, listener func(msg []byte) e
 	logger := NewLogger(corsHandler)
 	server := &http.Server{Addr: ":" + port, Handler: logger, WriteTimeout: 10 * time.Second, ReadTimeout: 10 * time.Second, ReadHeaderTimeout: 2 * time.Second}
 	go func() {
-		log.Println("Listening on ", server.Addr)
+		slogger.Info("starting http command consumer server", "addr", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				log.Println("ERROR: http command consumer server error", err)
+			if !errors.Is(err, http.ErrServerClosed) {
+				slogger.Error("http command consumer server error", "error", err)
 				log.Fatal(err)
 			} else {
-				log.Println("closing http command consumer server")
+				slogger.Info("http command consumer server closed")
 			}
 		}
 	}()
 	go func() {
 		<-ctx.Done()
-		log.Println("http command consumer shutdown", server.Shutdown(context.Background()))
+		slogger.Info("shutting down http command consumer server", "result", server.Shutdown(context.Background()))
 	}()
 	return nil
 }

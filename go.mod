@@ -1,6 +1,6 @@
 module github.com/SENERGY-Platform/platform-connector-lib
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
@@ -17,10 +17,11 @@ require (
 	github.com/IBM/sarama v1.43.3
 	github.com/SENERGY-Platform/converter v0.0.10
 	github.com/SENERGY-Platform/developer-notifications v0.0.4
-	github.com/SENERGY-Platform/device-repository v0.2.32
+	github.com/SENERGY-Platform/device-repository v0.2.36
+	github.com/SENERGY-Platform/go-service-base/struct-logger v0.6.0
 	github.com/SENERGY-Platform/models/go v0.0.0-20251202070403-e7e5579f7111
-	github.com/SENERGY-Platform/permissions-v2 v0.0.38
-	github.com/SENERGY-Platform/service-commons v0.0.0-20251120132821-0c66860f211e
+	github.com/SENERGY-Platform/permissions-v2 v0.0.40
+	github.com/SENERGY-Platform/service-commons v0.0.0-20260106114257-16bca4ba28e7
 	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/testcontainers/testcontainers-go v0.40.0
@@ -33,7 +34,6 @@ require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
-	github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -95,7 +95,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
-	github.com/pierrec/lz4/v4 v4.1.22 // indirect
+	github.com/pierrec/lz4/v4 v4.1.23 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
@@ -109,7 +109,6 @@ require (
 	github.com/swaggo/files v1.0.1 // indirect
 	github.com/swaggo/http-swagger v1.3.4 // indirect
 	github.com/swaggo/swag v1.16.4 // indirect
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.40.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
 	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
@@ -125,7 +124,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
-	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect

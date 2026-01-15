@@ -20,20 +20,21 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"io"
 	"log"
 	"net/http"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 )
 
 func (this *Connector) handleCommand(msg []byte, t time.Time) (err error) {
 	protocolmsg := model.ProtocolMsg{}
 	err = json.Unmarshal(msg, &protocolmsg)
 	if err != nil {
-		log.Println("WARNING: invalid command: ", err.Error(), string(msg))
+		this.Config.GetLogger().Warn("invalid command", "error", err, "msg", string(msg))
 		return nil
 	}
 	protocolmsg.Trace = append(protocolmsg.Trace, model.Trace{
@@ -66,7 +67,7 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 	})
 	responseMsg, err := json.Marshal(commandRequest)
 	if err != nil {
-		log.Println("ERROR in handleCommand() json.Marshal(): ", err)
+		this.Config.GetLogger().Error("json marshal error", "error", err, "msg", commandRequest)
 		return err
 	}
 
@@ -78,20 +79,20 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 	if strings.HasPrefix(topic, "http://") || strings.HasPrefix(topic, "https://") {
 		resp, err := http.Post(topic, "application/json", bytes.NewReader(responseMsg))
 		if err != nil {
-			log.Println("ERROR: http producer", topic, err)
+			this.Config.GetLogger().Error("http producer error", "error", err, "topic", topic)
 			return err
 		}
 		defer resp.Body.Close()
 		respMsg, _ := io.ReadAll(resp.Body)
 		if resp.StatusCode != http.StatusOK {
 			err = errors.New("http producer: " + resp.Status + " " + string(respMsg))
-			log.Println("ERROR:", topic, err)
+			this.Config.GetLogger().Error("http producer error", "error", err, "topic", topic, "status-code", resp.StatusCode)
 			return err
 		}
 	} else {
 		producer, err := this.GetProducer(qos)
 		if err != nil {
-			log.Println("ERROR in handleCommand(): ", err)
+			this.Config.GetLogger().Error("kafka producer error", "error", err, "topic", topic)
 			return err
 		}
 		err = producer.ProduceWithKey(topic, string(responseMsg), commandRequest.Metadata.Device.Id)

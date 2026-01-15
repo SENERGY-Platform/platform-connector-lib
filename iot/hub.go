@@ -19,14 +19,14 @@ package iot
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"time"
+
 	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/iot/options"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
-	"log"
-	"net/url"
-	"time"
 )
 
 func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.Option) (hub model.Hub, err error) {
@@ -35,7 +35,7 @@ func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.
 	resp, err := cred.Get(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
 		if !options.Silent.IsInOptions(optionals...) {
-			log.Println("ERROR on GetGateway()", id, err)
+			this.GetLogger().Error("unable to get hub", "error", err, "id", id)
 		}
 		return hub, err
 	}
@@ -43,7 +43,7 @@ func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.
 
 	err = json.NewDecoder(resp.Body).Decode(&hub)
 	if err != nil {
-		log.Println("ERROR on GetGateway() json decode", err)
+		this.GetLogger().Error("unable to decode hub", "error", err, "id", id)
 	}
 	return hub, err
 }

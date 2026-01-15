@@ -3,16 +3,16 @@ package iot
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
+	"sync"
+	"time"
+
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache/memcached"
 	"github.com/SENERGY-Platform/service-commons/pkg/signal"
-	"log"
-	"runtime/debug"
-	"sync"
-	"time"
 )
 
 type PreparedCache struct {
@@ -72,9 +72,7 @@ func (this *PreparedCache) GetDevice(token security.JwtToken, id string) (result
 		return result, err
 	}
 	result, err = cache.Use(this.cache, "device."+pl.UserId+"."+id, func() (model.Device, error) {
-		if this.Debug {
-			log.Printf("DEBUG: load device %v from repository\n", id)
-		}
+		this.iot.GetLogger().Debug("load device from repository", "id", id)
 		return this.iot.GetDevice(id, token)
 	}, func(device model.Device) error {
 		if device.Id == "" {
@@ -100,9 +98,7 @@ func (this *PreparedCache) GetDeviceByLocalId(token security.JwtToken, deviceUrl
 		return result, err
 	}
 	return cache.Use(this.cache, "device_url."+pl.UserId+"."+deviceUrl, func() (model.Device, error) {
-		if this.Debug {
-			log.Printf("DEBUG: load device %v from repository\n", deviceUrl)
-		}
+		this.iot.GetLogger().Debug("load device from repository", "deviceLocalId", deviceUrl)
 		return this.iot.GetDeviceByLocalId(deviceUrl, token)
 	}, func(device model.Device) error {
 		if device.Id == "" {
@@ -129,9 +125,7 @@ func (this *PreparedCache) cacheDevice(token security.JwtToken, device model.Dev
 	if err != nil {
 		return err
 	}
-	if this.Debug {
-		log.Printf("DEBUG: cache device %#v", device)
-	}
+	this.iot.GetLogger().Debug("cache device", "device", fmt.Sprintf("%#v", device))
 	err = this.cache.Set("device_url."+pl.UserId+"."+device.LocalId, device, time.Duration(this.deviceExpiration)*time.Second)
 	if err != nil {
 		return err
@@ -180,7 +174,7 @@ func (this *PreparedCache) GetDeviceType(token security.JwtToken, id string) (re
 		if this.Debug {
 			debug.PrintStack()
 		}
-		log.Println("ERROR: on GetDeviceType() missing id")
+		this.iot.GetLogger().Error("on GetDeviceType() missing id")
 		return result, errors.New("missing id")
 	}
 	if this.deviceTypeExpiration == 0 {

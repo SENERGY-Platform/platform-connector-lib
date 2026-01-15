@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"log"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -62,7 +61,6 @@ func TestProducer_Produce(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	producer.Log(log.New(os.Stdout, "[KAFKA-PRODUCER] ", 0))
 	log.Println("produce 1")
 	err = producer.Produce("test", "msg1")
 	if err != nil {

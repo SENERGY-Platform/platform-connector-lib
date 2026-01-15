@@ -20,13 +20,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"time"
+
 	devicerepo "github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
-	"log"
-	"net/url"
-	"time"
 )
 
 func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Device, err error) {
@@ -43,7 +43,7 @@ func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Dev
 	}
 	if device.Id == "" || device.DeviceTypeId == "" {
 		err = fmt.Errorf("receive invalid device %#v", device)
-		log.Println("ERROR:", err)
+		this.GetLogger().Error("unable to get device", "error", err, "deviceId", id)
 		return device, err
 	}
 	return device, err
@@ -51,21 +51,21 @@ func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Dev
 
 func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.DeviceType, err error) {
 	if id == "" {
-		log.Println("ERROR: on GetDeviceType() missing id")
+		this.GetLogger().Error("on GetDeviceType() missing id")
 		return dt, errors.New("missing id")
 	}
 	start := time.Now()
 	defer statistics.IotRead(time.Since(start))
 	resp, err := token.Get(this.repo_url + "/device-types/" + url.QueryEscape(id))
 	if err != nil {
-		log.Println("ERROR on GetDeviceType()", err)
+		this.GetLogger().Error("on GetDeviceType()", "error", err, "id", id)
 		return dt, err
 	}
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&dt)
 	if err != nil {
-		log.Println("ERROR on GetDeviceType() json decode", err)
+		this.GetLogger().Error("on GetDeviceType() json decode", "error", err, "id", id)
 	}
 	return dt, err
 }
@@ -118,7 +118,7 @@ func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (de
 	resp, err := token.Get(this.manager_url + "/local-devices/" + url.QueryEscape(localId))
 	if err != nil {
 		if !errors.Is(err, security.ErrorNotFound) {
-			log.Println("ERROR on GetDevice()", err)
+			this.GetLogger().Error("unable to get device", "error", err, "localId", localId)
 		}
 		return device, err
 	}
@@ -126,7 +126,7 @@ func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (de
 
 	err = json.NewDecoder(resp.Body).Decode(&device)
 	if err != nil {
-		log.Println("ERROR on GetDevice() json decode", err)
+		this.GetLogger().Error("unable to decode device", "error", err, "localId", localId)
 	}
 	return device, err
 }
@@ -134,7 +134,7 @@ func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (de
 func (this *Iot) CreateDevice(device model.Device, token security.JwtToken) (result model.Device, err error) {
 	err = token.PostJSON(this.manager_url+"/local-devices", device, &result)
 	if err != nil {
-		log.Println("ERROR on CreateDevice()", err)
+		this.GetLogger().Error("unable to create device", "error", err, "device", device)
 	}
 	return
 }
@@ -142,7 +142,7 @@ func (this *Iot) CreateDevice(device model.Device, token security.JwtToken) (res
 func (this *Iot) UpdateDevice(device model.Device, token security.JwtToken) (result model.Device, err error) {
 	err = token.PutJSON(this.manager_url+"/local-devices/"+device.LocalId, device, &result)
 	if err != nil {
-		log.Println("ERROR on CreateDevice()", err)
+		this.GetLogger().Error("unable to update device", "error", err, "device", device)
 	}
 	return
 }
@@ -150,7 +150,7 @@ func (this *Iot) UpdateDevice(device model.Device, token security.JwtToken) (res
 func (this *Iot) CreateDeviceType(deviceType model.DeviceType, token security.JwtToken) (dt model.DeviceType, err error) {
 	err = token.PostJSON(this.manager_url+"/device-types", deviceType, &dt)
 	if err != nil {
-		log.Println("ERROR on CreateDeviceType()", err)
+		this.GetLogger().Error("unable to create device type", "error", err, "deviceType", deviceType)
 		return dt, err
 	}
 	return dt, err
@@ -159,7 +159,7 @@ func (this *Iot) CreateDeviceType(deviceType model.DeviceType, token security.Jw
 func (this *Iot) UpdateDeviceType(deviceType model.DeviceType, token security.JwtToken) (dt model.DeviceType, err error) {
 	err = token.PutJSON(this.manager_url+"/device-types/"+deviceType.Id, deviceType, &dt)
 	if err != nil {
-		log.Println("ERROR on UpdateDeviceType()", err)
+		this.GetLogger().Error("unable to update device type", "error", err, "deviceType", deviceType)
 		return dt, err
 	}
 	return dt, err

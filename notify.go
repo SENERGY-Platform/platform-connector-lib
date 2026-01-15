@@ -22,30 +22,26 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	developerNotifications "github.com/SENERGY-Platform/developer-notifications/pkg/client"
-	"github.com/SENERGY-Platform/platform-connector-lib/model"
-	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"io"
-	"log"
 	"net/http"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
+
+	developerNotifications "github.com/SENERGY-Platform/developer-notifications/pkg/client"
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"github.com/SENERGY-Platform/platform-connector-lib/security"
 )
 
 const MutedDeviceErrorsAttribute = "platform/mute-format-error"
 
 func (this *Connector) notifyMessageFormatError(device model.Device, service model.Service, errMsg error) {
 	if errors.Is(errMsg, security.ErrorInternal) || errors.Is(errMsg, security.ErrorUnexpectedStatus) {
-		if this.Config.Debug {
-			log.Printf("DEBUG: internal error notification: %v %v %v\n", device.Id, device.Name, errMsg.Error())
-		}
+		this.Config.GetLogger().Debug("internal error notification", "error", errMsg, "deviceId", device.Id, "serviceId", service.Id)
 		if this.devNotifications != nil {
 			go func() {
-				if this.Config.Debug {
-					log.Println("DEBUG: send developer-notification")
-				}
+				this.Config.GetLogger().Debug("send developer-notification")
 				err := this.devNotifications.SendMessage(developerNotifications.Message{
 					Sender: "github.com/SENERGY-Platform/platform-connector-lib",
 					Title:  "Connector-Error-Notification",
@@ -53,25 +49,21 @@ func (this *Connector) notifyMessageFormatError(device model.Device, service mod
 					Body:   fmt.Sprintf("Notification For Device=%v %v Service=%v\nError: %v\n", device.Name, device.Id, service.Name, this.removeSecretsFromString(errMsg.Error())),
 				})
 				if err != nil {
-					log.Println("ERROR: unable to send developer-notification", err)
+					this.Config.GetLogger().Error("unable to send developer-notification", "error", err)
 				}
 			}()
 		}
 		return
 	}
-	if this.Config.Debug {
-		log.Printf("DEBUG: notify device %v (%v) owners of message format error\n", device.Id, device.Name)
-	}
+	this.Config.GetLogger().Debug("unable to notify device owners of message format error", "error", errMsg, "deviceId", device.Id, "deviceName", device.Name, "serviceId", service.Id)
 	if this.Config.NotificationUrl == "" {
-		log.Println("WARNING: no NotificationUrl configured")
+		this.Config.GetLogger().Warn("no NotificationUrl configured")
 		return
 	}
 	if !mutedDeviceErrors(device) {
 		this.notifyDeviceOwners(device.Id, createMessageFormatErrorNotification(device, service, errMsg))
 	} else {
-		if this.Config.Debug {
-			log.Printf("DEBUG: notifications for device %v (%v) are muted\n", device.Id, device.Name)
-		}
+		this.Config.GetLogger().Debug("device is muted for device-errors", "deviceId", device.Id, "deviceName", device.Name)
 	}
 }
 
@@ -86,13 +78,13 @@ func mutedDeviceErrors(device model.Device) bool {
 
 func (this *Connector) notifyDeviceOwners(deviceId string, message Notification) {
 	if this.Config.NotificationUrl == "" {
-		log.Println("WARNING: no NotificationUrl configured")
+		this.Config.GetLogger().Warn("no NotificationUrl configured")
 		return
 	}
 	if this.Config.NotificationUserOverwrite != "" && this.Config.NotificationUserOverwrite != "-" {
 		err := this.SendNotification(message)
 		if err != nil {
-			log.Println(err)
+			this.Config.GetLogger().Error("unable to send notification", "error", err)
 			if this.Config.Debug {
 				debug.PrintStack()
 			}
@@ -101,7 +93,7 @@ func (this *Connector) notifyDeviceOwners(deviceId string, message Notification)
 	}
 	token, err := this.Security().Access()
 	if err != nil {
-		log.Println(err)
+		this.Config.GetLogger().Error("unable to get access token", "error", err)
 		if this.Config.Debug {
 			debug.PrintStack()
 		}
@@ -109,7 +101,7 @@ func (this *Connector) notifyDeviceOwners(deviceId string, message Notification)
 	}
 	rights, err := this.Iot().GetDeviceUserRights(token, deviceId)
 	if err != nil {
-		log.Println(err)
+		this.Config.GetLogger().Error("unable to get device rights", "error", err)
 		if this.Config.Debug {
 			debug.PrintStack()
 		}
@@ -120,7 +112,7 @@ func (this *Connector) notifyDeviceOwners(deviceId string, message Notification)
 			message.UserId = user
 			err = this.SendNotification(message)
 			if err != nil {
-				log.Println(err)
+				this.Config.GetLogger().Error("unable to send notification", "error", err)
 				if this.Config.Debug {
 					debug.PrintStack()
 				}
@@ -139,7 +131,7 @@ func createMessageFormatErrorNotification(device model.Device, service model.Ser
 
 func (this *Connector) SendNotification(message Notification) error {
 	if this.Config.NotificationUrl == "" {
-		log.Println("WARNING: no NotificationUrl configured")
+		this.Config.GetLogger().Warn("no NotificationUrl configured")
 		return nil
 	}
 	if message.Topic == "" {
@@ -151,9 +143,7 @@ func (this *Connector) SendNotification(message Notification) error {
 	message.Message = this.removeSecretsFromString(message.Message)
 	if this.devNotifications != nil {
 		go func() {
-			if this.Config.Debug {
-				log.Println("DEBUG: send developer-notification")
-			}
+			this.Config.GetLogger().Debug("send developer-notification")
 			err := this.devNotifications.SendMessage(developerNotifications.Message{
 				Sender: "github.com/SENERGY-Platform/platform-connector-lib",
 				Title:  "Connector-User-Notification",
@@ -161,7 +151,7 @@ func (this *Connector) SendNotification(message Notification) error {
 				Body:   fmt.Sprintf("Notification For %v\nTitle: %v\nMessage: %v\n", message.UserId, message.Title, message.Message),
 			})
 			if err != nil {
-				log.Println("ERROR: unable to send developer-notification", err)
+				this.Config.GetLogger().Error("unable to send developer-notification", "error", err)
 			}
 		}()
 	}
@@ -178,12 +168,10 @@ func (this *Connector) SendNotification(message Notification) error {
 		ignoreDuplicatesWithinS = strconv.Itoa(this.Config.NotificationsIgnoreDuplicatesWithinS)
 	}
 	endpoint := this.Config.NotificationUrl + "/notifications?ignore_duplicates_within_seconds=" + ignoreDuplicatesWithinS
-	if this.Config.Debug {
-		log.Printf("DEBUG: send notification to %v with %v\n", message.UserId, endpoint)
-	}
+	this.Config.GetLogger().Debug("send notification", "endpoint", endpoint, "userId", message.UserId)
 	req, err := http.NewRequest("POST", endpoint, b)
 	if err != nil {
-		log.Printf("tried to send notification %#v\n", message)
+		this.Config.GetLogger().Error("unable to create notification request", "error", err)
 		return err
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
@@ -191,13 +179,12 @@ func (this *Connector) SendNotification(message Notification) error {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Printf("tried to send notification %#v\n", message)
+		this.Config.GetLogger().Error("unable to send notification", "error", err)
 		return err
 	}
 	if resp.StatusCode >= 300 {
 		respMsg, _ := io.ReadAll(resp.Body)
-		log.Printf("tried to send notification %#v\n", message)
-		log.Println("ERROR: unexpected response status from notifier", resp.StatusCode, string(respMsg))
+		this.Config.GetLogger().Error("unexpected response status from notifier", "status-code", resp.StatusCode, "error", string(respMsg))
 		return errors.New("unexpected response status from notifier " + resp.Status)
 	}
 	return nil

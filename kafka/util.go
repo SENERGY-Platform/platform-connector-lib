@@ -17,11 +17,11 @@
 package kafka
 
 import (
-	"github.com/segmentio/kafka-go"
-	"log"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/segmentio/kafka-go"
 )
 
 func EnsureTopic(topic string, kafkaUrl string, knownTopics *map[string]bool, configMap map[string][]kafka.ConfigEntry, partitions int, replicationFactor int) (err error) {
@@ -30,7 +30,6 @@ func EnsureTopic(topic string, kafkaUrl string, knownTopics *map[string]bool, co
 	}
 	err = InitTopicWithConfig(kafkaUrl, configMap, partitions, replicationFactor, topic)
 	if err != nil {
-		log.Println("ERROR:", err)
 		return err
 	}
 	(*knownTopics)[topic] = true

@@ -17,6 +17,8 @@
 package iot
 
 import (
+	"log/slog"
+
 	devicerepo "github.com/SENERGY-Platform/device-repository/lib/client"
 	permv2 "github.com/SENERGY-Platform/permissions-v2/pkg/client"
 )
@@ -26,13 +28,19 @@ type Iot struct {
 	repo_url    string
 	devicerepo  devicerepo.Interface
 	perm        permv2.Client
+	logger      *slog.Logger
 }
 
-func New(deviceManagerUrl string, deviceRepoUrl string, permv2Url string) *Iot {
+func New(deviceManagerUrl string, deviceRepoUrl string, permv2Url string, logger *slog.Logger) *Iot {
 	return &Iot{
 		manager_url: deviceManagerUrl,
 		repo_url:    deviceRepoUrl,
 		devicerepo:  devicerepo.NewClient(deviceRepoUrl, nil),
 		perm:        permv2.New(permv2Url),
+		logger:      logger,
 	}
+}
+
+func (this *Iot) GetLogger() *slog.Logger {
+	return this.logger
 }

@@ -21,7 +21,7 @@ import (
 	"errors"
 	"io"
 	"log"
-	"os"
+	"log/slog"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -37,17 +37,28 @@ type ConsumerConfig struct {
 	InitTopic        bool
 	TopicConfigMap   map[string][]kafka.ConfigEntry
 	AllowOldMessages bool
+	Logger           *slog.Logger
+}
+
+func (this *ConsumerConfig) GetLogger() *slog.Logger {
+	if this.Logger == nil {
+		return slog.Default()
+	}
+	return this.Logger
 }
 
 func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic string, msg []byte, time time.Time) error, errorhandler func(err error)) (err error) {
-	log.Println("DEBUG: consume topic: \"" + config.Topic + "\"")
+	logger := config.GetLogger()
+	logger.Info("start kafka consumer", "topic", config.Topic)
 	if config.InitTopic {
 		err = InitTopic(config.KafkaUrl, config.TopicConfigMap, config.Topic)
 		if err != nil {
-			log.Println("ERROR: unable to create topic", err)
+			logger.Error("unable to create topic", "topic", config.Topic, "error", err)
 			return err
 		}
 	}
+	kafkaLogger := slog.NewLogLogger(logger.Handler(), slog.LevelError)
+	kafkaLogger.SetPrefix("[KAFKA-ERR] ")
 	r := kafka.NewReader(kafka.ReaderConfig{
 		CommitInterval:         0, //synchronous commits
 		Brokers:                []string{config.KafkaUrl},
@@ -57,13 +68,13 @@ func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic
 		MaxBytes:               config.MaxBytes,
 		MaxWait:                config.MaxWait,
 		Logger:                 log.New(io.Discard, "", 0),
-		ErrorLogger:            log.New(os.Stdout, "[KAFKA-ERR] ", log.LstdFlags),
+		ErrorLogger:            kafkaLogger,
 		WatchPartitionChanges:  true,
 		PartitionWatchInterval: time.Minute,
 	})
 	go func() {
 		defer func() {
-			log.Println("close kafka reader ", config.Topic, r.Close())
+			logger.Info("close kafka consumer", "topic", config.Topic, "result", r.Close())
 		}()
 		for {
 			select {
@@ -72,30 +83,30 @@ func NewConsumer(ctx context.Context, config ConsumerConfig, listener func(topic
 			default:
 				m, err := r.FetchMessage(ctx)
 				if err == io.EOF || errors.Is(err, context.Canceled) {
-					log.Println("close consumer for topic ", config.Topic)
+					logger.Info("kafka consumer closed", "topic", config.Topic)
 					return
 				}
 				if err != nil {
-					log.Println("ERROR: while consuming topic ", config.Topic, err)
+					logger.Error("while consuming topic", "topic", config.Topic, "error", err)
 					errorhandler(err)
 					return
 				}
 				if !config.AllowOldMessages && time.Now().Sub(m.Time) > 1*time.Hour { //floodgate to prevent old messages to DOS the consumer
-					log.Println("WARNING: kafka message older than 1h: ", config.Topic, time.Now().Sub(m.Time))
+					logger.Warn("kafka message older than 1h", "topic", config.Topic, "age", time.Now().Sub(m.Time))
 					err = r.CommitMessages(ctx, m)
 					if err != nil {
-						log.Println("ERROR: while committing message ", config.Topic, err)
+						logger.Error("unable to commit message consumption", "topic", config.Topic, "error", err)
 						errorhandler(err)
 						return
 					}
 				} else {
 					err = listener(m.Topic, m.Value, m.Time)
 					if err != nil {
-						log.Println("ERROR: unable to handle message (no commit)", err, m.Topic, string(m.Value))
+						logger.Error("unable to handle message (no commit)", "topic", config.Topic, "error", err)
 					} else {
 						err = r.CommitMessages(ctx, m)
 						if err != nil {
-							log.Println("ERROR: while committing message ", config.Topic, err)
+							logger.Error("unable to commit message consumption", "topic", config.Topic, "error", err)
 							errorhandler(err)
 							return
 						}

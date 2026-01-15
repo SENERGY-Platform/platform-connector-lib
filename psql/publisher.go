@@ -20,22 +20,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"log/slog"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/SENERGY-Platform/converter/lib/converter"
 	"github.com/SENERGY-Platform/converter/lib/converter/characteristics"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
-	"log"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Publisher struct {
 	db                               *pgxpool.Pool
-	debug                            bool
 	serviceIdTimeCharacteristicCache map[string]characteristicIdTimestamp
 	conv                             *converter.Converter
+	logger                           *slog.Logger
 }
 
 type characteristicIdTimestamp struct {
@@ -47,7 +49,7 @@ var ConnectionTimeout = 10 * time.Second
 var timeAttributeKey = "senergy/time_path"
 var cacheDuration = 5 * time.Minute
 
-func New(postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, debugLog bool, wg *sync.WaitGroup, basectx context.Context) (*Publisher, error) {
+func New(postgresHost string, postgresPort int, postgresUser string, postgresPw string, postgresDb string, logger *slog.Logger, wg *sync.WaitGroup, basectx context.Context) (*Publisher, error) {
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", postgresHost,
 		postgresPort, postgresUser, postgresPw, postgresDb)
 
@@ -67,7 +69,7 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 	defer timeoutcancel()
 	go func() {
 		<-timeout.Done()
-		if timeout.Err() != context.Canceled {
+		if !errors.Is(timeout.Err(), context.Canceled) {
 			log.Println("ERROR: psql publisher connection timeout")
 			cancel()
 		}
@@ -92,7 +94,7 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 	}()
 	return &Publisher{
 		db:                               db,
-		debug:                            debugLog,
+		logger:                           logger,
 		serviceIdTimeCharacteristicCache: map[string]characteristicIdTimestamp{},
 		conv:                             conv,
 	}, nil
@@ -170,14 +172,11 @@ func (publisher *Publisher) Publish(envelope model.Envelope, service model.Servi
 
 	query += strings.Join(fields, ",") + ") VALUES (" + strings.Join(values, ",") + ");"
 
-	if publisher.debug {
-		log.Println("QUERY:", query)
-	}
+	publisher.logger.Debug("psql request", "query", query)
 
 	_, err = publisher.db.Exec(context.Background(), query)
-	if publisher.debug {
-		log.Println("Postgres publishing took ", time.Since(start))
-	}
+
+	publisher.logger.Debug("psql response", "err", err, "duration", time.Since(start))
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
 		log.Println("WARNING: finished slow timescale publisher call", time.Since(start), envelope.DeviceId, envelope.ServiceId)
 	}

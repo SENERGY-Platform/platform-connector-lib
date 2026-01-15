@@ -18,11 +18,13 @@ package unitreference
 
 import (
 	"context"
+	"log/slog"
+	"testing"
+	"time"
+
 	"github.com/SENERGY-Platform/platform-connector-lib/iot"
 	iot2 "github.com/SENERGY-Platform/platform-connector-lib/iot/mock/iot"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
-	"testing"
-	"time"
 )
 
 func TestFillUnits(t *testing.T) {
@@ -98,7 +100,7 @@ func NewSemanticRepositoryMock() (mockCtrl *iot2.Controller, repo SemanticReposi
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	iotrepo := iot.New(iotMockUrl, iotMockUrl, "")
+	iotrepo := iot.New(iotMockUrl, iotMockUrl, "", slog.Default())
 	cache, err := iot.NewCache(iotrepo, 60, 60, 60, 2, 200*time.Millisecond)
 	if err != nil {
 		return nil, nil, nil, err

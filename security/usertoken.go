@@ -21,14 +21,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/SENERGY-Platform/platform-connector-lib/model"
-	"github.com/golang-jwt/jwt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"github.com/golang-jwt/jwt"
 )
 
 func (this *Security) GetUserToken(username string, password string, remoteInfo model.RemoteInfo) (token JwtToken, err error) {
@@ -65,7 +65,7 @@ func (this *Security) ExchangeUserToken(userid string, remoteInfo model.RemoteIn
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Println("ERROR: GetUserToken()", resp.StatusCode, string(body))
+		this.logger.Error("unable to get user token", "error", string(body), "status-code", resp.StatusCode)
 		err = errors.New("access denied")
 		resp.Body.Close()
 		return
@@ -81,7 +81,7 @@ func (this *Security) ExchangeUserToken(userid string, remoteInfo model.RemoteIn
 func (this *Security) GenerateUserToken(username string) (token JwtToken, err error) {
 	userId, err := this.GetUserId(username)
 	if err != nil {
-		log.Println("ERROR: GetUserId()", err, username)
+		this.logger.Error("unable to get user id", "error", err, "username", username)
 		return token, err
 	}
 	return this.GenerateUserTokenById(userId)
@@ -90,7 +90,7 @@ func (this *Security) GenerateUserToken(username string) (token JwtToken, err er
 func (this *Security) GenerateUserTokenById(userid string) (token JwtToken, err error) {
 	roles, err := this.GetUserRoles(userid)
 	if err != nil {
-		log.Println("ERROR: GenerateUserTokenById::getUserRoles()", err, userid)
+		this.logger.Error("unable to get user roles", "error", err, "userid", userid)
 		return token, err
 	}
 
@@ -108,7 +108,7 @@ func (this *Security) GenerateUserTokenById(userid string) (token JwtToken, err 
 	if this.jwtPrivateKey == "" {
 		unsignedTokenString, err := jwtoken.SigningString()
 		if err != nil {
-			log.Println("ERROR: GenerateUserTokenById::SigningString()", err, userid)
+			this.logger.Error("unable to sign token", "error", err, "userid", userid)
 			return token, err
 		}
 		tokenString := strings.Join([]string{unsignedTokenString, ""}, ".")
@@ -117,14 +117,14 @@ func (this *Security) GenerateUserTokenById(userid string) (token JwtToken, err 
 		//decode key base64 string to []byte
 		b, err := base64.StdEncoding.DecodeString(this.jwtPrivateKey)
 		if err != nil {
-			log.Println("ERROR: GenerateUserTokenById::DecodeBase64()", err, userid)
+			this.logger.Error("unable to decode jwt private key", "error", err, "userid", userid)
 			return token, err
 		}
 		//parse []byte key to go struct key (use most common encoding)
 		key, err := x509.ParsePKCS1PrivateKey(b)
 		tokenString, err := jwtoken.SignedString(key)
 		if err != nil {
-			log.Println("ERROR: GenerateUserTokenById::SignedString()", err, userid)
+			this.logger.Error("unable to sign token", "error", err, "userid", userid)
 			return token, err
 		}
 		token = JwtToken("Bearer " + tokenString)
