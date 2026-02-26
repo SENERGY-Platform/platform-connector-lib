@@ -110,7 +110,7 @@ type Config struct {
 	InitTopics bool
 
 	LogLevel string       `json:"log_level"`
-	logger   *slog.Logger `json:"-"`
+	Logger   *slog.Logger `json:"-"` // optional, will be created if not set
 }
 
 // loads config from json in location and used environment variables (e.g KafkaUrl --> ZOOKEEPER_URL)
@@ -192,7 +192,7 @@ func handleEnvironmentVars(config *Config) {
 }
 
 func (this *Config) GetLogger() *slog.Logger {
-	if this.logger == nil {
+	if this.Logger == nil {
 		if this.Debug {
 			this.LogLevel = "debug"
 		}
@@ -208,7 +208,7 @@ func (this *Config) GetLogger() *slog.Logger {
 				org = strings.Join(parts[:2], "/")
 			}
 		}
-		this.logger = struct_logger.New(
+		this.Logger = struct_logger.New(
 			struct_logger.Config{
 				Handler:    struct_logger.JsonHandlerSelector,
 				Level:      this.LogLevel,
@@ -221,5 +221,5 @@ func (this *Config) GetLogger() *slog.Logger {
 			project,
 		)
 	}
-	return this.logger
+	return this.Logger
 }
