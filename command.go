@@ -100,6 +100,7 @@ func (this *Connector) HandleCommandResponse(commandRequest model.ProtocolMsg, c
 			if this.Config.Debug {
 				debug.PrintStack()
 			}
+			this.Config.GetLogger().Error("FATAL: unable to producer to kafka", "error", err)
 			log.Fatal("FATAL: ", err)
 		}
 	}

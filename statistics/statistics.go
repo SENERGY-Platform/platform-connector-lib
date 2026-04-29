@@ -17,16 +17,17 @@
 package statistics
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var once sync.Once
@@ -94,7 +95,7 @@ func DeviceMsgHandled(size float64, userId string, deviceId string, deviceTypeId
 }
 
 func start() {
-	log.Println("start statistics collector")
+	slog.Info("start statistics collector")
 	buckets := []float64{1, 5, 10, 50, 100, 200, 300, 500, 1000, 2000, 5000, 10000}
 	sourceBuckets := []float64{32, 64, 128, 256, 512, 1024, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 9216, 10240}
 	iotReads = promauto.NewHistogramVec(prometheus.HistogramOpts{
@@ -144,13 +145,13 @@ func start() {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
-		log.Println("ERROR: Could not get hostname, using '" + hostname + "'")
+		slog.Error("unable to get get hostname, using '"+hostname+"'", "error", err.Error())
 	}
 	instanceId = hostname
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		log.Println("INFO: Starting prometheus metrics on :2112/metrics")
-		log.Println("WARNING: Metrics server exited: " + http.ListenAndServe(":2112", nil).Error())
+		slog.Info("starting prometheus metrics on :2112/metrics")
+		slog.Warn("Metrics server exited: " + http.ListenAndServe(":2112", nil).Error())
 	}()
 }

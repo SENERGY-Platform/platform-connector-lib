@@ -17,13 +17,14 @@
 package helper
 
 import (
+	"io"
+	"log"
+	"log/slog"
+	"net"
+	"strconv"
+
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/config"
 	"github.com/segmentio/kafka-go"
-	"io/ioutil"
-	"log"
-	"net"
-	"os"
-	"strconv"
 )
 
 type Publisher struct {
@@ -39,9 +40,10 @@ type Publisher struct {
 func GetProducer(broker []string, topic string, debug bool) (writer *kafka.Writer, err error) {
 	var logger *log.Logger
 	if debug {
-		logger = log.New(os.Stdout, "[KAFKA-PRODUCER] ", 0)
+		logger = slog.NewLogLogger(slog.Default().Handler(), slog.LevelDebug)
+		logger.SetPrefix("[KAFKA-PRODUCER] ")
 	} else {
-		logger = log.New(ioutil.Discard, "", 0)
+		logger = log.New(io.Discard, "", 0)
 	}
 	writer = &kafka.Writer{
 		Addr:        kafka.TCP(broker...),

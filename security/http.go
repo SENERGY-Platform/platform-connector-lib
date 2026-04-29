@@ -23,7 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -62,12 +62,12 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Println("ERROR: ", err)
+			slog.Error("unable to read response", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
 		if err := resp.Body.Close(); err != nil {
-			log.Println("ERROR: ", err)
+			slog.Error("unable to rclose response body", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
-		log.Println("DEBUG: response:", resp.StatusCode, string(b))
+		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "error", err.Error())
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -117,12 +117,12 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Println("ERROR: ", err)
+			slog.Error("unable to read response", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
 		if err := resp.Body.Close(); err != nil {
-			log.Println("ERROR: ", err)
+			slog.Error("unable to rclose response body", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
-		log.Println("DEBUG: response:", resp.StatusCode, string(b))
+		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "error", err.Error())
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -165,12 +165,12 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Println("ERROR: ", err)
+			slog.Error("unable to read response", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
 		if err := resp.Body.Close(); err != nil {
-			log.Println("ERROR: ", err)
+			slog.Error("unable to rclose response body", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
-		log.Println("DEBUG: response:", resp.StatusCode, string(b))
+		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "error", err.Error())
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -205,12 +205,12 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Println("ERROR: ", err)
+			slog.Error("unable to read response", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
 		if err := resp.Body.Close(); err != nil {
-			log.Println("ERROR: ", err)
+			slog.Error("unable to rclose response body", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
-		log.Println("DEBUG: response:", resp.StatusCode, string(b))
+		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "error", err.Error())
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return

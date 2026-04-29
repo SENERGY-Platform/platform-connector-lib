@@ -45,6 +45,7 @@ func Connectionlog(ctx context.Context, wg *sync.WaitGroup, mongourl string, per
 				"INFLUXDB_USER":      "user",
 				"INFLUXDB_PW":        "pw",
 			},
+			AlwaysPullImage: true,
 		},
 		Started: true,
 	})

@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"strings"
 	"sync"
@@ -70,7 +69,7 @@ func New(postgresHost string, postgresPort int, postgresUser string, postgresPw 
 	go func() {
 		<-timeout.Done()
 		if !errors.Is(timeout.Err(), context.Canceled) {
-			log.Println("ERROR: psql publisher connection timeout")
+			logger.Error("psql publisher connection timeout", "err", timeout.Err())
 			cancel()
 		}
 	}()
@@ -178,7 +177,7 @@ func (publisher *Publisher) Publish(envelope model.Envelope, service model.Servi
 
 	publisher.logger.Debug("psql response", "err", err, "duration", time.Since(start))
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
-		log.Println("WARNING: finished slow timescale publisher call", time.Since(start), envelope.DeviceId, envelope.ServiceId)
+		publisher.logger.Warn("finished slow timescale publisher call", "duration", time.Since(start), "envelope", envelope, "deviceId", envelope.DeviceId, "serviceId", envelope.ServiceId)
 	}
 	return err, false
 }

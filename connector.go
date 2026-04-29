@@ -248,6 +248,7 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 			MaxWait:        maxWait,
 			TopicConfigMap: this.Config.KafkaTopicConfigs,
 			InitTopic:      this.Config.InitTopics,
+			Logger:         this.Config.GetLogger(),
 		}, func(topic string, msg []byte, t time.Time) error {
 			if string(msg) == "topic_init" {
 				return nil
@@ -287,6 +288,7 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 			MaxWait:        maxWait,
 			TopicConfigMap: this.Config.KafkaTopicConfigs,
 			InitTopic:      this.Config.InitTopics,
+			Logger:         this.Config.GetLogger(),
 		}, func(topic string, msg []byte, t time.Time) error {
 			if string(msg) == "topic_init" {
 				return nil
@@ -301,7 +303,7 @@ func (this *Connector) StartConsumer(ctx context.Context) (err error) {
 			this.IotCache.InvalidateDeviceTypeCache(command.Id)
 			return nil
 		}, func(err error) {
-			log.Println("ERROR: kafka consumer", this.Config.DeviceTypeTopic, err)
+			this.Config.GetLogger().Error("kafka consumer error", "error", err, "topic", this.Config.DeviceTypeTopic)
 		})
 	}
 

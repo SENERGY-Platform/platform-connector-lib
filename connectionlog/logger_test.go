@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/SENERGY-Platform/models/go/models"
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/helper"
 	"github.com/SENERGY-Platform/platform-connector-lib/connectionlog/test/server"
 	"github.com/segmentio/kafka-go"
@@ -164,18 +165,19 @@ func createDevice(t *testing.T, kafkaUrl string) string {
 	}
 	defer producer.Close()
 	defer time.Sleep(2 * time.Second)
+	deviceId := models.DEVICE_PREFIX + "device-id"
 	err = producer.WriteMessages(
 		context.Background(),
 		kafka.Message{
 			Key:   []byte("cmd.Id"),
-			Value: []byte(`{"command":"PUT","id":"device-id","owner":"dd69ea0d-f553-4336-80f3-7f4567f85c7b","device":{"id":"device-id","local_id":"device-local-id","name":"device-name","device_type_id":"dt-id"}}`),
+			Value: []byte(`{"command":"PUT","id":"` + deviceId + `","owner":"dd69ea0d-f553-4336-80f3-7f4567f85c7b","device":{"id":"` + deviceId + `","local_id":"device-local-id","name":"device-name","device_type_id":"dt-id"}}`),
 			Time:  time.Now(),
 		},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return "device-id"
+	return deviceId
 }
 
 func createHub(t *testing.T, kafkaUrl string) string {
@@ -197,11 +199,13 @@ func createHub(t *testing.T, kafkaUrl string) string {
 	}
 	defer producer.Close()
 	defer time.Sleep(2 * time.Second)
+
+	hubId := models.HUB_PREFIX + "hub-id"
 	err = producer.WriteMessages(
 		context.Background(),
 		kafka.Message{
 			Key:   []byte("cmd.Id"),
-			Value: []byte(`{"command":"PUT","id":"hub-id","owner":"dd69ea0d-f553-4336-80f3-7f4567f85c7b","hub":{"id":"hub-id","name":"hub-name","hash":"hash-value","device_local_ids":["device-local-id"]}}`),
+			Value: []byte(`{"command":"PUT","id":"` + hubId + `","owner":"dd69ea0d-f553-4336-80f3-7f4567f85c7b","hub":{"id":"` + hubId + `","name":"hub-name","hash":"hash-value","device_local_ids":["device-local-id"]}}`),
 			Time:  time.Now(),
 		},
 	)
@@ -209,5 +213,5 @@ func createHub(t *testing.T, kafkaUrl string) string {
 		t.Fatal(err)
 	}
 
-	return "hub-id"
+	return hubId
 }

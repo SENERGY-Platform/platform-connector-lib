@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"reflect"
 	"strings"
 )
@@ -47,14 +47,14 @@ func decodeJWTSegment(seg string, results ...interface{}) error {
 
 	b, err := base64.URLEncoding.DecodeString(seg)
 	if err != nil {
-		log.Println("error while base64.URLEncoding.DecodeString()", err, seg)
+		slog.Error("error while base64.URLEncoding.DecodeString()", "error", err, "seg", seg)
 		return err
 	}
 
 	for _, result := range results {
 		err = json.Unmarshal(b, result)
 		if err != nil {
-			log.Println("error while json.Unmarshal()", err, reflect.TypeOf(result).Kind().String(), string(b))
+			slog.Error("error while json.Unmarshal()", "error", err, "target", reflect.TypeOf(result).Kind().String(), "json", string(b))
 			return err
 		}
 	}

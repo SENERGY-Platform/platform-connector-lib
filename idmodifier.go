@@ -17,7 +17,7 @@
 package platform_connector_lib
 
 import (
-	"log"
+	"log/slog"
 	"net/url"
 	"strings"
 )
@@ -39,7 +39,7 @@ func SplitModifier(id string) (pureId string, modifier map[string][]string) {
 	var err error
 	modifier, err = DecodeModifierParameter(parts[1])
 	if err != nil {
-		log.Println("WARNING: unable to parse modifier parts as Modifier --> ignore modifiers")
+		slog.Warn("unable to parse modifier parts as Modifier --> ignore modifiers", "error", err.Error())
 		modifier = nil
 		return
 	}

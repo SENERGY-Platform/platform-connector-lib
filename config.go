@@ -220,6 +220,8 @@ func (this *Config) GetLogger() *slog.Logger {
 			org,
 			project,
 		)
+		slog.SetDefault(this.Logger)
+		slog.SetLogLoggerLevel(slog.LevelInfo)
 	}
 	return this.Logger
 }
