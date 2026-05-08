@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/platform-connector-lib/model"
 	"github.com/SENERGY-Platform/platform-connector-lib/security"
 	"github.com/SENERGY-Platform/platform-connector-lib/statistics"
@@ -109,6 +111,22 @@ func (this *PreparedCache) GetDeviceByLocalId(token security.JwtToken, deviceUrl
 		}
 		return nil
 	}, time.Duration(this.deviceExpiration)*time.Second)
+}
+
+func (this *PreparedCache) GetDevicesByLocalIdList(token security.JwtToken, localIds []string) (result []model.Device, err error) {
+	if this.deviceExpiration == 0 {
+		result, err, _ = this.iot.devicerepo.ListDevices(string(token), client.DeviceListOptions{LocalIds: localIds})
+		return result, err
+	}
+	pl, err := token.GetPayload()
+	if err != nil {
+		return result, err
+	}
+	return cache.Use(this.cache, "device_by_topic."+pl.UserId+"."+strings.Join(localIds, "/"), func() ([]model.Device, error) {
+		this.iot.GetLogger().Debug("load device from repository", "userId", pl.UserId, "deviceLocalIds", fmt.Sprintf("%#v", localIds))
+		result, err, _ = this.iot.devicerepo.ListDevices(string(token), client.DeviceListOptions{LocalIds: localIds})
+		return result, err
+	}, func(devices []model.Device) error { return nil }, time.Duration(this.deviceExpiration)*time.Second)
 }
 
 func (this *PreparedCache) CreateDevice(token security.JwtToken, device model.Device) (result model.Device, err error) {
