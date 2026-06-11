@@ -18,6 +18,7 @@ package security
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -27,6 +28,8 @@ import (
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache/memcached"
 )
+
+var ErrBadLogin = errors.New("bad login")
 
 func New(authEndpoint string, authClientId string, authClientSecret string, jwtIssuer string, jwtPrivateKey string, jwtExpiration int64, authExpirationTimeBuffer float64, tokenCacheExpiration int32, cacheUrls []string, cacheMaxIdleConns int, cacheTimeout time.Duration, logger *slog.Logger) (security *Security, err error) {
 	security = &Security{

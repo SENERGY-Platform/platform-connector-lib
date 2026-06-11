@@ -373,7 +373,11 @@ func (this *Connector) initProducer(ctx context.Context, qos Qos) (err error) {
 func (this *Connector) HandleDeviceEvent(username string, password string, deviceId string, serviceId string, protocolParts map[string]string, qos Qos, remoteInfo model.RemoteInfo) (err error) {
 	token, err := this.security.GetUserToken(username, password, remoteInfo)
 	if err != nil {
-		this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
+		if !errors.Is(err, security.ErrBadLogin) {
+			this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
+		} else {
+			this.Config.GetLogger().Info("unable to get user token", "error", err, "username", username)
+		}
 		return err
 	}
 	return this.HandleDeviceEventWithAuthToken(token, deviceId, serviceId, protocolParts, qos)
@@ -386,7 +390,11 @@ func (this *Connector) HandleDeviceEventWithAuthToken(token security.JwtToken, d
 func (this *Connector) HandleDeviceRefEvent(username string, password string, deviceUri string, serviceUri string, eventMsg EventMsg, qos Qos, remoteInfo model.RemoteInfo) (info HandledDeviceInfo, err error) {
 	token, err := this.security.GetUserToken(username, password, remoteInfo)
 	if err != nil {
-		this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
+		if !errors.Is(err, security.ErrBadLogin) {
+			this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
+		} else {
+			this.Config.GetLogger().Info("unable to get user token", "error", err, "username", username)
+		}
 		return info, err
 	}
 	return this.HandleDeviceRefEventWithAuthToken(token, deviceUri, serviceUri, eventMsg, qos)
@@ -399,7 +407,11 @@ func (this *Connector) HandleDeviceRefEventWithAuthToken(token security.JwtToken
 func (this *Connector) HandleDeviceIdentEvent(username string, password string, deviceId string, localDeviceId string, serviceId string, localServiceId string, eventMsg EventMsg, qos Qos, remoteInfo model.RemoteInfo) (info HandledDeviceInfo, err error) {
 	token, err := this.security.GetUserToken(username, password, remoteInfo)
 	if err != nil {
-		this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
+		if !errors.Is(err, security.ErrBadLogin) {
+			this.Config.GetLogger().Error("unable to get user token", "error", err, "username", username)
+		} else {
+			this.Config.GetLogger().Info("unable to get user token", "error", err, "username", username)
+		}
 		return info, err
 	}
 	return this.HandleDeviceIdentEventWithAuthToken(token, deviceId, localDeviceId, serviceId, localServiceId, eventMsg, qos)

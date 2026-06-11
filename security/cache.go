@@ -11,11 +11,11 @@ import (
 func (this *Security) GetCachedUserToken(username string, remoteInfo model.RemoteInfo) (token JwtToken, err error) {
 	if this.cache == nil {
 		token, err = this.ExchangeUserToken(username, remoteInfo)
-		if err != nil {
+		if err != nil && !errors.Is(err, ErrBadLogin) {
 			this.logger.Error("unable to exchange user token", "error", err, "username", username)
 			return
 		}
-		return token, nil
+		return token, err
 	}
 	return cache.Use(this.cache, "token."+username, func() (JwtToken, error) {
 		return this.ExchangeUserToken(username, remoteInfo)

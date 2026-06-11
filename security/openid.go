@@ -19,11 +19,13 @@ package security
 import (
 	"encoding/json"
 	"errors"
-	"github.com/SENERGY-Platform/platform-connector-lib/model"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/SENERGY-Platform/platform-connector-lib/model"
 
 	"net/url"
 )
@@ -146,6 +148,12 @@ func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClient
 	resp, err := client.Do(req)
 	if err != nil {
 		return token, err
+	}
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		body, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("%W: %v", ErrBadLogin, string(body))
+		resp.Body.Close()
+		return
 	}
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(resp.Body)
