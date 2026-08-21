@@ -21,9 +21,9 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+	"os"
 	"time"
 
-	"github.com/IBM/sarama"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -39,7 +39,7 @@ type ProducerInterface interface {
 type SyncProducer struct {
 	broker            []string
 	logger            *slog.Logger
-	producer          sarama.SyncProducer
+	producer          *kafka.Writer
 	kafkaBootstrapUrl string
 	syncIdempotent    bool
 	usedTopics        map[string]bool
@@ -53,7 +53,7 @@ type SyncProducer struct {
 type AsyncProducer struct {
 	broker            []string
 	logger            *slog.Logger
-	producer          sarama.AsyncProducer
+	producer          *kafka.Writer
 	kafkaBootstrapUrl string
 	usedTopics        map[string]bool
 	partitionsNum     int
@@ -65,8 +65,8 @@ type AsyncProducer struct {
 
 type Config struct {
 	AsyncFlushFrequency time.Duration
-	AsyncCompression    sarama.CompressionCodec
-	SyncCompression     sarama.CompressionCodec
+	AsyncCompression    kafka.Compression
+	SyncCompression     kafka.Compression
 	Sync                bool
 	SyncIdempotent      bool
 	PartitionNum        int
@@ -82,6 +82,15 @@ func (this *Config) GetLogger() *slog.Logger {
 		return slog.Default()
 	}
 	return this.Logger
+}
+
+// writerErrorLogger routes the internal retry logging of kafka.Writer to WARN:
+// the writer logs every failed attempt, most of which are followed by a
+// successful retry, which is not something anyone needs to act on.
+func writerErrorLogger(logger *slog.Logger) *log.Logger {
+	result := slog.NewLogLogger(logger.Handler(), slog.LevelWarn)
+	result.SetPrefix("[KAFKA-PRODUCER] ")
+	return result
 }
 
 func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, config Config) (result ProducerInterface, err error) {
@@ -104,19 +113,19 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			initTopic:         config.InitTopics,
 			logger:            config.GetLogger(),
 		}
-		sarama_conf := sarama.NewConfig()
-		sarama_conf.Version = sarama.V2_2_0_0
-		sarama_conf.Producer.Return.Errors = true
-		sarama_conf.Producer.Return.Successes = true
-		sarama_conf.Producer.Compression = config.SyncCompression
+		requiredAcks := kafka.RequireOne
 		if config.SyncIdempotent {
-			sarama_conf.Producer.Idempotent = true
-			sarama_conf.Net.MaxOpenRequests = 1
-			sarama_conf.Producer.RequiredAcks = sarama.WaitForAll
+			//kafka-go has no idempotent producer; RequireAll keeps the durability
+			//guarantee, but a retried batch can produce duplicates
+			requiredAcks = kafka.RequireAll
 		}
-		temp.producer, err = sarama.NewSyncProducer(temp.broker, sarama_conf)
-		if err != nil {
-			return result, err
+		temp.producer = &kafka.Writer{
+			Addr:         kafka.TCP(temp.broker...),
+			Balancer:     &kafka.Hash{}, //same partition selection as the sarama hash partitioner
+			BatchSize:    1,             //flush on every call, otherwise Produce() waits for the batch timeout
+			RequiredAcks: requiredAcks,
+			Compression:  config.SyncCompression,
+			ErrorLogger:  writerErrorLogger(temp.logger),
 		}
 		result = temp
 		go func() {
@@ -135,23 +144,24 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			initTopic:         config.InitTopics,
 			logger:            config.GetLogger(),
 		}
-		sarama_conf := sarama.NewConfig()
-		sarama_conf.Version = sarama.V2_2_0_0
-		sarama_conf.Producer.Return.Errors = true
-		sarama_conf.Producer.Return.Successes = false
-		sarama_conf.Producer.Flush.Frequency = config.AsyncFlushFrequency
-		sarama_conf.Producer.Flush.Messages = config.AsyncFlushMessages
-		sarama_conf.Producer.Compression = config.AsyncCompression
-		temp.producer, err = sarama.NewAsyncProducer(temp.broker, sarama_conf)
-		if err != nil {
-			return result, err
+		temp.producer = &kafka.Writer{
+			Addr:         kafka.TCP(temp.broker...),
+			Balancer:     &kafka.Hash{},
+			Async:        true,
+			BatchTimeout: config.AsyncFlushFrequency, //0 leaves the kafka-go default of 1s
+			BatchSize:    config.AsyncFlushMessages,  //0 leaves the kafka-go default of 100
+			RequiredAcks: kafka.RequireOne,
+			Compression:  config.AsyncCompression,
+			ErrorLogger:  writerErrorLogger(temp.logger),
+			Completion: func(messages []kafka.Message, err error) {
+				if err != nil {
+					//an async produce error cannot be returned to the caller; ending
+					//the process is the behavior this producer has always had
+					temp.logger.Error("unable to produce async kafka message", "error", err)
+					os.Exit(1)
+				}
+			},
 		}
-		go func() {
-			err, ok := <-temp.producer.Errors()
-			if ok {
-				log.Fatal(err)
-			}
-		}()
 		result = temp
 		go func() {
 			<-ctx.Done()
@@ -167,8 +177,8 @@ func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, s
 	return PrepareProducerWithConfig(ctx, kafkaBootstrapUrl, Config{
 		AsyncFlushMessages:  0,
 		AsyncFlushFrequency: 500 * time.Millisecond,
-		AsyncCompression:    sarama.CompressionSnappy,
-		SyncCompression:     sarama.CompressionSnappy,
+		AsyncCompression:    kafka.Snappy,
+		SyncCompression:     kafka.Snappy,
 		Sync:                sync,
 		SyncIdempotent:      syncIdempotent,
 		PartitionNum:        partitionNum,
@@ -201,7 +211,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 			}
 		}()
 	}
-	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()})
+	err = this.producer.WriteMessages(context.Background(), kafka.Message{Topic: topic, Key: nil, Value: []byte(message), Time: time.Now()})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
 		this.logger.Warn("finished slow produce call", "duration", time.Since(start), "topic", topic, "message", message)
 	}
@@ -220,8 +230,7 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 			err = nil
 		}
 	}
-	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.StringEncoder(message), Timestamp: time.Now()}
-	return
+	return this.producer.WriteMessages(context.Background(), kafka.Message{Topic: topic, Key: nil, Value: []byte(message), Time: time.Now()})
 }
 
 func (this *SyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
@@ -251,7 +260,7 @@ func (this *SyncProducer) ProduceWithTimestamp(topic string, message string, key
 			}
 		}()
 	}
-	_, _, err = this.producer.SendMessage(&sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: timestamp})
+	err = this.producer.WriteMessages(context.Background(), kafka.Message{Topic: topic, Key: []byte(key), Value: []byte(message), Time: timestamp})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
 		this.logger.Warn("finished slow produce call", "duration", time.Since(start), "topic", topic, "key", key, "message", message)
 	}
@@ -274,6 +283,5 @@ func (this *AsyncProducer) ProduceWithTimestamp(topic string, message string, ke
 			err = nil
 		}
 	}
-	this.producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder(key), Value: sarama.StringEncoder(message), Timestamp: timestamp}
-	return
+	return this.producer.WriteMessages(context.Background(), kafka.Message{Topic: topic, Key: []byte(key), Value: []byte(message), Time: timestamp})
 }

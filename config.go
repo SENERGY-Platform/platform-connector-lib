@@ -29,7 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBM/sarama"
 	struct_logger "github.com/SENERGY-Platform/go-service-base/struct-logger"
 	"github.com/segmentio/kafka-go"
 )
@@ -84,8 +83,8 @@ type Config struct {
 	AsyncPgThreadMax    int
 	AsyncFlushMessages  int
 	AsyncFlushFrequency time.Duration
-	AsyncCompression    sarama.CompressionCodec
-	SyncCompression     sarama.CompressionCodec
+	AsyncCompression    kafka.Compression
+	SyncCompression     kafka.Compression
 
 	KafkaConsumerMaxWait  string
 	KafkaConsumerMinBytes int
