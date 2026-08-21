@@ -91,3 +91,38 @@ func TestProducer_Produce(t *testing.T) {
 		t.Error(string(result[0]))
 	}
 }
+
+func TestProducer_ProduceToUnknownTopic(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	kafkaUrl, err := docker.Kafka(ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+
+	//no InitTopic() and InitTopics:false, so the broker has to create the topic on
+	//produce, which is what the sarama producer relied on
+	producer, err := PrepareProducerWithConfig(ctx, kafkaUrl, Config{
+		Sync:              true,
+		SyncIdempotent:    true,
+		PartitionNum:      1,
+		ReplicationFactor: 1,
+		InitTopics:        false,
+	})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = producer.Produce("topic-that-does-not-exist-yet", "msg")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}

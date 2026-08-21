@@ -93,6 +93,24 @@ func writerErrorLogger(logger *slog.Logger) *log.Logger {
 	return result
 }
 
+// writeMessage retries UnknownTopicOrPartition, because with
+// AllowAutoTopicCreation the metadata request that returns this error is also the
+// one that makes the broker create the topic, so only the first attempt fails.
+// sarama hid the same round trip behind Metadata.Retry (3 attempts, 250ms apart),
+// which is where these numbers come from.
+func writeMessage(producer *kafka.Writer, msg kafka.Message) (err error) {
+	for attempt := 0; attempt <= 3; attempt++ {
+		if attempt > 0 {
+			time.Sleep(250 * time.Millisecond)
+		}
+		err = producer.WriteMessages(context.Background(), msg)
+		if !errors.Is(err, kafka.UnknownTopicOrPartition) {
+			return err
+		}
+	}
+	return err
+}
+
 func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, config Config) (result ProducerInterface, err error) {
 	broker, err := GetBroker(kafkaBootstrapUrl)
 	if err != nil {
@@ -120,12 +138,13 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			requiredAcks = kafka.RequireAll
 		}
 		temp.producer = &kafka.Writer{
-			Addr:         kafka.TCP(temp.broker...),
-			Balancer:     &kafka.Hash{}, //same partition selection as the sarama hash partitioner
-			BatchSize:    1,             //flush on every call, otherwise Produce() waits for the batch timeout
-			RequiredAcks: requiredAcks,
-			Compression:  config.SyncCompression,
-			ErrorLogger:  writerErrorLogger(temp.logger),
+			Addr:                   kafka.TCP(temp.broker...),
+			Balancer:               &kafka.Hash{}, //same partition selection as the sarama hash partitioner
+			BatchSize:              1,             //flush on every call, otherwise Produce() waits for the batch timeout
+			RequiredAcks:           requiredAcks,
+			Compression:            config.SyncCompression,
+			AllowAutoTopicCreation: true, //sarama requested this in every metadata request; produce paths without InitTopics rely on it
+			ErrorLogger:            writerErrorLogger(temp.logger),
 		}
 		result = temp
 		go func() {
@@ -145,14 +164,15 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			logger:            config.GetLogger(),
 		}
 		temp.producer = &kafka.Writer{
-			Addr:         kafka.TCP(temp.broker...),
-			Balancer:     &kafka.Hash{},
-			Async:        true,
-			BatchTimeout: config.AsyncFlushFrequency, //0 leaves the kafka-go default of 1s
-			BatchSize:    config.AsyncFlushMessages,  //0 leaves the kafka-go default of 100
-			RequiredAcks: kafka.RequireOne,
-			Compression:  config.AsyncCompression,
-			ErrorLogger:  writerErrorLogger(temp.logger),
+			Addr:                   kafka.TCP(temp.broker...),
+			Balancer:               &kafka.Hash{},
+			Async:                  true,
+			BatchTimeout:           config.AsyncFlushFrequency, //0 leaves the kafka-go default of 1s
+			BatchSize:              config.AsyncFlushMessages,  //0 leaves the kafka-go default of 100
+			RequiredAcks:           kafka.RequireOne,
+			Compression:            config.AsyncCompression,
+			AllowAutoTopicCreation: true,
+			ErrorLogger:            writerErrorLogger(temp.logger),
 			Completion: func(messages []kafka.Message, err error) {
 				if err != nil {
 					//an async produce error cannot be returned to the caller; ending
@@ -211,7 +231,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 			}
 		}()
 	}
-	err = this.producer.WriteMessages(context.Background(), kafka.Message{Topic: topic, Key: nil, Value: []byte(message), Time: time.Now()})
+	err = writeMessage(this.producer, kafka.Message{Topic: topic, Key: nil, Value: []byte(message), Time: time.Now()})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
 		this.logger.Warn("finished slow produce call", "duration", time.Since(start), "topic", topic, "message", message)
 	}
@@ -230,7 +250,7 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 			err = nil
 		}
 	}
-	return this.producer.WriteMessages(context.Background(), kafka.Message{Topic: topic, Key: nil, Value: []byte(message), Time: time.Now()})
+	return writeMessage(this.producer, kafka.Message{Topic: topic, Key: nil, Value: []byte(message), Time: time.Now()})
 }
 
 func (this *SyncProducer) ProduceWithKey(topic string, message string, key string) (err error) {
@@ -260,7 +280,7 @@ func (this *SyncProducer) ProduceWithTimestamp(topic string, message string, key
 			}
 		}()
 	}
-	err = this.producer.WriteMessages(context.Background(), kafka.Message{Topic: topic, Key: []byte(key), Value: []byte(message), Time: timestamp})
+	err = writeMessage(this.producer, kafka.Message{Topic: topic, Key: []byte(key), Value: []byte(message), Time: timestamp})
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
 		this.logger.Warn("finished slow produce call", "duration", time.Since(start), "topic", topic, "key", key, "message", message)
 	}
@@ -283,5 +303,5 @@ func (this *AsyncProducer) ProduceWithTimestamp(topic string, message string, ke
 			err = nil
 		}
 	}
-	return this.producer.WriteMessages(context.Background(), kafka.Message{Topic: topic, Key: []byte(key), Value: []byte(message), Time: timestamp})
+	return writeMessage(this.producer, kafka.Message{Topic: topic, Key: []byte(key), Value: []byte(message), Time: timestamp})
 }
