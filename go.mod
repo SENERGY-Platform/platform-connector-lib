@@ -16,11 +16,11 @@ require (
 require (
 	github.com/SENERGY-Platform/converter v0.0.11
 	github.com/SENERGY-Platform/developer-notifications v0.0.5
-	github.com/SENERGY-Platform/device-repository v0.2.52
+	github.com/SENERGY-Platform/device-repository v0.2.53
 	github.com/SENERGY-Platform/go-service-base/struct-logger v0.8.0
 	github.com/SENERGY-Platform/models/go v0.0.0-20260710115411-5b8e00d6e038
 	github.com/SENERGY-Platform/permissions-v2 v0.0.45
-	github.com/SENERGY-Platform/service-commons v0.0.0-20260507090252-155b04bb4c46
+	github.com/SENERGY-Platform/service-commons v0.0.0-20260821114734-3e4578ac2358
 	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/testcontainers/testcontainers-go v0.40.0
