@@ -22,6 +22,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -29,6 +30,8 @@ import (
 
 var Fatal = false
 var SlowProducerTimeout time.Duration = 2 * time.Second
+
+var errProducerClosed = errors.New("producer closed")
 
 type ProducerInterface interface {
 	Produce(topic string, message string) (err error)
@@ -47,7 +50,7 @@ type SyncProducer struct {
 	replicationFactor int
 	topicConfigMap    map[string][]kafka.ConfigEntry
 	initTopic         bool
-	isClosed          bool
+	isClosed          atomic.Bool
 }
 
 type AsyncProducer struct {
@@ -60,7 +63,7 @@ type AsyncProducer struct {
 	replicationFactor int
 	topicConfigMap    map[string][]kafka.ConfigEntry
 	initTopic         bool
-	isClosed          bool
+	isClosed          atomic.Bool
 }
 
 type Config struct {
@@ -147,11 +150,7 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			ErrorLogger:            writerErrorLogger(temp.logger),
 		}
 		result = temp
-		go func() {
-			<-ctx.Done()
-			temp.isClosed = true
-			temp.producer.Close()
-		}()
+		temp.closeOnDone(ctx)
 	} else {
 		temp := &AsyncProducer{
 			broker:            broker,
@@ -183,13 +182,28 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			},
 		}
 		result = temp
-		go func() {
-			<-ctx.Done()
-			temp.isClosed = true
-			temp.producer.Close()
-		}()
+		temp.closeOnDone(ctx)
 	}
 	return result, nil
+}
+
+// closeOnDone marks the producer closed and closes the writer once ctx is
+// cancelled. isClosed is atomic because the produce paths read it concurrently
+// with this goroutine.
+func (this *SyncProducer) closeOnDone(ctx context.Context) {
+	go func() {
+		<-ctx.Done()
+		this.isClosed.Store(true)
+		this.producer.Close()
+	}()
+}
+
+func (this *AsyncProducer) closeOnDone(ctx context.Context) {
+	go func() {
+		<-ctx.Done()
+		this.isClosed.Store(true)
+		this.producer.Close()
+	}()
 }
 
 // deprecated
@@ -208,8 +222,8 @@ func PrepareProducer(ctx context.Context, kafkaBootstrapUrl string, sync bool, s
 }
 
 func (this *SyncProducer) Produce(topic string, message string) (err error) {
-	if this.isClosed {
-		return errors.New("producer closed")
+	if this.isClosed.Load() {
+		return errProducerClosed
 	}
 	this.logger.Debug("kafka produce sync", "topic", topic, "message", message)
 	if this.initTopic {
@@ -239,8 +253,8 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 }
 
 func (this *AsyncProducer) Produce(topic string, message string) (err error) {
-	if this.isClosed {
-		return errors.New("producer closed")
+	if this.isClosed.Load() {
+		return errProducerClosed
 	}
 	this.logger.Debug("kafka produce async", "topic", topic, "message", message)
 	if this.initTopic {
@@ -258,8 +272,8 @@ func (this *SyncProducer) ProduceWithKey(topic string, message string, key strin
 }
 
 func (this *SyncProducer) ProduceWithTimestamp(topic string, message string, key string, timestamp time.Time) (err error) {
-	if this.isClosed {
-		return errors.New("producer closed")
+	if this.isClosed.Load() {
+		return errProducerClosed
 	}
 	this.logger.Debug("kafka produce sync", "topic", topic, "message", message)
 	if this.initTopic {
@@ -292,8 +306,8 @@ func (this *AsyncProducer) ProduceWithKey(topic string, message string, key stri
 }
 
 func (this *AsyncProducer) ProduceWithTimestamp(topic string, message string, key string, timestamp time.Time) (err error) {
-	if this.isClosed {
-		return errors.New("producer closed")
+	if this.isClosed.Load() {
+		return errProducerClosed
 	}
 	this.logger.Debug("kafka produce async", "topic", topic, "message", message)
 	if this.initTopic {
