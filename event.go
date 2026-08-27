@@ -245,6 +245,10 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 
 		go func() {
 			defer func() {
+				//a panic in this goroutine would take down the whole connector
+				if r := recover(); r != nil {
+					this.Config.GetLogger().Error("recovered panic while publishing event to postgres", "panic", r, "deviceId", envelope.DeviceId, "serviceId", envelope.ServiceId)
+				}
 				if qos == Async {
 					<-this.asyncPgBackpressure //free one of the limited go routines
 				} else {
@@ -252,13 +256,16 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 				}
 			}()
 			timescaleStart := time.Now()
-			pgErr, shouldNotify := this.postgresPublisher.Publish(envelope, service)
-			if pgErr != nil {
-				this.Config.GetLogger().Error("unable to publish event to postgres", "error", pgErr)
+			publishErr, shouldNotify := this.postgresPublisher.Publish(envelope, service)
+			if publishErr != nil {
+				if qos != Async {
+					pgErr = publishErr //only the synchronous path waits for this goroutine and can report the error
+				}
+				this.Config.GetLogger().Error("unable to publish event to postgres", "error", publishErr)
 				if shouldNotify {
 					this.notifyDeviceOwners(envelope.DeviceId, Notification{
 						Title:   "DeviceType Timescale Configuration Error",
-						Message: "Error: " + err.Error() + "\n\nDeviceId: " + envelope.DeviceId + "\nService: " + service.Name + " (" + service.LocalId + ")",
+						Message: "Error: " + publishErr.Error() + "\n\nDeviceId: " + envelope.DeviceId + "\nService: " + service.Name + " (" + service.LocalId + ")",
 					})
 				}
 				return
@@ -269,7 +276,7 @@ func (this *Connector) sendEventEnvelope(envelope model.Envelope, qos Qos, servi
 	}
 	kafkaStart := time.Now()
 	kafkaErr = producer.ProduceWithTimestamp(serviceTopic, string(jsonMsg), envelope.DeviceId, timestamp)
-	if err != nil {
+	if kafkaErr != nil {
 		if this.Config.FatalKafkaError {
 			if this.Config.Debug {
 				debug.PrintStack()
