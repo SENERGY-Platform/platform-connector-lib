@@ -124,11 +124,11 @@ func (publisher *Publisher) Publish(envelope model.Envelope, service model.Servi
 		return timeErr, notify
 	}
 
-	query := buildInsertQuery(table, timeStr, m)
+	query, args := buildInsertQuery(table, timeStr, m)
 
-	publisher.logger.Debug("psql request", "query", query)
+	publisher.logger.Debug("psql request", "query", query, "args", args)
 
-	_, err = publisher.db.Exec(context.Background(), query)
+	_, err = publisher.db.Exec(context.Background(), query, args...)
 
 	publisher.logger.Debug("psql response", "err", err, "duration", time.Since(start))
 	if SlowProducerTimeout > 0 && time.Since(start) >= SlowProducerTimeout {
@@ -225,36 +225,38 @@ func toNanoseconds(value interface{}) (nanoseconds int64, err error) {
 	}
 }
 
-func buildInsertQuery(table string, timeStr string, m map[string]interface{}) (query string) {
+// buildInsertQuery returns the query and the arguments belonging to it. The message
+// values are passed as parameters, so that they need no quoting and cannot terminate
+// the statement. The time is not a parameter because it is the output of
+// time.Time.Format and pgx does not encode a string for a timestamptz column.
+func buildInsertQuery(table string, timeStr string, m map[string]interface{}) (query string, args []interface{}) {
 	fields := make([]string, len(m)+1)
 	values := make([]string, len(m)+1)
+	args = make([]interface{}, 0, len(m))
 
-	fields[0] = "\"time\""
+	fields[0] = quoteIdentifier("time")
 	values[0] = "'" + timeStr + "'"
 
 	i := 1
 	for k, v := range m {
-		fields[i] = "\"" + k + "\""
-		values[i] = formatValue(v)
+		fields[i] = quoteIdentifier(k)
+		values[i] = "$" + strconv.Itoa(i)
+		args = append(args, v)
 		i++
 	}
 
-	return "INSERT INTO \"" + table + "\"(" + strings.Join(fields, ",") + ") VALUES (" + strings.Join(values, ",") + ");"
+	return "INSERT INTO " + quoteIdentifier(table) + "(" + strings.Join(fields, ",") + ") VALUES (" + strings.Join(values, ",") + ");", args
 }
 
-func formatValue(value interface{}) string {
-	switch v := value.(type) {
-	case nil:
-		return "NULL"
-	case string:
-		return "'" + v + "'"
-	default:
-		return fmt.Sprintf("%v", v)
-	}
+// quoteIdentifier quotes a table or column name. Identifiers cannot be passed as
+// parameters, and the names originate from device and service ids and from the field
+// names of the message, so a quote in a name has to be escaped.
+func quoteIdentifier(name string) string {
+	return "\"" + strings.ReplaceAll(name, "\"", "\"\"") + "\""
 }
 
-// flatten keeps the values as they were decoded; quoting happens in formatValue,
-// so that a value may still be read and cast before the query is built
+// flatten keeps the values as they were decoded; they are passed to the query as
+// parameters, so that a value may still be read and cast before the query is built
 func flatten(m map[string]interface{}) (values map[string]interface{}) {
 	values = make(map[string]interface{})
 	for k, v := range m {

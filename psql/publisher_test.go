@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"strconv"
 	"sync"
 	"testing"
@@ -188,27 +189,39 @@ func TestGetTimeStringIsSafeForConcurrentUse(t *testing.T) {
 func TestBuildInsertQuery(t *testing.T) {
 	timeStr := testTime.Format(time.RFC3339Nano)
 
-	t.Run("quotes string values", func(t *testing.T) {
+	check := func(t *testing.T, m map[string]interface{}, expectedQuery string, expectedArgs []interface{}) {
+		t.Helper()
+		query, args := buildInsertQuery("device:a_service:b", timeStr, m)
+		if query != expectedQuery {
+			t.Error(query)
+		}
+		if !reflect.DeepEqual(args, expectedArgs) {
+			t.Error(args)
+		}
+	}
+
+	t.Run("passes a string value as parameter", func(t *testing.T) {
 		m := flatten(map[string]interface{}{"root": map[string]interface{}{"text": "hello"}})
-		expected := `INSERT INTO "device:a_service:b"("time","root.text") VALUES ('` + timeStr + `','hello');`
-		if query := buildInsertQuery("device:a_service:b", timeStr, m); query != expected {
-			t.Error(query)
-		}
+		check(t, m, `INSERT INTO "device:a_service:b"("time","root.text") VALUES ('`+timeStr+`',$1);`, []interface{}{"hello"})
 	})
 
-	t.Run("writes numbers unquoted", func(t *testing.T) {
+	t.Run("passes a value with an apostrophe unchanged", func(t *testing.T) {
+		m := flatten(map[string]interface{}{"root": map[string]interface{}{"text": "it's ');DROP TABLE x;--"}})
+		check(t, m, `INSERT INTO "device:a_service:b"("time","root.text") VALUES ('`+timeStr+`',$1);`, []interface{}{"it's ');DROP TABLE x;--"})
+	})
+
+	t.Run("passes a number as parameter", func(t *testing.T) {
 		m := flatten(map[string]interface{}{"root": map[string]interface{}{"value": float64(1.5)}})
-		expected := `INSERT INTO "device:a_service:b"("time","root.value") VALUES ('` + timeStr + `',1.5);`
-		if query := buildInsertQuery("device:a_service:b", timeStr, m); query != expected {
-			t.Error(query)
-		}
+		check(t, m, `INSERT INTO "device:a_service:b"("time","root.value") VALUES ('`+timeStr+`',$1);`, []interface{}{float64(1.5)})
 	})
 
-	t.Run("writes a nil value as NULL", func(t *testing.T) {
+	t.Run("passes a nil value as parameter", func(t *testing.T) {
 		m := flatten(map[string]interface{}{"root": map[string]interface{}{"value": nil}})
-		expected := `INSERT INTO "device:a_service:b"("time","root.value") VALUES ('` + timeStr + `',NULL);`
-		if query := buildInsertQuery("device:a_service:b", timeStr, m); query != expected {
-			t.Error(query)
-		}
+		check(t, m, `INSERT INTO "device:a_service:b"("time","root.value") VALUES ('`+timeStr+`',$1);`, []interface{}{nil})
+	})
+
+	t.Run("escapes a quote in a field name", func(t *testing.T) {
+		m := flatten(map[string]interface{}{`ro"ot`: map[string]interface{}{"value": float64(1)}})
+		check(t, m, `INSERT INTO "device:a_service:b"("time","ro""ot.value") VALUES ('`+timeStr+`',$1);`, []interface{}{float64(1)})
 	})
 }
