@@ -20,10 +20,70 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/segmentio/kafka-go"
 )
 
+// KnownTopics remembers which topics have already been created, so that only
+// the first publication to a topic talks to the broker. The produce paths of one
+// producer run in several goroutines, so the check and the mark afterwards have
+// to be synchronized: on a plain map two concurrent first publications end the
+// process with "fatal error: concurrent map writes", which is not a panic and no
+// recover catches it. The zero value is ready to use.
+type KnownTopics struct {
+	mux    sync.Mutex
+	topics map[string]*topicState
+}
+
+// topicState guards the creation of a single topic. It carries its own lock so
+// that the lock of KnownTopics is never held while the broker is called: a topic
+// creation that waits for an unreachable broker would otherwise also block
+// publications to topics that exist already.
+type topicState struct {
+	mux     sync.Mutex
+	created bool
+}
+
+// EnsureTopic creates the topic unless it has been created before. Two parallel
+// first publications to the same topic create it once; a failed creation is not
+// remembered, so the next publication tries again.
+func (this *KnownTopics) EnsureTopic(topic string, kafkaUrl string, configMap map[string][]kafka.ConfigEntry, partitions int, replicationFactor int) (err error) {
+	return this.ensure(topic, func() error {
+		return InitTopicWithConfig(kafkaUrl, configMap, partitions, replicationFactor, topic)
+	})
+}
+
+func (this *KnownTopics) ensure(topic string, create func() error) (err error) {
+	state := this.state(topic)
+	state.mux.Lock()
+	defer state.mux.Unlock()
+	if state.created {
+		return nil
+	}
+	err = create()
+	if err != nil {
+		return err
+	}
+	state.created = true
+	return nil
+}
+
+func (this *KnownTopics) state(topic string) *topicState {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	if this.topics == nil {
+		this.topics = map[string]*topicState{}
+	}
+	result, ok := this.topics[topic]
+	if !ok {
+		result = &topicState{}
+		this.topics[topic] = result
+	}
+	return result
+}
+
+// deprecated: not safe for concurrent use, use KnownTopics.EnsureTopic
 func EnsureTopic(topic string, kafkaUrl string, knownTopics *map[string]bool, configMap map[string][]kafka.ConfigEntry, partitions int, replicationFactor int) (err error) {
 	if (*knownTopics)[topic] {
 		return nil

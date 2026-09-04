@@ -45,7 +45,7 @@ type SyncProducer struct {
 	producer          *kafka.Writer
 	kafkaBootstrapUrl string
 	syncIdempotent    bool
-	usedTopics        map[string]bool
+	usedTopics        KnownTopics
 	partitionsNum     int
 	replicationFactor int
 	topicConfigMap    map[string][]kafka.ConfigEntry
@@ -58,7 +58,7 @@ type AsyncProducer struct {
 	logger            *slog.Logger
 	producer          *kafka.Writer
 	kafkaBootstrapUrl string
-	usedTopics        map[string]bool
+	usedTopics        KnownTopics
 	partitionsNum     int
 	replicationFactor int
 	topicConfigMap    map[string][]kafka.ConfigEntry
@@ -127,7 +127,6 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 			broker:            broker,
 			kafkaBootstrapUrl: kafkaBootstrapUrl,
 			syncIdempotent:    config.SyncIdempotent,
-			usedTopics:        map[string]bool{},
 			partitionsNum:     config.PartitionNum,
 			replicationFactor: config.ReplicationFactor,
 			topicConfigMap:    config.TopicConfigMap,
@@ -155,7 +154,6 @@ func PrepareProducerWithConfig(ctx context.Context, kafkaBootstrapUrl string, co
 		temp := &AsyncProducer{
 			broker:            broker,
 			kafkaBootstrapUrl: kafkaBootstrapUrl,
-			usedTopics:        map[string]bool{},
 			partitionsNum:     config.PartitionNum,
 			replicationFactor: config.ReplicationFactor,
 			topicConfigMap:    config.TopicConfigMap,
@@ -227,7 +225,7 @@ func (this *SyncProducer) Produce(topic string, message string) (err error) {
 	}
 	this.logger.Debug("kafka produce sync", "topic", topic, "message", message)
 	if this.initTopic {
-		err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
+		err = this.usedTopics.EnsureTopic(topic, this.kafkaBootstrapUrl, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
 		if err != nil {
 			this.logger.Warn("unable to ensure topic", "error", err)
 			err = nil
@@ -258,7 +256,7 @@ func (this *AsyncProducer) Produce(topic string, message string) (err error) {
 	}
 	this.logger.Debug("kafka produce async", "topic", topic, "message", message)
 	if this.initTopic {
-		err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
+		err = this.usedTopics.EnsureTopic(topic, this.kafkaBootstrapUrl, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
 		if err != nil {
 			this.logger.Warn("unable to ensure topic", "error", err)
 			err = nil
@@ -277,7 +275,7 @@ func (this *SyncProducer) ProduceWithTimestamp(topic string, message string, key
 	}
 	this.logger.Debug("kafka produce sync", "topic", topic, "message", message)
 	if this.initTopic {
-		err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
+		err = this.usedTopics.EnsureTopic(topic, this.kafkaBootstrapUrl, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
 		if err != nil {
 			this.logger.Warn("unable to ensure topic", "error", err)
 			err = nil
@@ -311,7 +309,7 @@ func (this *AsyncProducer) ProduceWithTimestamp(topic string, message string, ke
 	}
 	this.logger.Debug("kafka produce async", "topic", topic, "message", message)
 	if this.initTopic {
-		err = EnsureTopic(topic, this.kafkaBootstrapUrl, &this.usedTopics, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
+		err = this.usedTopics.EnsureTopic(topic, this.kafkaBootstrapUrl, this.topicConfigMap, this.partitionsNum, this.replicationFactor)
 		if err != nil {
 			this.logger.Warn("unable to ensure topic", "error", err)
 			err = nil

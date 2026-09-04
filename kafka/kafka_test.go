@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"testing"
@@ -124,5 +125,57 @@ func TestProducer_ProduceToUnknownTopic(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 		return
+	}
+}
+
+// TestProducer_ProduceToNewTopicsConcurrently publishes to several topics that
+// do not exist yet from one goroutine each, which is what a connector does when
+// a fresh environment starts sending for the first time. With InitTopics the
+// produce path records every topic it created in the producer, so an
+// unsynchronized bookkeeping map turns this into a concurrent map access: `go
+// test -race` reports the data race, and without the race detector Go can end
+// the process with "fatal error: concurrent map writes".
+func TestProducer_ProduceToNewTopicsConcurrently(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	kafkaUrl, err := docker.Kafka(ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+
+	producer, err := PrepareProducerWithConfig(ctx, kafkaUrl, Config{
+		Sync:              true,
+		SyncIdempotent:    true,
+		PartitionNum:      1,
+		ReplicationFactor: 1,
+		InitTopics:        true,
+	})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	const topics = 8
+	errs := make([]error, topics)
+	produceWg := &sync.WaitGroup{}
+	for i := range errs {
+		produceWg.Add(1)
+		go func(i int) {
+			defer produceWg.Done()
+			errs[i] = producer.Produce(fmt.Sprintf("test-concurrent-new-topic-%v", i), "msg")
+		}(i)
+	}
+	produceWg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Errorf("produce to topic %v: %v", i, err)
+		}
 	}
 }
