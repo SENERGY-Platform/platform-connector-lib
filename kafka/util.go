@@ -83,17 +83,11 @@ func (this *KnownTopics) state(topic string) *topicState {
 	return result
 }
 
-// deprecated: not safe for concurrent use, use KnownTopics.EnsureTopic
+var DefaultKnownTopics = KnownTopics{}
+
+// deprecated: use KnownTopics.EnsureTopic
 func EnsureTopic(topic string, kafkaUrl string, knownTopics *map[string]bool, configMap map[string][]kafka.ConfigEntry, partitions int, replicationFactor int) (err error) {
-	if (*knownTopics)[topic] {
-		return nil
-	}
-	err = InitTopicWithConfig(kafkaUrl, configMap, partitions, replicationFactor, topic)
-	if err != nil {
-		return err
-	}
-	(*knownTopics)[topic] = true
-	return
+	return DefaultKnownTopics.EnsureTopic(topic, kafkaUrl, configMap, partitions, replicationFactor)
 }
 
 func GetBroker(bootstrapUrl string) (brokers []string, err error) {
