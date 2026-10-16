@@ -29,9 +29,9 @@ import (
 
 func withClientTimeout(t *testing.T, timeout time.Duration) {
 	t.Helper()
-	old := httpClient.Timeout
-	httpClient.Timeout = timeout
-	t.Cleanup(func() { httpClient.Timeout = old })
+	old := httpClient
+	httpClient = newHTTPClient(timeout)
+	t.Cleanup(func() { httpClient = old })
 }
 
 func TestJwtTokenRequestTimeout(t *testing.T) {
@@ -123,5 +123,23 @@ func TestResetAccessDoesNotLogToken(t *testing.T) {
 	}
 	if s.openid != nil {
 		t.Error("token not reset")
+	}
+}
+
+func TestJwtTokenSlowBodyIsNotCutOff(t *testing.T) {
+	withClientTimeout(t, 200*time.Millisecond)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		time.Sleep(500 * time.Millisecond)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	t.Cleanup(server.Close)
+	var result map[string]bool
+	if err := JwtToken("Bearer test").GetJSON(server.URL, &result); err != nil {
+		t.Fatalf("slow body after prompt headers failed: %v", err)
+	}
+	if !result["ok"] {
+		t.Errorf("result = %v", result)
 	}
 }

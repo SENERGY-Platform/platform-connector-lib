@@ -19,6 +19,7 @@ package iot
 import (
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -66,49 +67,28 @@ func TestIotReadLatencyCoversRequest(t *testing.T) {
 	}
 }
 
-type trackedBody struct {
-	io.ReadCloser
-	closed *atomic.Bool
-}
-
-func (this trackedBody) Close() error {
-	this.closed.Store(true)
-	return this.ReadCloser.Close()
-}
-
-type closeRecorder struct {
-	base   http.RoundTripper
-	closed atomic.Bool
-	seen   atomic.Int32
-}
-
-func (this *closeRecorder) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp, err := this.base.RoundTrip(req)
-	if err != nil {
-		return resp, err
-	}
-	this.seen.Add(1)
-	resp.Body = trackedBody{ReadCloser: resp.Body, closed: &this.closed}
-	return resp, nil
-}
-
 func TestDeleteHubClosesResponseBody(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// An unclosed body keeps its connection busy, so a second call would have to dial a new one.
+	var dials atomic.Int32
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("deleted"))
 	}))
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			dials.Add(1)
+		}
+	}
+	server.Start()
 	t.Cleanup(server.Close)
-	rec := &closeRecorder{base: http.DefaultTransport}
-	http.DefaultTransport = rec
-	t.Cleanup(func() { http.DefaultTransport = rec.base })
 
 	repo := New(server.URL, server.URL, "", slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := repo.DeleteHub("hid", security.JwtToken("Bearer test")); err != nil {
-		t.Fatal(err)
+	for i := 0; i < 2; i++ {
+		if err := repo.DeleteHub("hid", security.JwtToken("Bearer test")); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if rec.seen.Load() != 1 {
-		t.Fatalf("saw %d responses, want 1", rec.seen.Load())
-	}
-	if !rec.closed.Load() {
-		t.Error("response body was not closed")
+	if n := dials.Load(); n != 1 {
+		t.Errorf("server saw %d connections, want 1: the response body was not closed", n)
 	}
 }

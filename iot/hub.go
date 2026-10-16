@@ -19,6 +19,7 @@ package iot
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"time"
 
@@ -88,6 +89,7 @@ func (this *Iot) DeleteHub(id string, cred security.JwtToken) (err error) {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	return nil
+	// Read to EOF and close, so the connection can be reused.
+	_, _ = io.Copy(io.Discard, resp.Body)
+	return resp.Body.Close()
 }

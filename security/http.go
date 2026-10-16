@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 )
@@ -32,9 +33,17 @@ var ErrorNotFound = errors.New("not found")
 var ErrorAccessDenied = errors.New("access denied")
 var ErrorUnexpectedStatus = errors.New("unexpected status")
 
-// httpClient bounds each request, including reading the response body, to 5s.
-// A client timeout is used instead of a context because Post, Get, Put and Delete hand the open body to the caller.
-var httpClient = &http.Client{Timeout: 5 * time.Second}
+// httpClient bounds connecting and waiting for the response headers to 5s each. Reading the body the
+// caller receives is not limited, so a large answer from a responsive server is not cut off.
+var httpClient = newHTTPClient(5 * time.Second)
+
+func newHTTPClient(timeout time.Duration) *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{Timeout: timeout, KeepAlive: 30 * time.Second}).DialContext
+	transport.TLSHandshakeTimeout = timeout
+	transport.ResponseHeaderTimeout = timeout
+	return &http.Client{Transport: transport}
+}
 
 func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
 	req, err := http.NewRequest("POST", url, body)
