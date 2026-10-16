@@ -42,7 +42,7 @@ func (this *PreparedCache) GetCharacteristicById(id string, token security.JwtTo
 
 func (this *Iot) GetCharacteristicById(id string, token security.JwtToken) (characteristic model.Characteristic, err error) {
 	start := time.Now()
-	defer statistics.IotRead(time.Since(start))
+	defer func() { statistics.IotRead(time.Since(start)) }()
 	if id == "" {
 		return characteristic, errors.New("characteristic id can not be empty")
 	}

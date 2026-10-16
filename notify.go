@@ -174,14 +174,16 @@ func (this *Connector) SendNotification(message Notification) error {
 		this.Config.GetLogger().Error("unable to create notification request", "error", err)
 		return err
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	req.WithContext(ctx)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		this.Config.GetLogger().Error("unable to send notification", "error", err)
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		respMsg, _ := io.ReadAll(resp.Body)
 		this.Config.GetLogger().Error("unexpected response status from notifier", "status-code", resp.StatusCode, "error", string(respMsg))

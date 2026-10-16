@@ -12,7 +12,7 @@ import (
 
 func (this *Iot) GetProtocol(id string, token security.JwtToken) (protocol model.Protocol, err error) {
 	start := time.Now()
-	defer statistics.IotRead(time.Since(start))
+	defer func() { statistics.IotRead(time.Since(start)) }()
 	resp, err := token.Get(this.repo_url + "/protocols/" + url.QueryEscape(id))
 	if err != nil {
 		this.GetLogger().Error("unable to get protocol", "error", err, "id", id)

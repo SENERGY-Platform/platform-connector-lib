@@ -31,7 +31,7 @@ import (
 
 func (this *Iot) GetHub(id string, cred security.JwtToken, optionals ...options.Option) (hub model.Hub, err error) {
 	start := time.Now()
-	defer statistics.IotRead(time.Since(start))
+	defer func() { statistics.IotRead(time.Since(start)) }()
 	resp, err := cred.Get(this.repo_url + "/hubs/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
 		if !options.Silent.IsInOptions(optionals...) {
@@ -84,6 +84,10 @@ func (this *Iot) UpdateHub(id string, hub model.Hub, cred security.JwtToken) (re
 }
 
 func (this *Iot) DeleteHub(id string, cred security.JwtToken) (err error) {
-	_, err = cred.Delete(this.manager_url + "/hubs/" + url.QueryEscape(id))
-	return
+	resp, err := cred.Delete(this.manager_url + "/hubs/" + url.QueryEscape(id))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }

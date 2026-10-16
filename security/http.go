@@ -18,7 +18,6 @@ package security
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,17 +32,19 @@ var ErrorNotFound = errors.New("not found")
 var ErrorAccessDenied = errors.New("access denied")
 var ErrorUnexpectedStatus = errors.New("unexpected status")
 
+// httpClient bounds each request, including reading the response body, to 5s.
+// A client timeout is used instead of a context because Post, Get, Put and Delete hand the open body to the caller.
+var httpClient = &http.Client{Timeout: 5 * time.Second}
+
 func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 	req.Header.Set("Content-Type", contentType)
 
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
@@ -67,7 +68,7 @@ func (this JwtToken) Post(url string, contentType string, body io.Reader) (resp 
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("unable to rclose response body", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
-		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "error", err.Error())
+		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "read-error", err)
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -95,10 +96,8 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
@@ -122,7 +121,7 @@ func (this JwtToken) Get(url string) (resp *http.Response, err error) {
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("unable to rclose response body", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
-		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "error", err.Error())
+		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "read-error", err)
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -142,11 +141,9 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
@@ -170,7 +167,7 @@ func (this JwtToken) Delete(url string) (resp *http.Response, err error) {
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("unable to rclose response body", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
-		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "error", err.Error())
+		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "read-error", err)
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -181,12 +178,10 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 	req.Header.Set("Content-Type", contentType)
 
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
@@ -210,7 +205,7 @@ func (this JwtToken) Put(url string, contentType string, body io.Reader) (resp *
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("unable to rclose response body", "url", url, "status-code", resp.StatusCode, "error", err.Error(), "body", string(b))
 		}
-		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "error", err.Error())
+		slog.Debug("response", "url", url, "status-code", resp.StatusCode, "body", string(b), "read-error", err)
 		return resp, fmt.Errorf("%w: %v %v %v", ErrorUnexpectedStatus, url, resp.StatusCode, string(b))
 	}
 	return
@@ -238,11 +233,9 @@ func (this JwtToken) Head(url string) (statuscode int, err error) {
 	if err != nil {
 		return statuscode, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	req.WithContext(ctx)
 	req.Header.Set("Authorization", string(this))
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return statuscode, fmt.Errorf("%w: %v", ErrorInternal, err.Error())
 	}

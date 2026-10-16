@@ -57,24 +57,23 @@ func (this *Security) ExchangeUserToken(userid string, remoteInfo model.RemoteIn
 	if remoteInfo.Port != "" {
 		req.Header.Set("X-Forwarded-Port", remoteInfo.Port)
 	}
-	if remoteInfo.Port != "" {
+	if remoteInfo.Protocol != "" {
 		req.Header.Set("X-Forwarded-Proto", remoteInfo.Protocol)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		body, _ := io.ReadAll(resp.Body)
 		err = fmt.Errorf("%w: %v", ErrBadLogin, string(body))
-		resp.Body.Close()
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		this.logger.Error("unable to get user token", "error", string(body), "status-code", resp.StatusCode)
 		err = errors.New("access denied")
-		resp.Body.Close()
 		return
 	}
 	var openIdToken OpenidToken

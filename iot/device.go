@@ -31,7 +31,7 @@ import (
 
 func (this *Iot) GetDevice(id string, token security.JwtToken) (device model.Device, err error) {
 	start := time.Now()
-	defer statistics.IotRead(time.Since(start))
+	defer func() { statistics.IotRead(time.Since(start)) }()
 	resp, err := token.Get(this.repo_url + "/devices/" + url.QueryEscape(id) + "?&p=x")
 	if err != nil {
 		return device, err
@@ -55,7 +55,7 @@ func (this *Iot) GetDeviceType(id string, token security.JwtToken) (dt model.Dev
 		return dt, errors.New("missing id")
 	}
 	start := time.Now()
-	defer statistics.IotRead(time.Since(start))
+	defer func() { statistics.IotRead(time.Since(start)) }()
 	resp, err := token.Get(this.repo_url + "/device-types/" + url.QueryEscape(id))
 	if err != nil {
 		this.GetLogger().Error("on GetDeviceType()", "error", err, "id", id)
@@ -114,7 +114,7 @@ func allTrue(arr []bool) bool {
 
 func (this *Iot) GetDeviceByLocalId(localId string, token security.JwtToken) (device model.Device, err error) {
 	start := time.Now()
-	defer statistics.IotRead(time.Since(start))
+	defer func() { statistics.IotRead(time.Since(start)) }()
 	resp, err := token.Get(this.manager_url + "/local-devices/" + url.QueryEscape(localId))
 	if err != nil {
 		if !errors.Is(err, security.ErrorNotFound) {

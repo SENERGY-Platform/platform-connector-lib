@@ -65,13 +65,14 @@ func GetOpenidToken(authEndpoint string, authClientId string, authClientSecret s
 	if remoteInfo.Port != "" {
 		req.Header.Set("X-Forwarded-Port", remoteInfo.Port)
 	}
-	if remoteInfo.Port != "" {
+	if remoteInfo.Protocol != "" {
 		req.Header.Set("X-Forwarded-Proto", remoteInfo.Protocol)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return openid, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(resp.Body)
 		err = errors.New(resp.Status + ": " + string(b))
@@ -103,13 +104,14 @@ func RefreshOpenidToken(authEndpoint string, authClientId string, authClientSecr
 	if remoteInfo.Port != "" {
 		req.Header.Set("X-Forwarded-Port", remoteInfo.Port)
 	}
-	if remoteInfo.Port != "" {
+	if remoteInfo.Protocol != "" {
 		req.Header.Set("X-Forwarded-Proto", remoteInfo.Protocol)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return openid, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(resp.Body)
 		err = errors.New(resp.Status + ": " + string(b))
@@ -142,17 +144,17 @@ func GetOpenidPasswordToken(authEndpoint string, authClientId string, authClient
 	if remoteInfo.Port != "" {
 		req.Header.Set("X-Forwarded-Port", remoteInfo.Port)
 	}
-	if remoteInfo.Port != "" {
+	if remoteInfo.Protocol != "" {
 		req.Header.Set("X-Forwarded-Proto", remoteInfo.Protocol)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return token, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		body, _ := io.ReadAll(resp.Body)
 		err = fmt.Errorf("%w: %v", ErrBadLogin, string(body))
-		resp.Body.Close()
 		return
 	}
 	if resp.StatusCode >= 300 {

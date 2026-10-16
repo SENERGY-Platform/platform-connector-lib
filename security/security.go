@@ -17,7 +17,6 @@
 package security
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"sync"
@@ -79,8 +78,9 @@ type Security struct {
 func (this *Security) ResetAccess() {
 	this.mux.Lock()
 	defer this.mux.Unlock()
-	b, _ := json.Marshal(this.openid)
-	this.logger.Debug("reset openid token", "openid", string(b))
+	if this.openid != nil {
+		this.logger.Debug("reset openid token", "expires_in", this.openid.ExpiresIn, "request_time", this.openid.RequestTime)
+	}
 	this.openid = nil
 }
 
