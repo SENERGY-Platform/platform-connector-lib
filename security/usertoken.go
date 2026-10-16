@@ -66,7 +66,7 @@ func (this *Security) ExchangeUserToken(userid string, remoteInfo model.RemoteIn
 	}
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		body, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%W: %v", ErrBadLogin, string(body))
+		err = fmt.Errorf("%w: %v", ErrBadLogin, string(body))
 		resp.Body.Close()
 		return
 	}
