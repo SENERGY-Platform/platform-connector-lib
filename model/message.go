@@ -19,9 +19,16 @@ package model
 import "strings"
 
 type TaskInfo struct {
-	WorkerId            string `json:"worker_id"`
-	TaskId              string `json:"task_id"`
-	ProcessInstanceId   string `json:"process_instance_id"`
+	WorkerId          string `json:"worker_id"`
+	TaskId            string `json:"task_id"`
+	ProcessInstanceId string `json:"process_instance_id"`
+	// DeploymentId identifies the deployment the task belongs to. Connectors
+	// mirror it unchanged in their responses.
+	DeploymentId string `json:"deployment_id"`
+	// ProcessDefinitionId is the deprecated name of DeploymentId. The
+	// automation-engine fills it with the same deployment id until every
+	// connector uses a library version that knows DeploymentId; after that
+	// it is dropped.
 	ProcessDefinitionId string `json:"process_definition_id"`
 	CompletionStrategy  string `json:"completion_strategy"`
 	Time                string `json:"time"`
